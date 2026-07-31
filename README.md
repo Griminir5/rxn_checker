@@ -65,7 +65,7 @@ def build_simple(states):
     aye = states.concentration("Aye")
 
     return Reaction(
-        id="aye_to_bee.simple",
+        name="simple",
         family="aye_to_bee",
         reactants={"Aye": 1},
         products={"Bee": 1},
@@ -97,11 +97,14 @@ belongs to the case. Overlapping selectors such as `aye_to_bee` together with
 
 A `Reaction` represents one forward direction and contains:
 
-- a unique implementation id;
+- a local reaction name;
 - a family id for implementations of the same net reaction;
 - separate reactant and product mappings;
 - optional non-consumed catalysts;
 - the resulting SymPy rate expression.
+
+Its globally unique `id` is derived as `family.name`, so a family implementation
+does not repeat the qualified selector manually.
 
 Net stoichiometry is derived. The authoritative sided mappings preserve the
 difference between these mechanisms:

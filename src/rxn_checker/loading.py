@@ -68,12 +68,13 @@ def _build_reaction(
     reaction = builder(states)
     if not isinstance(reaction, Reaction):
         raise TypeError(f"Builder for '{reaction_id}' did not return a Reaction.")
-    if reaction.id != reaction_id:
+    family_id, reaction_name = reaction_id.split(".", 1)
+    if reaction.name != reaction_name:
         raise ValueError(
-            f"Builder for '{reaction_id}' returned reaction '{reaction.id}'."
+            f"Builder for '{reaction_id}' returned reaction name "
+            f"'{reaction.name}'."
         )
 
-    family_id = reaction_id.split(".", 1)[0]
     if reaction.family != family_id:
         raise ValueError(
             f"Reaction '{reaction_id}' declared family '{reaction.family}'."

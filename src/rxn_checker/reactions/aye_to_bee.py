@@ -19,7 +19,7 @@ def build_autocatalytic(states: StateVariables) -> Reaction:
     aye = states.concentration("Aye")
     bee = states.concentration("Bee")
     return Reaction(
-        id="aye_to_bee.autocatalytic",
+        name="autocatalytic",
         family="aye_to_bee",
         reactants={"Aye": 1, "Bee": 1},
         products={"Bee": 2},
@@ -30,7 +30,7 @@ def build_autocatalytic(states: StateVariables) -> Reaction:
 def build_simple(states: StateVariables) -> Reaction:
     aye = states.concentration("Aye")
     return Reaction(
-        id="aye_to_bee.simple",
+        name="simple",
         family="aye_to_bee",
         reactants={"Aye": 1},
         products={"Bee": 1},

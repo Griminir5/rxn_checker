@@ -10,7 +10,8 @@
  - Each packaged reaction family has a same-named module exposing a `REACTIONS` builder mapping
  - Family modules are discovered automatically into a unified builder registry
  - A case may select one implementation as `family.reaction` or every implementation as `family`
- - A `Reaction` documents id, family, rate expression, sided stoichiometry, and catalysts
+ - A `Reaction` documents its local name, family, rate expression, sided stoichiometry, and catalysts
+ - Its qualified `family.name` id is derived rather than repeated in the definition
  - Expression is symbolic, constructed with SymPy
  - All symbols come from the case-owned state object; constants stay numeric in the module
 

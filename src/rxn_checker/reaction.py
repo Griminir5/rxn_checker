@@ -19,7 +19,7 @@ def _side(values: Mapping[str, float], label: str) -> Mapping[str, float]:
 class Reaction:
     """One forward reaction and its symbolic rate expression."""
 
-    id: str
+    name: str
     family: str
     reactants: Mapping[str, float]
     products: Mapping[str, float]
@@ -27,8 +27,8 @@ class Reaction:
     catalysts: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
-        if not self.id or not self.family:
-            raise ValueError("Reaction id and family must not be empty.")
+        if not self.name or not self.family:
+            raise ValueError("Reaction name and family must not be empty.")
 
         reactants = _side(self.reactants, "Reactant")
         products = _side(self.products, "Product")
@@ -46,6 +46,12 @@ class Reaction:
         object.__setattr__(self, "products", products)
         object.__setattr__(self, "catalysts", catalysts)
         object.__setattr__(self, "rate", rate)
+
+    @property
+    def id(self) -> str:
+        """Globally unique id derived from the family and local name."""
+
+        return f"{self.family}.{self.name}"
 
     @property
     def species_ids(self) -> tuple[str, ...]:

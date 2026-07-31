@@ -24,6 +24,11 @@ class ReactionTests(unittest.TestCase):
         for reaction in reactions:
             self.assertLessEqual(reaction.rate.free_symbols, self.states.symbols)
 
+    def test_qualified_id_is_derived_from_family_and_local_name(self) -> None:
+        reaction = build_simple_reaction(self.states)
+        self.assertEqual(reaction.name, "simple")
+        self.assertEqual(reaction.id, "aye_to_bee.simple")
+
     def test_family_files_are_registered_automatically(self) -> None:
         self.assertEqual(
             FAMILY_REGISTRY["aye_to_bee"],
@@ -58,7 +63,7 @@ class ReactionTests(unittest.TestCase):
         a = states.concentration("Aye")
         catalyst = states.concentration("catalyst")
         reaction = Reaction(
-            id="catalysed",
+            name="catalysed",
             family="conversion",
             reactants={"Aye": 1},
             products={"Bee": 1},
@@ -71,7 +76,7 @@ class ReactionTests(unittest.TestCase):
     def test_undeclared_state_symbols_are_rejected(self) -> None:
         unknown = Symbol("unknown", real=True)
         reaction = Reaction(
-            id="bad",
+            name="bad",
             family="bad",
             reactants={"Aye": 1},
             products={"Bee": 1},
@@ -87,14 +92,14 @@ class ReactionTests(unittest.TestCase):
         aye = self.states.concentration("Aye")
         bee = self.states.concentration("Bee")
         forward = Reaction(
-            id="Aye_to_Bee",
+            name="Aye_to_Bee",
             family="forward",
             reactants={"Aye": 1},
             products={"Bee": 1},
             rate=aye,
         )
         reverse = Reaction(
-            id="Bee_to_Aye",
+            name="Bee_to_Aye",
             family="reverse",
             reactants={"Bee": 1},
             products={"Aye": 1},
