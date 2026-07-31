@@ -4,12 +4,12 @@ import unittest
 
 from sympy import Symbol
 
-from case import Case, StateVariables
-from reactions import Reaction
-from reactions.aye_to_bee import (
+from rxn_checker import Case, Reaction, StateVariables
+from rxn_checker.reactions import FAMILY_REGISTRY, REACTION_REGISTRY
+from rxn_checker.reactions.aye_to_bee import (
     build_autocatalytic as build_autocatalytic_reaction,
 )
-from reactions.aye_to_bee import build_simple as build_simple_reaction
+from rxn_checker.reactions.aye_to_bee import build_simple as build_simple_reaction
 
 
 class ReactionTests(unittest.TestCase):
@@ -23,6 +23,13 @@ class ReactionTests(unittest.TestCase):
         )
         for reaction in reactions:
             self.assertLessEqual(reaction.rate.free_symbols, self.states.symbols)
+
+    def test_family_files_are_registered_automatically(self) -> None:
+        self.assertEqual(
+            FAMILY_REGISTRY["aye_to_bee"],
+            ("aye_to_bee.autocatalytic", "aye_to_bee.simple"),
+        )
+        self.assertIn("aye_to_bee.simple", REACTION_REGISTRY)
 
     def test_full_sides_are_preserved_while_net_is_derived(self) -> None:
         autocatalytic = build_autocatalytic_reaction(self.states)
@@ -72,7 +79,7 @@ class ReactionTests(unittest.TestCase):
         )
         with self.assertRaisesRegex(
             ValueError,
-            "does not use this case's state symbols",
+            "uses symbols not owned by this case",
         ):
             Case("bad", (), self.states, (reaction,))
 

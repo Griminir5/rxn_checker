@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import unittest
 
-from species import PROPERTY_REGISTRY, SpeciesProperties
+from rxn_checker.species import PROPERTY_REGISTRY, SpeciesProperties
 
 
 class SpeciesRegistryTests(unittest.TestCase):

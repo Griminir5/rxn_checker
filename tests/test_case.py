@@ -4,7 +4,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
 
-from case import StateVariables, load_case
+from rxn_checker import StateVariables, load_case
 
 
 class StateVariablesTests(unittest.TestCase):

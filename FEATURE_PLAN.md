@@ -7,7 +7,8 @@
 
 # Reaction Definition
  - Reaction implementation are on the user
- - Each reaction family has a same-named module exposing a `REACTIONS` builder mapping
+ - Each packaged reaction family has a same-named module exposing a `REACTIONS` builder mapping
+ - Family modules are discovered automatically into a unified builder registry
  - A case may select one implementation as `family.reaction` or every implementation as `family`
  - A `Reaction` documents id, family, rate expression, sided stoichiometry, and catalysts
  - Expression is symbolic, constructed with SymPy

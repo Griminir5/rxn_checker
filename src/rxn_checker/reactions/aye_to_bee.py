@@ -5,10 +5,10 @@ from __future__ import annotations
 from types import MappingProxyType
 from typing import TYPE_CHECKING
 
-from .core import Reaction
+from ..reaction import Reaction
 
 if TYPE_CHECKING:
-    from case import StateVariables
+    from ..state import StateVariables
 
 
 AUTOCATALYTIC_RATE_CONSTANT = 2.0

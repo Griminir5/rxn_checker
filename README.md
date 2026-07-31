@@ -5,9 +5,9 @@ numerical robustness.
 
 The current foundation has three small pieces:
 
-- `species` stores species properties.
-- `case.py` loads a case and owns all symbolic state variables.
-- `reactions` defines one-way reactions using those state variables.
+- `rxn_checker.species` stores species properties.
+- `rxn_checker` loads a case and owns all symbolic state variables.
+- `rxn_checker.reactions` defines one-way reactions using those state variables.
 
 ## Case-owned state variables
 
@@ -33,7 +33,7 @@ both `aye_to_bee.simple` and `aye_to_bee.autocatalytic`.
 symbol for every listed species, plus temperature and pressure:
 
 ```python
-from case import load_case
+from rxn_checker import load_case
 
 case = load_case("example_case/case.yaml")
 
@@ -48,15 +48,15 @@ checks need to inspect expressions just outside the physical domain.
 
 ## Reaction family modules
 
-The family part of a selector maps directly to a same-named Python module.
+The family part of a selector maps directly to a same-named packaged module.
 For example, both `aye_to_bee` and `aye_to_bee.simple` load
-`reactions/aye_to_bee.py`. Each family module exposes a `REACTIONS` mapping
-from its local reaction names to builder functions:
+`rxn_checker/reactions/aye_to_bee.py`. Each family module exposes a `REACTIONS`
+mapping from its local reaction names to builder functions:
 
 ```python
 from types import MappingProxyType
 
-from reactions import Reaction
+from rxn_checker import Reaction
 
 RATE_CONSTANT = 2.0
 
@@ -76,10 +76,12 @@ def build_simple(states):
 REACTIONS = MappingProxyType({"simple": build_simple})
 ```
 
-The mapping is local to the family module; there is no central registry to
-maintain. A qualified selector calls one mapped builder, while a bare family
-selector calls every mapped builder in mapping order. Only named families are
-imported.
+The package automatically discovers these family modules and combines their
+local mappings into a unified builder registry. There is no central list to
+maintain: adding a family file is enough to register it. Discovery imports the
+family modules and records their builder functions, but it does not build any
+`Reaction` objects. A qualified selector calls one builder, while a bare family
+selector calls every builder in that family's mapping order.
 
 The case passes its state object into each selected builder, so reaction code
 does not create SymPy symbols. Constants and correlations stay as ordinary
@@ -120,5 +122,5 @@ the species registry or reaction-definition object.
 ## Development
 
 ```shell
-.venv/bin/python -m unittest discover -v
+PYTHONPATH=src .venv/bin/python -m unittest discover -v
 ```
