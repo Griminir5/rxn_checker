@@ -122,6 +122,32 @@ Species existence, atom balance, family comparison, and physical/numerical
 properties are later checks. They are intentionally not responsibilities of
 the species registry or reaction-definition object.
 
+## Conservation checks
+
+Unknown requested species and reactions are rejected while loading a case,
+and `Case` rejects reactions whose reactants, products, or catalysts are not
+present. Atom and mass conservation are explicit checks so that an invalid
+reaction can be loaded and reported rather than preventing the whole case from
+being inspected:
+
+```python
+from rxn_checker import check_atom_conservation, check_mass_conservation
+
+for reaction in case.reactions:
+    atom_result = check_atom_conservation(reaction)
+    mass_result = check_mass_conservation(reaction)
+    print(reaction.id, atom_result.passed, mass_result.passed)
+```
+
+Atom results contain the per-element totals on both sides and `imbalances`,
+defined as products minus reactants. Mass results contain `reactant_mass`,
+`product_mass`, and the signed `imbalance`, all using the property registry's
+kg/mol units. The mass check uses a small relative tolerance because tabulated
+molecular weights are rounded; both checks accept `rel_tol` and `abs_tol`
+overrides. A missing molecular weight raises `ValueError`, distinguishing an
+unavailable check from a failed conservation check. Catalysts are excluded
+from both balances because they are non-consumed by definition.
+
 ## Development
 
 ```shell
