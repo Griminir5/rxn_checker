@@ -7,8 +7,11 @@
 
 # Reaction Definition
  - Reaction implementation are on the user
- - Must expose a 'Reaction' object that documents id, family, rate expression. stoichiometry, catalysts
+ - Each reaction family has a same-named module exposing a `REACTIONS` builder mapping
+ - A case may select one implementation as `family.reaction` or every implementation as `family`
+ - A `Reaction` documents id, family, rate expression, sided stoichiometry, and catalysts
  - Expression is symbolic, constructed with SymPy
+ - All symbols come from the case-owned state object; constants stay numeric in the module
 
 # Basic Checks
  - All requested species and reactions exist
