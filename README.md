@@ -146,7 +146,86 @@ kg/mol units. The mass check uses a small relative tolerance because tabulated
 molecular weights are rounded; both checks accept `rel_tol` and `abs_tol`
 overrides. A missing molecular weight raises `ValueError`, distinguishing an
 unavailable check from a failed conservation check. Catalysts are excluded
-from both balances because they are non-consumed by definition.
+from both balances because they are non-consumed by definition. The registered
+mass check translates a missing molecular weight into an `UNAVAILABLE`
+outcome.
+
+## Command-line report
+
+Run every registered check by pointing `rxn-checker` at either a case YAML
+file or its directory:
+
+```shell
+rxn-checker example_case/case.yaml
+# or
+rxn-checker example_case
+```
+
+The command prints a plain-text report and writes the same report to
+`rxn-checker-report.txt` in the case directory. Its exit code is `0` when the
+overall status is `PASS` or `SAMPLED_PASS` (or the report contains only
+numerical results), `1` for `FAIL`, `INDETERMINATE`, or `UNAVAILABLE`, and `2`
+when the case cannot be loaded or the report cannot be written.
+
+## Adding checks
+
+Each check lives in its own module, accepts the complete `Case` plus a shared
+`CheckContext`, and returns either one `CheckOutcome` or an iterable of them.
+A case-wide check normally returns one outcome. A reaction-wide check can loop
+over `case.reactions` and return one outcome per reaction, setting `subject` to
+the reaction id.
+
+For example, a sampled case-wide check with numerical diagnostics has this
+shape:
+
+```python
+from .models import (
+    CheckContext,
+    CheckDefinition,
+    CheckOutcome,
+    CheckScope,
+    CheckStatus,
+    CheckValue,
+)
+
+
+def run(case, context: CheckContext):
+    minimum_rate, sample_count = sample_rates(case)
+    return CheckOutcome(
+        status=CheckStatus.SAMPLED_PASS,
+        details=("No negative rates were sampled.",),
+        values=(
+            CheckValue("Minimum rate", minimum_rate, "mol/m^3/s"),
+            CheckValue("Samples", sample_count),
+        ),
+    )
+
+
+CHECK = CheckDefinition(
+    id="nonnegative_rates",
+    name="Non-negative rates",
+    group="Physical checks",
+    scope=CheckScope.CASE,
+    run=run,
+)
+```
+
+Import that module's `CHECK` in `checks/registry.py` and append it to
+`CHECK_REGISTRY`. Registry order controls report order; neither the CLI nor the
+report renderer needs to change.
+
+The supported qualitative statuses are `PASS`, `SAMPLED_PASS`, `FAIL`,
+`INDETERMINATE`, and `UNAVAILABLE`. Omit `status` for a purely numerical
+outcome. Values can also accompany a status. Overall status uses the most
+consequential outcome in this order:
+
+```text
+FAIL > INDETERMINATE > UNAVAILABLE > SAMPLED_PASS > PASS
+```
+
+An unexpected exception or invalid return from one runner is isolated as an
+`INDETERMINATE` outcome, and the remaining checks still run. Expected missing
+prerequisites should be returned explicitly as `UNAVAILABLE`.
 
 ## Development
 

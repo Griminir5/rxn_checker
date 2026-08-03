@@ -12,6 +12,9 @@ dependencies = [
     "sympy>=1.14.0",
 ]
 
+[project.scripts]
+rxn-checker = "rxn_checker.cli:main"
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
