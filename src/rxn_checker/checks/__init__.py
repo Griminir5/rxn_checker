@@ -21,6 +21,10 @@ from .mass_conservation import (
     MassConservationResult,
     check_mass_conservation,
 )
+from .network_positivity import (
+    NetworkPositivityResult,
+    check_network_positivity,
+)
 from .nonnegative_rate import (
     RateNonnegativityResult,
     check_rate_nonnegativity,
@@ -43,11 +47,13 @@ __all__ = (
     "CheckStatus",
     "CheckValue",
     "MassConservationResult",
+    "NetworkPositivityResult",
     "RateNonnegativityResult",
     "ZeroAtDepletionResult",
     "aggregate_status",
     "check_atom_conservation",
     "check_mass_conservation",
+    "check_network_positivity",
     "check_rate_nonnegativity",
     "check_zero_at_depletion",
     "run_checks",

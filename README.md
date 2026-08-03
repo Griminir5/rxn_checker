@@ -3,7 +3,8 @@
 `rxn-checker` validates symbolic reaction implementations. It currently checks
 that selected reactions exist, use case-owned state symbols, reference declared
 species, conserve atoms and mass, have non-negative rates in the physical
-domain, and stop when a reactant or catalyst is depleted.
+domain, stop when a reactant or catalyst is depleted, and form a positive
+reaction network.
 
 ## Running a case
 
@@ -117,6 +118,13 @@ The zero-at-depletion check independently sets every reactant and catalyst
 concentration to zero and requires the resulting symbolic rate to be exactly
 zero. Product-only species are not depletion boundaries. A disproven identity
 is a `FAIL`, while an identity SymPy cannot decide is `INDETERMINATE`.
+
+The case-level network positivity check first assembles the complete source
+vector `F = S r`. For each species `i`, it sets `c_i = 0` and asks SymPy to
+prove `F_i >= 0` while all other concentrations are non-negative. This checks
+that the vector field cannot point out of the non-negative concentration
+orthant. Reaction contributions are summed before their signs are tested, so
+coupled reactions and exact cancellations are handled at the network level.
 
 Checks return `CheckOutcome` objects with an optional qualitative status,
 details, and numerical values. Supported statuses, from least to most

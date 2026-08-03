@@ -11,8 +11,10 @@ from .checks import (
     CheckStatus,
     CheckValue,
     MassConservationResult,
+    NetworkPositivityResult,
     check_atom_conservation,
     check_mass_conservation,
+    check_network_positivity,
     run_checks,
 )
 from .loading import load_case
@@ -32,12 +34,14 @@ __all__ = (
     "CheckStatus",
     "CheckValue",
     "MassConservationResult",
+    "NetworkPositivityResult",
     "Reaction",
     "StateVariables",
     "VariableBounds",
     "build_check_report",
     "check_atom_conservation",
     "check_mass_conservation",
+    "check_network_positivity",
     "load_case",
     "run_checks",
 )

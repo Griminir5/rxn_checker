@@ -50,6 +50,7 @@ class CheckFrameworkTests(unittest.TestCase):
                 "mass_conservation",
                 "rate_nonnegativity",
                 "zero_at_depletion",
+                "network_positivity",
             ),
         )
         self.assertEqual(
@@ -59,6 +60,7 @@ class CheckFrameworkTests(unittest.TestCase):
                 "mass_conservation",
                 "rate_nonnegativity",
                 "zero_at_depletion",
+                "network_positivity",
             ),
         )
 
