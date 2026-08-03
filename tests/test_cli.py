@@ -33,7 +33,9 @@ class CliTests(unittest.TestCase):
             exit_code = main((str(argument),))
         return exit_code, stdout.getvalue(), stderr.getvalue()
 
-    def test_temperature_dependent_case_reports_indeterminate_rate_sign(self) -> None:
+    def test_temperature_dependent_case_prints_and_writes_a_passing_report(
+        self,
+    ) -> None:
         with TemporaryDirectory() as directory_name:
             directory = Path(directory_name)
             case_path = self._write_case(directory)
@@ -42,7 +44,7 @@ class CliTests(unittest.TestCase):
 
             report_path = directory / REPORT_FILENAME
             report_text = report_path.read_text(encoding="utf-8")
-            self.assertEqual(exit_code, 1)
+            self.assertEqual(exit_code, 0)
             self.assertEqual(stderr, "")
             self.assertTrue(stdout.startswith(report_text))
             self.assertIn("aye_to_bee.simple", report_text)
@@ -58,10 +60,9 @@ class CliTests(unittest.TestCase):
             self.assertIn(
                 "Zero rate at depletion [zero_at_depletion; reaction]", report_text
             )
-            self.assertEqual(report_text.count("aye_to_bee.simple: PASS"), 3)
-            self.assertIn("aye_to_bee.simple: INDETERMINATE", report_text)
+            self.assertEqual(report_text.count("aye_to_bee.simple: PASS"), 4)
             self.assertIn("Case loading: PASS", report_text)
-            self.assertIn("Overall: INDETERMINATE", report_text)
+            self.assertIn("Overall: PASS", report_text)
             self.assertIn(f"Report written to {report_path}", stdout)
 
     def test_failed_check_report_returns_exit_one(self) -> None:
@@ -94,7 +95,7 @@ class CliTests(unittest.TestCase):
 
             exit_code, stdout, _ = self._run(directory)
 
-            self.assertEqual(exit_code, 1)
+            self.assertEqual(exit_code, 0)
             self.assertIn(f"Source: {directory / 'case.yaml'}", stdout)
             self.assertTrue((directory / REPORT_FILENAME).is_file())
 

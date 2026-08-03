@@ -5,9 +5,8 @@ from sympy import exp
 from ..reaction import Reaction
 from ..state import StateVariables
 
-# Toy Arrhenius parameters in SI molar units.
-ACTIVATION_ENERGY = 50_000.0  # J/mol
-GAS_CONSTANT = 8.314  # J/(mol K)
+ACTIVATION_ENERGY = 50_000.0
+GAS_CONSTANT = 8.314
 RATE_CONSTANT = 2.0
 
 

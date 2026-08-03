@@ -14,10 +14,10 @@ Basic checks
 
 Physical checks
   Rate non-negativity [rate_nonnegativity; reaction]
-    aye_to_bee.autocatalytic: INDETERMINATE
-      Symbolic sign analysis was inconclusive; bounded interval analysis is not yet available.
-    aye_plus_bee_to_cee.half_order: INDETERMINATE
-      Symbolic sign analysis was inconclusive; bounded interval analysis is not yet available.
+    aye_to_bee.autocatalytic: PASS
+      Rate is symbolically non-negative under its physical lower-bound assumptions.
+    aye_plus_bee_to_cee.half_order: PASS
+      Rate is symbolically non-negative under its physical lower-bound assumptions.
   Zero rate at depletion [zero_at_depletion; reaction]
     aye_to_bee.autocatalytic: PASS
       Rate is exactly zero at every reactant and catalyst depletion boundary.
@@ -25,6 +25,6 @@ Physical checks
       Rate is exactly zero at every reactant and catalyst depletion boundary.
 
 Summary
-  Overall: INDETERMINATE
-  Statuses: PASS=6, SAMPLED_PASS=0, FAIL=0, INDETERMINATE=2, UNAVAILABLE=0
+  Overall: PASS
+  Statuses: PASS=8, SAMPLED_PASS=0, FAIL=0, INDETERMINATE=0, UNAVAILABLE=0
   Numerical values: 0

@@ -106,11 +106,12 @@ signed difference in kg/mol. Both checks accept `rel_tol` and `abs_tol`
 overrides. Missing molecular weights make the registered mass check
 `UNAVAILABLE` rather than failed.
 
-Rate non-negativity asks SymPy to prove that an expression is non-negative when
-all of its state variables are non-negative. A symbolic proof is a `PASS`, and
-a rate proven negative in the positive interior is a `FAIL`. Other expressions
-remain `INDETERMINATE`; a later interval branch-and-bound check will use ranges
-specified by the case to resolve them.
+Rate non-negativity asks SymPy to prove that an expression is non-negative using
+sign assumptions implied by each state's physical lower bound. A zero lower
+bound makes a symbol non-negative, while a positive lower bound makes it
+strictly positive. A symbolic proof is a `PASS`, and a rate proven negative in
+the physical interior is a `FAIL`. Upper bounds are reserved for a later
+interval branch-and-bound check that can resolve otherwise indeterminate rates.
 
 The zero-at-depletion check independently sets every reactant and catalyst
 concentration to zero and requires the resulting symbolic rate to be exactly

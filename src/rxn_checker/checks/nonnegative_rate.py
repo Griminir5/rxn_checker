@@ -1,11 +1,13 @@
 """Symbolic rate non-negativity check."""
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 
 import sympy as sp
 
 from ..case import Case
 from ..reaction import Reaction
+from ..state import VariableBounds
 from .models import (
     CheckContext,
     CheckDefinition,
@@ -24,13 +26,24 @@ class RateNonnegativityResult:
     rate: sp.Expr
 
 
-def _rate_with_assumptions(rate: sp.Expr, **assumptions: bool) -> sp.Expr:
-    """Return an equivalent expression with assumptions on its free symbols."""
+def _rate_with_bound_assumptions(
+    rate: sp.Expr,
+    state_bounds: Mapping[sp.Symbol, VariableBounds],
+    *,
+    interior: bool = False,
+) -> sp.Expr:
+    """Apply sign assumptions implied by each state's physical lower bound."""
 
-    replacements = {
-        symbol: sp.Dummy(symbol.name, **assumptions)
-        for symbol in rate.free_symbols
-    }
+    replacements = {}
+    for symbol in rate.free_symbols:
+        lower = state_bounds[symbol].physical_lower
+        if lower > 0 or (interior and lower == 0):
+            assumptions = {"positive": True}
+        elif lower == 0:
+            assumptions = {"nonnegative": True}
+        else:
+            assumptions = {"real": True}
+        replacements[symbol] = sp.Dummy(symbol.name, **assumptions)
     return rate.xreplace(replacements)
 
 
@@ -40,15 +53,16 @@ def _sign_candidates(rate: sp.Expr) -> tuple[sp.Expr, ...]:
 
 def check_rate_nonnegativity(
     reaction: Reaction,
+    state_bounds: Mapping[sp.Symbol, VariableBounds],
 ) -> RateNonnegativityResult:
-    """Symbolically check a rate over non-negative state variables.
+    """Symbolically check a rate using signs implied by its physical bounds.
 
     A negative conclusion is made only when SymPy proves the rate is negative
-    with every state variable in the positive interior. All other unresolved
+    in the physical interior. Upper bounds are not yet used, so other unresolved
     expressions remain indeterminate until bounded interval analysis is added.
     """
 
-    physical_rate = _rate_with_assumptions(reaction.rate, nonnegative=True)
+    physical_rate = _rate_with_bound_assumptions(reaction.rate, state_bounds)
     if any(
         candidate.is_nonnegative is True
         for candidate in _sign_candidates(physical_rate)
@@ -59,7 +73,11 @@ def check_rate_nonnegativity(
             rate=reaction.rate,
         )
 
-    interior_rate = _rate_with_assumptions(reaction.rate, positive=True)
+    interior_rate = _rate_with_bound_assumptions(
+        reaction.rate,
+        state_bounds,
+        interior=True,
+    )
     if any(
         candidate.is_negative is True
         for candidate in _sign_candidates(interior_rate)
@@ -83,7 +101,7 @@ def _outcome(result: RateNonnegativityResult) -> CheckOutcome:
             status=CheckStatus.FAIL,
             subject=result.reaction_id,
             details=(
-                "Rate is symbolically negative in the positive physical interior.",
+                "Rate is symbolically negative in the physical interior.",
             ),
         )
     if result.passed:
@@ -91,7 +109,8 @@ def _outcome(result: RateNonnegativityResult) -> CheckOutcome:
             status=CheckStatus.PASS,
             subject=result.reaction_id,
             details=(
-                "Rate is symbolically non-negative for non-negative state variables.",
+                "Rate is symbolically non-negative under its physical "
+                "lower-bound assumptions.",
             ),
         )
     return CheckOutcome(
@@ -110,7 +129,7 @@ def run(case: Case, context: CheckContext) -> tuple[CheckOutcome, ...]:
     outcomes: list[CheckOutcome] = []
     for reaction in case.reactions:
         try:
-            result = check_rate_nonnegativity(reaction)
+            result = check_rate_nonnegativity(reaction, case.state_bounds)
         except ValueError as error:
             outcomes.append(
                 CheckOutcome(
