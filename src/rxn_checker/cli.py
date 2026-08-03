@@ -1,7 +1,5 @@
 """Command-line interface for rxn-checker."""
 
-from __future__ import annotations
-
 import argparse
 from collections.abc import Sequence
 from pathlib import Path
@@ -34,10 +32,7 @@ def _case_path(path: Path) -> Path:
 
 
 def _loading_error_report(case_path: Path, error: Exception) -> str:
-    if len(error.args) == 1 and isinstance(error.args[0], str):
-        message = error.args[0]
-    else:
-        message = str(error)
+    message = str(error.args[0]) if len(error.args) == 1 else str(error)
     return "\n".join(
         (
             "rxn-checker report",
@@ -53,10 +48,16 @@ def _loading_error_report(case_path: Path, error: Exception) -> str:
     )
 
 
-def _write_report(case_path: Path, text: str) -> Path:
+def _output_report(case_path: Path, text: str) -> bool:
+    sys.stdout.write(text)
     report_path = case_path.parent / REPORT_FILENAME
-    report_path.write_text(text, encoding="utf-8")
-    return report_path
+    try:
+        report_path.write_text(text, encoding="utf-8")
+    except OSError as error:
+        print(f"Could not write report: {error}", file=sys.stderr)
+        return False
+    print(f"Report written to {report_path}")
+    return True
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -69,29 +70,14 @@ def main(argv: Sequence[str] | None = None) -> int:
         case = load_case(case_path)
     except Exception as error:
         report_text = _loading_error_report(case_path, error)
-        sys.stdout.write(report_text)
-        try:
-            report_path = _write_report(case_path, report_text)
-        except OSError as write_error:
-            print(f"Could not write report: {write_error}", file=sys.stderr)
-        else:
-            print(f"Report written to {report_path}")
+        _output_report(case_path, report_text)
         return 2
 
     report = build_check_report(case, source=case_path)
-    sys.stdout.write(report.text)
-    try:
-        report_path = _write_report(case_path, report.text)
-    except OSError as error:
-        print(f"Could not write report: {error}", file=sys.stderr)
+    if not _output_report(case_path, report.text):
         return 2
-
-    print(f"Report written to {report_path}")
     return 0 if report.passed else 1
 
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
-
-__all__ = ("main",)

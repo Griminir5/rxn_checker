@@ -1,7 +1,5 @@
 """Generic plain-text reporting for registered checks."""
 
-from __future__ import annotations
-
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from numbers import Real
@@ -10,7 +8,6 @@ from types import MappingProxyType
 
 from .case import Case
 from .checks import (
-    BASIC_CHECKS,
     CheckContext,
     CheckDefinition,
     CheckExecution,
@@ -19,7 +16,6 @@ from .checks import (
     aggregate_status,
     run_checks,
 )
-from .species import PROPERTY_REGISTRY, PropertyRegistry
 
 
 @dataclass(frozen=True)
@@ -40,8 +36,6 @@ class CheckReport:
 
 
 def _number(value: Real) -> str:
-    if isinstance(value, int):
-        return str(value)
     try:
         return format(value, ".12g")
     except TypeError:
@@ -50,10 +44,8 @@ def _number(value: Real) -> str:
 
 def _render_outcome(outcome: CheckOutcome) -> list[str]:
     subject = outcome.subject or "Case"
-    if outcome.status is None:
-        lines = [f"    {subject}"]
-    else:
-        lines = [f"    {subject}: {outcome.status.value}"]
+    status = "" if outcome.status is None else f": {outcome.status.value}"
+    lines = [f"    {subject}{status}"]
     lines.extend(f"      {detail}" for detail in outcome.details)
     for value in outcome.values:
         rendered = f"      {value.name}: {_number(value.value)}"
@@ -63,14 +55,11 @@ def _render_outcome(outcome: CheckOutcome) -> list[str]:
     return lines
 
 
-def _status_counts(
-    executions: Iterable[CheckExecution],
-) -> Mapping[CheckStatus, int]:
+def _status_counts(outcomes: Iterable[CheckOutcome]) -> Mapping[CheckStatus, int]:
     counts = {status: 0 for status in CheckStatus}
-    for execution in executions:
-        for outcome in execution.outcomes:
-            if outcome.status is not None:
-                counts[outcome.status] += 1
+    for outcome in outcomes:
+        if outcome.status is not None:
+            counts[outcome.status] += 1
     return MappingProxyType(counts)
 
 
@@ -88,7 +77,7 @@ def build_check_report(
         outcome for execution in executions for outcome in execution.outcomes
     )
     overall_status = aggregate_status(outcomes)
-    status_counts = _status_counts(executions)
+    status_counts = _status_counts(outcomes)
     value_count = sum(len(outcome.values) for outcome in outcomes)
 
     lines = ["rxn-checker report", f"Case: {case.name}"]
@@ -129,30 +118,3 @@ def build_check_report(
         value_count=value_count,
         executions=executions,
     )
-
-
-def build_basic_check_report(
-    case: Case,
-    *,
-    source: str | Path | None = None,
-    property_registry: PropertyRegistry = PROPERTY_REGISTRY,
-) -> CheckReport:
-    """Compatibility wrapper for the original basic-report API."""
-
-    return build_check_report(
-        case,
-        source=source,
-        checks=BASIC_CHECKS,
-        context=CheckContext(property_registry=property_registry),
-    )
-
-
-BasicCheckReport = CheckReport
-
-
-__all__ = (
-    "BasicCheckReport",
-    "CheckReport",
-    "build_basic_check_report",
-    "build_check_report",
-)

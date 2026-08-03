@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import unittest
 
 from sympy import Symbol
@@ -15,14 +13,6 @@ from rxn_checker.reactions.aye_to_bee import build_simple as build_simple_reacti
 class ReactionTests(unittest.TestCase):
     def setUp(self) -> None:
         self.states = StateVariables(("Aye", "Bee"))
-
-    def test_module_uses_case_owned_symbols(self) -> None:
-        reactions = (
-            build_autocatalytic_reaction(self.states),
-            build_simple_reaction(self.states),
-        )
-        for reaction in reactions:
-            self.assertLessEqual(reaction.rate.free_symbols, self.states.symbols)
 
     def test_qualified_id_is_derived_from_family_and_local_name(self) -> None:
         reaction = build_simple_reaction(self.states)
@@ -86,7 +76,7 @@ class ReactionTests(unittest.TestCase):
             ValueError,
             "uses symbols not owned by this case",
         ):
-            Case("bad", (), self.states, (reaction,))
+            Case("bad", self.states, (reaction,))
 
     def test_each_reaction_is_one_way(self) -> None:
         aye = self.states.concentration("Aye")
@@ -107,7 +97,3 @@ class ReactionTests(unittest.TestCase):
         )
         self.assertEqual(dict(forward.net_stoichiometry), {"Aye": -1, "Bee": 1})
         self.assertEqual(dict(reverse.net_stoichiometry), {"Bee": -1, "Aye": 1})
-
-
-if __name__ == "__main__":
-    unittest.main()

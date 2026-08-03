@@ -1,8 +1,6 @@
-from __future__ import annotations
-
+from collections.abc import Mapping
 from dataclasses import dataclass
 import math
-from typing import Mapping
 
 
 @dataclass(frozen=True)
@@ -43,9 +41,6 @@ class PropertyRegistry:
                 raise ValueError(
                     "Property registry species identifiers must not be blank or padded."
                 )
-
-    def has_species(self, species_id: str) -> bool:
-        return species_id in self.records
 
     def get_record(self, species_id: str) -> SpeciesProperties:
         try:

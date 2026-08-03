@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import unittest
 
 from rxn_checker import Case, Reaction, StateVariables
@@ -20,7 +18,6 @@ class CheckReportTests(unittest.TestCase):
         )
         case = Case(
             name="bad-case",
-            reaction_ids=(reaction.id,),
             states=states,
             reactions=(reaction,),
         )
@@ -54,7 +51,6 @@ class CheckReportTests(unittest.TestCase):
         )
         case = Case(
             name="missing-data",
-            reaction_ids=(reaction.id,),
             states=states,
             reactions=(reaction,),
         )
@@ -71,7 +67,3 @@ class CheckReportTests(unittest.TestCase):
         self.assertIn("example.conversion: PASS", report.text)
         self.assertIn("example.conversion: UNAVAILABLE", report.text)
         self.assertIn("molecular weight is missing for species: A", report.text)
-
-
-if __name__ == "__main__":
-    unittest.main()

@@ -1,49 +1,28 @@
-# Case Specification
- - Each case specifies a list of species
- - Each case specifies a list of reactions
- - Optional domain overrides
- - Lower bound perturbation magnitude
- - State variables are molar concentration of specified components, temperature, pressure
+# Roadmap
 
-# Reaction Definition
- - Reaction implementation are on the user
- - Each packaged reaction family has a same-named module exposing a `REACTIONS` builder mapping
- - Family modules are discovered automatically into a unified builder registry
- - A case may select one implementation as `family.reaction` or every implementation as `family`
- - A `Reaction` documents its local name, family, rate expression, sided stoichiometry, and catalysts
- - Its qualified `family.name` id is derived rather than repeated in the definition
- - Expression is symbolic, constructed with SymPy
- - All symbols come from the case-owned state object; constants stay numeric in the module
+The implemented case, reaction, registry, and conservation-check foundations
+are documented in the README. Remaining work is grouped below.
 
-# Basic Checks
- - All requested species and reactions exist
- - All required reactants, products, catalysts present in species
- - Atom conservation
- - Mass conservation
+## Case configuration
 
-# Physical Checks
- - Rates are non-negative in physical domain
- - Rate is 0 when reactant/catalyst concentration is 0
- - Full network positivity
- - Locate equilibria and terminal faces
- - Report Jacobian eigenvalues within the stoichiometric subspace
- - Test recovery from nonphysical domain
- - Detect unbounded growth
- - Detect finite-time blow-up
- - Detect bound violations
- - Detect unintended stable equilibria
+- Optional physical-domain overrides
+- Lower-bound perturbation magnitude
 
-# Numeric and Solver Friendliness Checks
- - Detect improper forms (fractional powers, bad logarithms, divisions)
- - Check for NaNs, infs, exceptions in extended domain
- - Minimum denominator margin
- - Scaled rate and full-source Jacobians
- - Stiffness, eigenvalue spread
- - Finite difference Jacobian stability
- - Experssion graph metrics (op count, intermediate-value dynamic range, cancellation factors, graph perturbation amplification)
- - Time Jacobian Evaluation
- - Time rate evaluation
- - Rate mismatch
- - Jacobian mismatch
- - Equilibrium mismatch
- - Integration runtime ratio
+## Physical checks
+
+- Non-negative rates in the physical domain
+- Zero rates at missing reactant or catalyst boundaries
+- Network positivity, equilibria, and terminal faces
+- Jacobian eigenvalues within the stoichiometric subspace
+- Recovery from the nonphysical domain and bound violations
+- Unbounded growth, finite-time blow-up, and unintended stable equilibria
+
+## Numerical robustness
+
+- Unsafe fractional powers, logarithms, and divisions
+- NaNs, infinities, and exceptions in the extended domain
+- Denominator margins and scaled rate/source Jacobians
+- Stiffness, eigenvalue spread, and finite-difference Jacobian stability
+- Expression-graph size, dynamic range, cancellation, and perturbation metrics
+- Rate and Jacobian evaluation time
+- Rate, Jacobian, equilibrium, and integration-runtime comparisons

@@ -1,7 +1,5 @@
 """Atom conservation check."""
 
-from __future__ import annotations
-
 from collections.abc import Mapping
 from dataclasses import dataclass
 import math
@@ -32,9 +30,6 @@ class AtomConservationResult:
     reactant_totals: Mapping[str, float]
     product_totals: Mapping[str, float]
     imbalances: Mapping[str, float]
-
-    def __bool__(self) -> bool:
-        return self.passed
 
 
 def _validate_tolerances(rel_tol: float, abs_tol: float) -> None:
@@ -109,16 +104,11 @@ def run(case: Case, context: CheckContext) -> tuple[CheckOutcome, ...]:
         try:
             result = check_atom_conservation(reaction, context.property_registry)
         except (KeyError, ValueError) as error:
-            message = (
-                error.args[0]
-                if len(error.args) == 1 and isinstance(error.args[0], str)
-                else str(error)
-            )
             outcomes.append(
                 CheckOutcome(
                     status=CheckStatus.UNAVAILABLE,
                     subject=reaction.id,
-                    details=(message,),
+                    details=(str(error.args[0]),),
                 )
             )
             continue
@@ -145,12 +135,4 @@ CHECK = CheckDefinition(
     group="Basic checks",
     scope=CheckScope.REACTION,
     run=run,
-)
-
-
-__all__ = (
-    "AtomConservationResult",
-    "CHECK",
-    "check_atom_conservation",
-    "run",
 )

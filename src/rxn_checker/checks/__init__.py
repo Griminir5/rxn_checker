@@ -20,12 +20,11 @@ from .models import (
     CheckValue,
     aggregate_status,
 )
-from .registry import BASIC_CHECKS, CHECK_REGISTRY
+from .registry import CHECK_REGISTRY
 from .runner import run_checks
 
 __all__ = (
     "AtomConservationResult",
-    "BASIC_CHECKS",
     "CHECK_REGISTRY",
     "CheckContext",
     "CheckDefinition",

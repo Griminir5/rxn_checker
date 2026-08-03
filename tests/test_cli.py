@@ -1,10 +1,8 @@
-from __future__ import annotations
-
 from contextlib import redirect_stderr, redirect_stdout
 from io import StringIO
 from pathlib import Path
-from types import SimpleNamespace
 from tempfile import TemporaryDirectory
+from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 
@@ -15,7 +13,8 @@ class CliTests(unittest.TestCase):
     def _write_case(self, directory: Path, species: str = "Aye") -> Path:
         path = directory / "case.yaml"
         path.write_text(
-            f"species:\n  - {species}\n  - Bee\n" "reactions:\n  - aye_to_bee.simple\n",
+            f"species:\n  - {species}\n  - Bee\n"
+            "reactions:\n  - aye_to_bee.simple\n",
             encoding="utf-8",
         )
         return path
@@ -99,7 +98,3 @@ class CliTests(unittest.TestCase):
             self.assertIn("Case loading: ERROR", report_text)
             self.assertIn("Unknown case species: Missing", report_text)
             self.assertIn("Overall: ERROR", report_text)
-
-
-if __name__ == "__main__":
-    unittest.main()

@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from types import MappingProxyType
@@ -53,6 +51,3 @@ class StateVariables:
         return frozenset(
             (*self.concentrations.values(), self.temperature, self.pressure)
         )
-
-
-__all__ = ("StateVariables",)

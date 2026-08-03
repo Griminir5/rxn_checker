@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from pathlib import Path
 
 import yaml
@@ -71,8 +69,7 @@ def _build_reaction(
     family_id, reaction_name = reaction_id.split(".", 1)
     if reaction.name != reaction_name:
         raise ValueError(
-            f"Builder for '{reaction_id}' returned reaction name "
-            f"'{reaction.name}'."
+            f"Builder for '{reaction_id}' returned unexpected name '{reaction.name}'."
         )
 
     if reaction.family != family_id:
@@ -107,7 +104,7 @@ def load_case(
     missing_species = [
         species_id
         for species_id in species_ids
-        if not property_registry.has_species(species_id)
+        if species_id not in property_registry.records
     ]
     if missing_species:
         raise ValueError("Unknown case species: " + ", ".join(missing_species) + ".")
@@ -116,10 +113,6 @@ def load_case(
     reactions = _load_reactions(reaction_selectors, states)
     return Case(
         name=path.parent.name,
-        reaction_ids=tuple(reaction.id for reaction in reactions),
         states=states,
         reactions=reactions,
     )
-
-
-__all__ = ("load_case",)

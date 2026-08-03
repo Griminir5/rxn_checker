@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import unittest
 
 from rxn_checker import Case, Reaction, StateVariables
@@ -29,7 +27,6 @@ class CheckFrameworkTests(unittest.TestCase):
         )
         self.case = Case(
             name="example",
-            reaction_ids=(reaction.id,),
             states=states,
             reactions=(reaction,),
         )
@@ -141,7 +138,3 @@ class CheckFrameworkTests(unittest.TestCase):
         check = self.definition("duplicate", passing)
         with self.assertRaisesRegex(ValueError, "ids must be unique"):
             run_checks(self.case, (check, check))
-
-
-if __name__ == "__main__":
-    unittest.main()

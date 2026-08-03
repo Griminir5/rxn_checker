@@ -1,15 +1,7 @@
 """Implementations in the Aye-to-Bee reaction family."""
 
-from __future__ import annotations
-
-from types import MappingProxyType
-from typing import TYPE_CHECKING
-
 from ..reaction import Reaction
-
-if TYPE_CHECKING:
-    from ..state import StateVariables
-
+from ..state import StateVariables
 
 AUTOCATALYTIC_RATE_CONSTANT = 2.0
 SIMPLE_RATE_CONSTANT = 2.0
@@ -38,12 +30,7 @@ def build_simple(states: StateVariables) -> Reaction:
     )
 
 
-REACTIONS = MappingProxyType(
-    {
-        "autocatalytic": build_autocatalytic,
-        "simple": build_simple,
-    }
-)
-
-
-__all__ = ("REACTIONS", "build_autocatalytic", "build_simple")
+REACTIONS = {
+    "autocatalytic": build_autocatalytic,
+    "simple": build_simple,
+}

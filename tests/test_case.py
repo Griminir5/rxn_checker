@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
@@ -22,13 +20,10 @@ class CaseLoadingTests(unittest.TestCase):
         case = load_case(path)
 
         self.assertEqual(case.states.species_ids, ("Aye", "Bee"))
-        self.assertEqual(case.reaction_ids, ("aye_to_bee.simple",))
         self.assertEqual(
             tuple(reaction.id for reaction in case.reactions),
             ("aye_to_bee.simple",),
         )
-        for reaction in case.reactions:
-            self.assertLessEqual(reaction.rate.free_symbols, case.states.symbols)
 
     def load_selectors(self, selectors: tuple[str, ...]):
         with TemporaryDirectory() as directory:
@@ -43,7 +38,7 @@ class CaseLoadingTests(unittest.TestCase):
     def test_bare_family_selects_every_reaction_in_that_family(self) -> None:
         case = self.load_selectors(("aye_to_bee",))
         self.assertEqual(
-            case.reaction_ids,
+            tuple(reaction.id for reaction in case.reactions),
             ("aye_to_bee.autocatalytic", "aye_to_bee.simple"),
         )
 
@@ -54,7 +49,3 @@ class CaseLoadingTests(unittest.TestCase):
     def test_unknown_reaction_names_are_reported(self) -> None:
         with self.assertRaisesRegex(ValueError, "Unknown reaction"):
             self.load_selectors(("aye_to_bee.missing",))
-
-
-if __name__ == "__main__":
-    unittest.main()

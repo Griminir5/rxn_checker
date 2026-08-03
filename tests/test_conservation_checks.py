@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import unittest
 
 from rxn_checker import Reaction
@@ -23,7 +21,7 @@ class ConservationCheckTests(unittest.TestCase):
     def test_atom_conservation_reports_side_totals_and_imbalances(self) -> None:
         result = check_atom_conservation(self.combustion)
 
-        self.assertTrue(result)
+        self.assertTrue(result.passed)
         self.assertEqual(result.reactant_totals, {"C": 1, "H": 4, "O": 4})
         self.assertEqual(result.product_totals, {"C": 1, "O": 4, "H": 4})
         self.assertEqual(result.imbalances, {"C": 0, "H": 0, "O": 0})
@@ -39,7 +37,7 @@ class ConservationCheckTests(unittest.TestCase):
 
         result = check_atom_conservation(reaction)
 
-        self.assertFalse(result)
+        self.assertFalse(result.passed)
         self.assertEqual(result.imbalances, {"C": 0, "H": -2, "O": 1})
 
     def test_atom_check_ignores_non_consumed_catalysts(self) -> None:
@@ -54,14 +52,14 @@ class ConservationCheckTests(unittest.TestCase):
 
         result = check_atom_conservation(reaction)
 
-        self.assertTrue(result)
+        self.assertTrue(result.passed)
         self.assertNotIn("Ni", result.reactant_totals)
         self.assertNotIn("Ni", result.product_totals)
 
     def test_mass_conservation_allows_for_tabulated_weight_rounding(self) -> None:
         result = check_mass_conservation(self.combustion)
 
-        self.assertTrue(result)
+        self.assertTrue(result.passed)
         self.assertAlmostEqual(
             result.imbalance,
             result.product_mass - result.reactant_mass,
@@ -76,8 +74,8 @@ class ConservationCheckTests(unittest.TestCase):
             rate=1,
         )
 
-        self.assertTrue(check_atom_conservation(reaction))
-        self.assertTrue(check_mass_conservation(reaction))
+        self.assertTrue(check_atom_conservation(reaction).passed)
+        self.assertTrue(check_mass_conservation(reaction).passed)
 
     def test_mass_imbalance_is_reported_in_kg_per_mol(self) -> None:
         reaction = Reaction(
@@ -90,7 +88,7 @@ class ConservationCheckTests(unittest.TestCase):
 
         result = check_mass_conservation(reaction)
 
-        self.assertFalse(result)
+        self.assertFalse(result.passed)
         self.assertAlmostEqual(result.reactant_mass, 16.043e-3)
         self.assertAlmostEqual(result.product_mass, 44.0095e-3)
         self.assertAlmostEqual(result.imbalance, 27.9665e-3)
@@ -110,7 +108,7 @@ class ConservationCheckTests(unittest.TestCase):
             rate=1,
         )
 
-        self.assertTrue(check_atom_conservation(reaction, registry))
+        self.assertTrue(check_atom_conservation(reaction, registry).passed)
         with self.assertRaisesRegex(
             ValueError,
             "molecular weight is missing for species: A, B",
@@ -132,9 +130,9 @@ class ConservationCheckTests(unittest.TestCase):
             rate=1,
         )
 
-        self.assertTrue(check_mass_conservation(reaction, registry))
+        self.assertTrue(check_mass_conservation(reaction, registry).passed)
         self.assertFalse(
-            check_mass_conservation(reaction, registry, rel_tol=0, abs_tol=0)
+            check_mass_conservation(reaction, registry, rel_tol=0, abs_tol=0).passed
         )
 
     def test_tolerances_must_be_finite_and_non_negative(self) -> None:
@@ -142,7 +140,3 @@ class ConservationCheckTests(unittest.TestCase):
             check_atom_conservation(self.combustion, rel_tol=-1)
         with self.assertRaisesRegex(ValueError, "abs_tol"):
             check_mass_conservation(self.combustion, abs_tol=float("inf"))
-
-
-if __name__ == "__main__":
-    unittest.main()

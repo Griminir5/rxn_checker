@@ -5,9 +5,6 @@ description = "Symbolic foundations for checking reaction-network robustness"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-    "black>=26.5.1",
-    "numpy>=2.4.6",
-    "pydantic>=2.13.4",
     "pyyaml>=6.0.3",
     "sympy>=1.14.0",
 ]

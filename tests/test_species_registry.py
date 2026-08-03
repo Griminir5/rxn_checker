@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import unittest
 
 from rxn_checker.species import PROPERTY_REGISTRY, SpeciesProperties
@@ -20,7 +18,3 @@ class SpeciesRegistryTests(unittest.TestCase):
     def test_atom_counts_must_be_positive(self) -> None:
         with self.assertRaisesRegex(ValueError, "must be finite and positive"):
             SpeciesProperties("Bad", {"C": 0})
-
-
-if __name__ == "__main__":
-    unittest.main()

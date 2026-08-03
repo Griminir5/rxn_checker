@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from dataclasses import dataclass
 
 from .reaction import Reaction
@@ -11,15 +9,10 @@ class Case:
     """A validated set of states and selected reactions."""
 
     name: str
-    reaction_ids: tuple[str, ...]
     states: StateVariables
     reactions: tuple[Reaction, ...]
 
     def __post_init__(self) -> None:
-        reaction_ids = [reaction.id for reaction in self.reactions]
-        if len(reaction_ids) != len(set(reaction_ids)):
-            raise ValueError("Case reaction ids must be unique.")
-
         available_species = set(self.states.species_ids)
         for reaction in self.reactions:
             missing = set(reaction.species_ids) - available_species
@@ -36,6 +29,3 @@ class Case:
                     f"Reaction '{reaction.id}' uses symbols not owned by this case: "
                     f"{names}."
                 )
-
-
-__all__ = ("Case",)

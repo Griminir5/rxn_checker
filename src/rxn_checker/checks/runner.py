@@ -1,7 +1,5 @@
 """Generic execution and isolation for registered checks."""
 
-from __future__ import annotations
-
 from collections.abc import Iterable
 
 from ..case import Case
@@ -32,9 +30,7 @@ def _normalise_outcomes(returned: object) -> tuple[CheckOutcome, ...]:
 
 
 def _indeterminate(error: Exception) -> tuple[CheckOutcome, ...]:
-    message = str(error)
-    if len(error.args) == 1 and isinstance(error.args[0], str):
-        message = error.args[0]
+    message = str(error.args[0]) if len(error.args) == 1 else str(error)
     return (
         CheckOutcome(
             status=CheckStatus.INDETERMINATE,
@@ -56,8 +52,6 @@ def run_checks(
 
         checks = CHECK_REGISTRY
     definitions = tuple(checks)
-    if any(not isinstance(definition, CheckDefinition) for definition in definitions):
-        raise TypeError("Registered checks must be CheckDefinition instances.")
     check_ids = tuple(definition.id for definition in definitions)
     if len(check_ids) != len(set(check_ids)):
         raise ValueError("Registered check ids must be unique.")
@@ -71,6 +65,3 @@ def run_checks(
             outcomes = _indeterminate(error)
         executions.append(CheckExecution(definition, outcomes))
     return tuple(executions)
-
-
-__all__ = ("run_checks",)
