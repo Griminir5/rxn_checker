@@ -28,7 +28,9 @@ class CaseLoadingTests(unittest.TestCase):
     def load_selectors(self, selectors: tuple[str, ...]):
         with TemporaryDirectory() as directory:
             path = Path(directory) / "case.yaml"
-            reaction_lines = "\n".join(f"  - {selector}" for selector in selectors)
+            reaction_lines = (
+                "\n".join(f"  - {selector}" for selector in selectors) or "  []"
+            )
             path.write_text(
                 "species:\n  - Aye\n  - Bee\nreactions:\n" + reaction_lines + "\n",
                 encoding="utf-8",
@@ -49,3 +51,7 @@ class CaseLoadingTests(unittest.TestCase):
     def test_unknown_reaction_names_are_reported(self) -> None:
         with self.assertRaisesRegex(ValueError, "Unknown reaction"):
             self.load_selectors(("aye_to_bee.missing",))
+
+    def test_empty_reaction_lists_are_rejected(self) -> None:
+        with self.assertRaisesRegex(ValueError, "at least one reaction"):
+            self.load_selectors(())

@@ -50,11 +50,6 @@ class RateNonnegativityCheckTests(unittest.TestCase):
 
         self.assertIsNone(result.passed)
 
-    def test_case_without_reactions_is_unavailable(self) -> None:
-        case = Case("empty", self.states, ())
-
-        self.assertEqual(run(case, CheckContext())[0].status, CheckStatus.UNAVAILABLE)
-
 
 if __name__ == "__main__":
     unittest.main()

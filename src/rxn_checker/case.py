@@ -13,6 +13,9 @@ class Case:
     reactions: tuple[Reaction, ...]
 
     def __post_init__(self) -> None:
+        if not self.reactions:
+            raise ValueError("Case must contain at least one reaction.")
+
         available_species = set(self.states.species_ids)
         for reaction in self.reactions:
             missing = set(reaction.species_ids) - available_species

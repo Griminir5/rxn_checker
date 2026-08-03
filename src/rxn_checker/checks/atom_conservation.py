@@ -91,14 +91,6 @@ def check_atom_conservation(
 def run(case: Case, context: CheckContext) -> tuple[CheckOutcome, ...]:
     """Run atom conservation for every reaction in a case."""
 
-    if not case.reactions:
-        return (
-            CheckOutcome(
-                status=CheckStatus.UNAVAILABLE,
-                details=("Case has no reactions.",),
-            ),
-        )
-
     outcomes: list[CheckOutcome] = []
     for reaction in case.reactions:
         try:
