@@ -2,8 +2,8 @@
 
 `rxn-checker` validates symbolic reaction implementations. It currently checks
 that selected reactions exist, use case-owned state symbols, reference declared
-species, conserve atoms and mass, and have non-negative rates in the physical
-domain.
+species, conserve atoms and mass, have non-negative rates in the physical
+domain, and stop when a reactant or catalyst is depleted.
 
 ## Running a case
 
@@ -92,6 +92,11 @@ all of its state variables are non-negative. A symbolic proof is a `PASS`, and
 a rate proven negative in the positive interior is a `FAIL`. Other expressions
 remain `INDETERMINATE`; a later interval branch-and-bound check will use ranges
 specified by the case to resolve them.
+
+The zero-at-depletion check independently sets every reactant and catalyst
+concentration to zero and requires the resulting symbolic rate to be exactly
+zero. Product-only species are not depletion boundaries. A disproven identity
+is a `FAIL`, while an identity SymPy cannot decide is `INDETERMINATE`.
 
 Checks return `CheckOutcome` objects with an optional qualitative status,
 details, and numerical values. Supported statuses, from least to most

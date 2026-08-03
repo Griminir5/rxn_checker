@@ -1,5 +1,7 @@
 species:
   - Aye
   - Bee
+  - Cee
 reactions:
-  - aye_to_bee.simple
+  - aye_to_bee.autocatalytic
+  - aye_plus_bee_to_cee.half_order

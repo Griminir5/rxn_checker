@@ -56,6 +56,7 @@ PROPERTY_REGISTRY = PropertyRegistry(
     records={
         "Aye": SpeciesProperties("Aye", {"Ex": 1}, 10.0e-3),
         "Bee": SpeciesProperties("Bee", {"Ex": 1}, 10.0e-3),
+        "Cee": SpeciesProperties("Cee", {"Ex": 2}, 20.0e-3),
         "Ar": SpeciesProperties("Argon", {"Ar": 1}, 39.948e-3),
         "CH4": SpeciesProperties("Methane", {"C": 1, "H": 4}, 16.043e-3),
         "CO": SpeciesProperties("Carbon Monoxide", {"C": 1, "O": 1}, 28.010e-3),

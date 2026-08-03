@@ -11,7 +11,6 @@ are documented in the README. Remaining work is grouped below.
 ## Physical checks
 
 - Bounded rate non-negativity using interval branch-and-bound
-- Zero rates at missing reactant or catalyst boundaries
 - Network positivity, equilibria, and terminal faces
 - Jacobian eigenvalues within the stoichiometric subspace
 - Recovery from the nonphysical domain and bound violations

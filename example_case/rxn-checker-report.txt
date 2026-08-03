@@ -1,21 +1,30 @@
 rxn-checker report
 Case: example_case
 Source: /home/w96380vz/Repos/rxn_checker/example_case/case.yaml
-Reactions: 1
+Reactions: 2
 Case loading: PASS
 
 Basic checks
   Atom conservation [atom_conservation; reaction]
-    aye_to_bee.simple: PASS
+    aye_to_bee.autocatalytic: PASS
+    aye_plus_bee_to_cee.half_order: PASS
   Mass conservation [mass_conservation; reaction]
-    aye_to_bee.simple: PASS
+    aye_to_bee.autocatalytic: PASS
+    aye_plus_bee_to_cee.half_order: PASS
 
 Physical checks
   Rate non-negativity [rate_nonnegativity; reaction]
-    aye_to_bee.simple: PASS
+    aye_to_bee.autocatalytic: PASS
       Rate is symbolically non-negative for non-negative state variables.
+    aye_plus_bee_to_cee.half_order: PASS
+      Rate is symbolically non-negative for non-negative state variables.
+  Zero rate at depletion [zero_at_depletion; reaction]
+    aye_to_bee.autocatalytic: PASS
+      Rate is exactly zero at every reactant and catalyst depletion boundary.
+    aye_plus_bee_to_cee.half_order: PASS
+      Rate is exactly zero at every reactant and catalyst depletion boundary.
 
 Summary
   Overall: PASS
-  Statuses: PASS=3, SAMPLED_PASS=0, FAIL=0, INDETERMINATE=0, UNAVAILABLE=0
+  Statuses: PASS=8, SAMPLED_PASS=0, FAIL=0, INDETERMINATE=0, UNAVAILABLE=0
   Numerical values: 0
