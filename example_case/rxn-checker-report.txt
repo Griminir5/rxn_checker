@@ -27,7 +27,27 @@ Physical checks
     Case: PASS
       Every species source term is non-negative on its zero-concentration boundary.
 
+Network analysis
+  Conserved stoichiometric quantities [stoichiometric_conservation; case]
+    Case
+      Quantities are conserved by the selected reaction source terms; flows, dilution, and changing volume are not included.
+      Only expressions are shown because the case has no initial concentrations.
+      Component 1 (Aye, Bee, Cee):
+        Non-negative extreme rays:
+          Q1 = [Aye] + [Bee] + 2 [Cee]
+      Stoichiometric rank: 2
+      Conserved-quantity dimension: 1
+  Equilibria and terminal faces [equilibria_and_terminal_faces; case]
+    Case: PASS
+      Equilibrium 1: Aye=0; Bee free; Cee free (physical).
+      Equilibrium 2: Aye free; Bee=0; Cee free (physical).
+      Maximal terminal faces: Aye=0; Bee=0.
+      Maximal invariant faces: Aye=0; Bee=0.
+      Equilibrium families: 2
+      Terminal faces: 2
+      Invariant faces: 2
+
 Summary
   Overall: PASS
-  Statuses: PASS=9, SAMPLED_PASS=0, FAIL=0, INDETERMINATE=0, UNAVAILABLE=0
-  Numerical values: 0
+  Statuses: PASS=10, SAMPLED_PASS=0, FAIL=0, INDETERMINATE=0, UNAVAILABLE=0
+  Numerical values: 5

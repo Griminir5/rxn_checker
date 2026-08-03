@@ -11,7 +11,7 @@ are documented in the README. Remaining work is grouped below.
 ## Physical checks
 
 - Bounded rate non-negativity using interval branch-and-bound
-- Report equilibria and terminal faces
+- Report conserved quantities
 - Jacobian eigenvalues within the stoichiometric subspace
 - Recovery from the nonphysical domain and bound violations
 - Unbounded growth, finite-time blow-up, and unintended stable equilibria
@@ -19,6 +19,7 @@ are documented in the README. Remaining work is grouped below.
 ## Numerical robustness
 
 - Unsafe fractional powers, logarithms, and divisions
+- Lipschitz continuity within extended domain
 - NaNs, infinities, and exceptions in the extended domain
 - Denominator margins and scaled rate/source Jacobians
 - Stiffness, eigenvalue spread, and finite-difference Jacobian stability

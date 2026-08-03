@@ -4,7 +4,9 @@
 that selected reactions exist, use case-owned state symbols, reference declared
 species, conserve atoms and mass, have non-negative rates in the physical
 domain, stop when a reactant or catalyst is depleted, and form a positive
-reaction network.
+reaction network. It also reports the conserved stoichiometric quantities of
+the selected reaction network, symbolic equilibrium families, and terminal or
+invariant concentration faces.
 
 ## Running a case
 
@@ -125,6 +127,27 @@ prove `F_i >= 0` while all other concentrations are non-negative. This checks
 that the vector field cannot point out of the non-negative concentration
 orthant. Reaction contributions are summed before their signs are tested, so
 coupled reactions and exact cancellations are handled at the network level.
+
+The equilibrium and terminal-face check solves the same complete source vector
+`F = S r = 0` for concentration coordinates, leaving temperature, pressure,
+and unconstrained concentrations as symbolic parameters. Definitely
+out-of-bounds solutions are discarded; solutions whose bounds depend on free
+parameters are reported as conditional. It separately substitutes zero for
+sets of concentrations. A terminal face makes every component of `F` vanish,
+so the entire face consists of equilibria. An invariant face only makes the
+depleted species' components vanish, so motion may continue within the face.
+Only maximal faces are reported. Exact face enumeration is combinatorial and
+stops as `INDETERMINATE` after 4096 symbolic face tests.
+
+The conserved-quantity analysis builds the case stoichiometric matrix exactly
+and finds its left nullspace. It reports individually unchanged species,
+analyzes disconnected reaction-network components separately, and presents the
+non-negative extreme rays of each component's conservation cone. Signed basis
+relations are included when those rays do not span the complete nullspace.
+These expressions are conserved by the selected reaction source terms; external
+flows, dilution, and changing volume are outside the analysis. Cases do not yet
+define initial concentrations, so the report gives expressions rather than
+their constant numerical values.
 
 Checks return `CheckOutcome` objects with an optional qualitative status,
 details, and numerical values. Supported statuses, from least to most

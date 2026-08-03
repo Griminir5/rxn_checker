@@ -17,6 +17,11 @@ from .atom_conservation import (
     AtomConservationResult,
     check_atom_conservation,
 )
+from .equilibria_and_terminal_faces import (
+    EquilibriumFamily,
+    EquilibriaAndTerminalFacesResult,
+    check_equilibria_and_terminal_faces,
+)
 from .mass_conservation import (
     MassConservationResult,
     check_mass_conservation,
@@ -24,10 +29,17 @@ from .mass_conservation import (
 from .network_positivity import (
     NetworkPositivityResult,
     check_network_positivity,
+    network_source_terms,
 )
 from .nonnegative_rate import (
     RateNonnegativityResult,
     check_rate_nonnegativity,
+)
+from .stoichiometric_conservation import (
+    ConservationComponent,
+    ConservedQuantity,
+    StoichiometricConservationResult,
+    find_conserved_quantities,
 )
 from .zero_at_depletion import (
     ZeroAtDepletionResult,
@@ -46,15 +58,23 @@ __all__ = (
     "CheckScope",
     "CheckStatus",
     "CheckValue",
+    "ConservationComponent",
+    "ConservedQuantity",
+    "EquilibriumFamily",
+    "EquilibriaAndTerminalFacesResult",
     "MassConservationResult",
     "NetworkPositivityResult",
     "RateNonnegativityResult",
+    "StoichiometricConservationResult",
     "ZeroAtDepletionResult",
     "aggregate_status",
     "check_atom_conservation",
+    "check_equilibria_and_terminal_faces",
     "check_mass_conservation",
     "check_network_positivity",
     "check_rate_nonnegativity",
     "check_zero_at_depletion",
+    "find_conserved_quantities",
+    "network_source_terms",
     "run_checks",
 )

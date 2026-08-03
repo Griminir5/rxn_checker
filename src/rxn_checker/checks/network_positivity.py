@@ -26,21 +26,23 @@ class NetworkPositivityResult:
     conclusions: Mapping[str, bool | None]
 
 
-def _source_terms(case: Case) -> dict[str, sp.Expr]:
+def network_source_terms(case: Case) -> Mapping[str, sp.Expr]:
     """Construct F = S r in the ordering of the case species."""
 
-    return {
-        species_id: sp.simplify(
-            sp.Add(
-                *(
-                    sp.sympify(reaction.net_stoichiometry.get(species_id, 0))
-                    * reaction.rate
-                    for reaction in case.reactions
+    return MappingProxyType(
+        {
+            species_id: sp.simplify(
+                sp.Add(
+                    *(
+                        sp.sympify(reaction.net_stoichiometry.get(species_id, 0))
+                        * reaction.rate
+                        for reaction in case.reactions
+                    )
                 )
             )
-        )
-        for species_id in case.states.species_ids
-    }
+            for species_id in case.states.species_ids
+        }
+    )
 
 
 def _with_sign_assumptions(
@@ -105,7 +107,7 @@ def check_network_positivity(case: Case) -> NetworkPositivityResult:
     and pressure use the signs implied by their physical lower bounds.
     """
 
-    source_terms = _source_terms(case)
+    source_terms = network_source_terms(case)
     boundary_sources = {
         species_id: sp.simplify(
             source_terms[species_id].subs(
@@ -129,7 +131,7 @@ def check_network_positivity(case: Case) -> NetworkPositivityResult:
 
     return NetworkPositivityResult(
         passed=passed,
-        source_terms=MappingProxyType(source_terms),
+        source_terms=source_terms,
         boundary_sources=MappingProxyType(boundary_sources),
         conclusions=MappingProxyType(conclusions),
     )
