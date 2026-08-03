@@ -4,6 +4,7 @@ from rxn_checker import Case, Reaction, StateVariables
 from rxn_checker.checks import CheckContext, CheckStatus
 from rxn_checker.reporting import build_check_report
 from rxn_checker.species import PropertyRegistry, SpeciesProperties
+from tests import make_state_bounds
 
 
 class CheckReportTests(unittest.TestCase):
@@ -20,6 +21,7 @@ class CheckReportTests(unittest.TestCase):
             name="bad-case",
             states=states,
             reactions=(reaction,),
+            state_bounds=make_state_bounds(states),
         )
 
         report = build_check_report(case, source="bad-case/case.yaml")
@@ -53,6 +55,7 @@ class CheckReportTests(unittest.TestCase):
             name="missing-data",
             states=states,
             reactions=(reaction,),
+            state_bounds=make_state_bounds(states),
         )
 
         report = build_check_report(

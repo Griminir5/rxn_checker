@@ -1,8 +1,39 @@
 from collections.abc import Mapping
 from dataclasses import dataclass, field
+import math
 from types import MappingProxyType
 
 from sympy import Symbol
+
+
+@dataclass(frozen=True)
+class VariableBounds:
+    """Physical bounds and an optional lower excursion limit for one state."""
+
+    physical_lower: float
+    physical_upper: float
+    excursion_lower: float | None = None
+
+    def __post_init__(self) -> None:
+        if not math.isfinite(self.physical_lower) or not math.isfinite(
+            self.physical_upper
+        ):
+            raise ValueError("Physical bounds must be finite.")
+        if self.physical_lower >= self.physical_upper:
+            raise ValueError("Physical lower bound must be below the upper bound.")
+        if self.excursion_lower is not None:
+            if not math.isfinite(self.excursion_lower):
+                raise ValueError("Excursion lower bound must be finite.")
+            if self.excursion_lower > self.physical_lower:
+                raise ValueError(
+                    "Excursion lower bound must not exceed the physical lower bound."
+                )
+
+    def interval(self, *, include_excursion: bool = False) -> tuple[float, float]:
+        lower = self.physical_lower
+        if include_excursion and self.excursion_lower is not None:
+            lower = self.excursion_lower
+        return lower, self.physical_upper
 
 
 @dataclass(frozen=True)

@@ -4,6 +4,7 @@ from rxn_checker import Case, Reaction, StateVariables
 from rxn_checker.checks import CheckStatus, check_rate_nonnegativity
 from rxn_checker.checks.nonnegative_rate import run
 from rxn_checker.checks.models import CheckContext
+from tests import make_state_bounds
 
 
 class RateNonnegativityCheckTests(unittest.TestCase):
@@ -32,7 +33,12 @@ class RateNonnegativityCheckTests(unittest.TestCase):
 
         self.assertFalse(result.passed)
 
-        case = Case("negative", self.states, (reaction,))
+        case = Case(
+            "negative",
+            self.states,
+            (reaction,),
+            make_state_bounds(self.states),
+        )
         outcome = run(case, CheckContext())[0]
         self.assertEqual(outcome.status, CheckStatus.FAIL)
 
@@ -42,7 +48,12 @@ class RateNonnegativityCheckTests(unittest.TestCase):
 
         self.assertIsNone(result.passed)
 
-        case = Case("sampled", self.states, (self.reaction(rate),))
+        case = Case(
+            "sampled",
+            self.states,
+            (self.reaction(rate),),
+            make_state_bounds(self.states),
+        )
         self.assertEqual(run(case, CheckContext())[0].status, CheckStatus.INDETERMINATE)
 
     def test_sign_changing_rate_is_indeterminate_without_bounds(self) -> None:

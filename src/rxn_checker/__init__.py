@@ -18,7 +18,7 @@ from .checks import (
 from .loading import load_case
 from .reaction import Reaction
 from .reporting import CheckReport, build_check_report
-from .state import StateVariables
+from .state import StateVariables, VariableBounds
 
 __all__ = (
     "CHECK_REGISTRY",
@@ -34,6 +34,7 @@ __all__ = (
     "MassConservationResult",
     "Reaction",
     "StateVariables",
+    "VariableBounds",
     "build_check_report",
     "check_atom_conservation",
     "check_mass_conservation",

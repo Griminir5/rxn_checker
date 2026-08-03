@@ -6,6 +6,7 @@ from rxn_checker import Case, Reaction, StateVariables
 from rxn_checker.checks import CheckStatus, check_zero_at_depletion
 from rxn_checker.checks.models import CheckContext
 from rxn_checker.checks.zero_at_depletion import run
+from tests import make_state_bounds
 
 
 class ZeroAtDepletionCheckTests(unittest.TestCase):
@@ -50,7 +51,12 @@ class ZeroAtDepletionCheckTests(unittest.TestCase):
 
         self.assertFalse(result.passed)
         self.assertEqual(result.rates_at_depletion["Bee"], self.aye)
-        case = Case("missing-factor", self.states, (reaction,))
+        case = Case(
+            "missing-factor",
+            self.states,
+            (reaction,),
+            make_state_bounds(self.states),
+        )
         outcome = run(case, CheckContext())[0]
         self.assertEqual(outcome.status, CheckStatus.FAIL)
         self.assertIn("Bee=0", outcome.details[0])

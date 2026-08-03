@@ -7,7 +7,7 @@ domain, and stop when a reactant or catalyst is depleted.
 
 ## Running a case
 
-A case lists species and reaction selectors:
+A case lists species, reaction selectors, and state bounds:
 
 ```yaml
 species:
@@ -15,6 +15,16 @@ species:
   - Bee
 reactions:
   - aye_to_bee.simple
+bounds:
+  temperature: [200.0, 1500.0]
+  pressure: [10000.0, 10000000.0]
+  concentrations:
+    default:
+      upper: 1000.0
+      excursion_lower: -0.1
+    overrides:
+      Aye:
+        upper: 100.0
 ```
 
 A selector is either `family.reaction` for one implementation or `family` for
@@ -44,12 +54,21 @@ case = load_case("example_case/case.yaml")
 aye = case.states.concentration("Aye")
 temperature = case.states.temperature
 pressure = case.states.pressure
+
+temperature_bounds = case.state_bounds[temperature]
+aye_bounds = case.state_bounds[aye]
+assert temperature_bounds.interval() == (200.0, 1500.0)
+assert aye_bounds.interval() == (0.0, 100.0)
+assert aye_bounds.interval(include_excursion=True) == (-0.1, 100.0)
 ```
 
 Concentrations are real but not assumed non-negative, allowing later checks to
-inspect expressions just outside the physical domain. Loading rejects unknown
-species or reactions, duplicate selections, missing reaction species, and rate
-symbols not owned by the case.
+inspect expressions just outside the physical domain. Their physical lower
+bound is always zero; `excursion_lower` separately defines how far a later
+recovery check may inspect the unphysical region. Concentration defaults apply
+to every species and entries under `overrides` replace either value for one
+species. Loading rejects invalid bounds, unknown species or reactions, duplicate
+selections, missing reaction species, and rate symbols not owned by the case.
 
 Each module in `rxn_checker.reactions` is an automatically discovered reaction
 family. It exposes a `REACTIONS` mapping from local names to builder functions:

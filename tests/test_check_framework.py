@@ -13,6 +13,7 @@ from rxn_checker.checks import (
     run_checks,
 )
 from rxn_checker.reporting import build_check_report
+from tests import make_state_bounds
 
 
 class CheckFrameworkTests(unittest.TestCase):
@@ -29,6 +30,7 @@ class CheckFrameworkTests(unittest.TestCase):
             name="example",
             states=states,
             reactions=(reaction,),
+            state_bounds=make_state_bounds(states),
         )
 
     def definition(self, check_id, run, scope=CheckScope.CASE):

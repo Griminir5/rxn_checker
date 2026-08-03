@@ -1,13 +1,21 @@
 import unittest
 
-from sympy import Symbol
+from sympy import Symbol, exp
 
 from rxn_checker import Case, Reaction, StateVariables
 from rxn_checker.reactions import FAMILY_REGISTRY, REACTION_REGISTRY
-from rxn_checker.reactions.aye_to_bee import (
-    build_autocatalytic as build_autocatalytic_reaction,
+from rxn_checker.reactions.aye_plus_bee_to_cee import (
+    ACTIVATION_ENERGY as HALF_ORDER_ACTIVATION_ENERGY,
+    GAS_CONSTANT as HALF_ORDER_GAS_CONSTANT,
+    build_simple as build_half_order_reaction,
 )
-from rxn_checker.reactions.aye_to_bee import build_simple as build_simple_reaction
+from rxn_checker.reactions.aye_to_bee import (
+    ACTIVATION_ENERGY,
+    GAS_CONSTANT,
+    build_autocatalytic as build_autocatalytic_reaction,
+    build_simple as build_simple_reaction,
+)
+from tests import make_state_bounds
 
 
 class ReactionTests(unittest.TestCase):
@@ -39,14 +47,31 @@ class ReactionTests(unittest.TestCase):
             dict(simple.net_stoichiometry),
         )
 
-    def test_rates_contain_only_state_symbols_and_numeric_constants(self) -> None:
+    def test_rates_include_case_owned_temperature_dependence(self) -> None:
         aye = self.states.concentration("Aye")
         bee = self.states.concentration("Bee")
+        temperature = self.states.temperature
         autocatalytic = build_autocatalytic_reaction(self.states)
         simple = build_simple_reaction(self.states)
+        half_order = build_half_order_reaction(self.states)
 
-        self.assertEqual(autocatalytic.rate, 2.0 * aye * bee)
-        self.assertEqual(simple.rate, 2.0 * aye)
+        activation_factor = exp(
+            -ACTIVATION_ENERGY / (GAS_CONSTANT * temperature)
+        )
+        half_order_activation_factor = exp(
+            -HALF_ORDER_ACTIVATION_ENERGY
+            / (HALF_ORDER_GAS_CONSTANT * temperature)
+        )
+
+        self.assertEqual(autocatalytic.rate, 2.0 * activation_factor * aye * bee)
+        self.assertEqual(simple.rate, 2.0 * activation_factor * aye)
+        self.assertEqual(
+            half_order.rate,
+            2.0 * half_order_activation_factor * aye * bee**0.5,
+        )
+        for reaction in (autocatalytic, simple, half_order):
+            self.assertIn(temperature, reaction.rate.free_symbols)
+            self.assertLessEqual(reaction.rate.free_symbols, self.states.symbols)
 
     def test_catalysts_are_species_but_have_no_net_coefficient(self) -> None:
         states = StateVariables(("Aye", "Bee", "catalyst"))
@@ -76,7 +101,12 @@ class ReactionTests(unittest.TestCase):
             ValueError,
             "uses symbols not owned by this case",
         ):
-            Case("bad", self.states, (reaction,))
+            Case(
+                "bad",
+                self.states,
+                (reaction,),
+                make_state_bounds(self.states),
+            )
 
     def test_each_reaction_is_one_way(self) -> None:
         aye = self.states.concentration("Aye")

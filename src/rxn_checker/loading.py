@@ -1,12 +1,13 @@
 from pathlib import Path
 
 import yaml
+from sympy import Symbol
 
 from .case import Case
 from .reaction import Reaction
 from .reactions import FAMILY_REGISTRY, REACTION_REGISTRY, ReactionBuilder
 from .species import PROPERTY_REGISTRY, PropertyRegistry
-from .state import StateVariables
+from .state import StateVariables, VariableBounds
 
 
 def _string_list(config: object, key: str) -> tuple[str, ...]:
@@ -88,6 +89,81 @@ def _load_reactions(
     )
 
 
+def _number(config: dict, key: str) -> float:
+    value = config.get(key)
+    if not isinstance(value, (int, float)) or isinstance(value, bool):
+        raise ValueError(f"Case bound '{key}' must be numeric.")
+    return float(value)
+
+
+def _bounds_pair(config: dict, key: str) -> tuple[float, float]:
+    values = config.get(key)
+    if not isinstance(values, list) or len(values) != 2:
+        raise ValueError(f"Case bound '{key}' must contain [lower, upper].")
+    if any(
+        not isinstance(value, (int, float)) or isinstance(value, bool)
+        for value in values
+    ):
+        raise ValueError(f"Case bound '{key}' must contain numeric values.")
+    return float(values[0]), float(values[1])
+
+
+def _load_state_bounds(
+    config: object,
+    states: StateVariables,
+) -> dict[Symbol, VariableBounds]:
+    if not isinstance(config, dict):
+        raise ValueError("Case 'bounds' must be a YAML mapping.")
+
+    temperature = VariableBounds(*_bounds_pair(config, "temperature"))
+    pressure = VariableBounds(*_bounds_pair(config, "pressure"))
+    if temperature.physical_lower <= 0:
+        raise ValueError("Temperature lower bound must be positive.")
+    if pressure.physical_lower < 0:
+        raise ValueError("Pressure lower bound must be non-negative.")
+
+    concentrations = config.get("concentrations")
+    if not isinstance(concentrations, dict):
+        raise ValueError("Case concentration bounds must be a YAML mapping.")
+    defaults = concentrations.get("default")
+    if not isinstance(defaults, dict):
+        raise ValueError("Case concentration bounds require a 'default' mapping.")
+    default_upper = _number(defaults, "upper")
+    default_excursion = _number(defaults, "excursion_lower")
+
+    overrides = concentrations.get("overrides", {})
+    if not isinstance(overrides, dict):
+        raise ValueError("Case concentration 'overrides' must be a YAML mapping.")
+    unknown_species = set(overrides) - set(states.species_ids)
+    if unknown_species:
+        raise ValueError(
+            "Concentration bounds reference unknown species: "
+            + ", ".join(sorted(unknown_species))
+            + "."
+        )
+
+    state_bounds = {
+        states.temperature: temperature,
+        states.pressure: pressure,
+    }
+    for species_id in states.species_ids:
+        override = overrides.get(species_id, {})
+        if not isinstance(override, dict):
+            raise ValueError(
+                f"Concentration bounds for '{species_id}' must be a YAML mapping."
+            )
+        upper = float(override.get("upper", default_upper))
+        excursion_lower = float(
+            override.get("excursion_lower", default_excursion)
+        )
+        state_bounds[states.concentration(species_id)] = VariableBounds(
+            physical_lower=0.0,
+            physical_upper=upper,
+            excursion_lower=excursion_lower,
+        )
+    return state_bounds
+
+
 def load_case(
     path: str | Path,
     *,
@@ -111,8 +187,10 @@ def load_case(
 
     states = StateVariables(species_ids)
     reactions = _load_reactions(reaction_selectors, states)
+    state_bounds = _load_state_bounds(config.get("bounds"), states)
     return Case(
         name=path.parent.name,
         states=states,
         reactions=reactions,
+        state_bounds=state_bounds,
     )

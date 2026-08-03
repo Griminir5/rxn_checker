@@ -5,6 +5,17 @@ import unittest
 from rxn_checker import StateVariables, load_case
 
 
+BOUNDS_YAML = """\
+bounds:
+  temperature: [200.0, 1500.0]
+  pressure: [10000.0, 10000000.0]
+  concentrations:
+    default:
+      upper: 1000.0
+      excursion_lower: -0.1
+"""
+
+
 class StateVariablesTests(unittest.TestCase):
     def test_concentrations_temperature_and_pressure_are_case_owned(self) -> None:
         states = StateVariables(("Aye", "Bee"))
@@ -15,14 +26,79 @@ class StateVariablesTests(unittest.TestCase):
 
 
 class CaseLoadingTests(unittest.TestCase):
-    def test_case_yaml_selects_one_reaction_from_a_family(self) -> None:
+    def test_case_yaml_loads_reactions_and_state_bounds(self) -> None:
         path = Path(__file__).parents[1] / "example_case" / "case.yaml"
         case = load_case(path)
 
-        self.assertEqual(case.states.species_ids, ("Aye", "Bee"))
+        self.assertEqual(case.states.species_ids, ("Aye", "Bee", "Cee"))
         self.assertEqual(
             tuple(reaction.id for reaction in case.reactions),
-            ("aye_to_bee.simple",),
+            (
+                "aye_to_bee.autocatalytic",
+                "aye_plus_bee_to_cee.half_order",
+            ),
+        )
+        self.assertEqual(
+            case.state_bounds[case.states.temperature].interval(),
+            (200.0, 1500.0),
+        )
+        self.assertEqual(
+            case.state_bounds[case.states.pressure].interval(),
+            (10_000.0, 10_000_000.0),
+        )
+        aye_bounds = case.state_bounds[case.states.concentration("Aye")]
+        bee_bounds = case.state_bounds[case.states.concentration("Bee")]
+        self.assertEqual(aye_bounds.interval(), (0.0, 100.0))
+        self.assertEqual(aye_bounds.interval(include_excursion=True), (-0.1, 100.0))
+        self.assertEqual(bee_bounds.interval(), (0.0, 1000.0))
+
+    def test_temperature_must_have_a_positive_lower_bound(self) -> None:
+        with TemporaryDirectory() as directory:
+            path = Path(directory) / "case.yaml"
+            path.write_text(
+                "species:\n  - Aye\n  - Bee\n"
+                "reactions:\n  - aye_to_bee.simple\n"
+                + BOUNDS_YAML.replace(
+                    "temperature: [200.0, 1500.0]",
+                    "temperature: [0.0, 1500.0]",
+                ),
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(ValueError, "must be positive"):
+                load_case(path)
+
+    def test_bounds_are_required(self) -> None:
+        with TemporaryDirectory() as directory:
+            path = Path(directory) / "case.yaml"
+            path.write_text(
+                "species:\n  - Aye\n  - Bee\n"
+                "reactions:\n  - aye_to_bee.simple\n",
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(ValueError, "'bounds' must be"):
+                load_case(path)
+
+    def test_concentration_override_must_name_a_case_species(self) -> None:
+        with TemporaryDirectory() as directory:
+            path = Path(directory) / "case.yaml"
+            path.write_text(
+                "species:\n  - Aye\n  - Bee\n"
+                "reactions:\n  - aye_to_bee.simple\n"
+                + BOUNDS_YAML
+                + "    overrides:\n      Missing:\n        upper: 10.0\n",
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(ValueError, "unknown species: Missing"):
+                load_case(path)
+
+    def test_negative_excursion_does_not_change_physical_lower_bound(self) -> None:
+        case = self.load_selectors(("aye_to_bee.simple",))
+        aye_bounds = case.state_bounds[case.states.concentration("Aye")]
+
+        self.assertEqual(aye_bounds.interval(), (0.0, 1000.0))
+        self.assertEqual(
+            aye_bounds.interval(include_excursion=True),
+            (-0.1, 1000.0),
         )
 
     def load_selectors(self, selectors: tuple[str, ...]):
@@ -32,7 +108,10 @@ class CaseLoadingTests(unittest.TestCase):
                 "\n".join(f"  - {selector}" for selector in selectors) or "  []"
             )
             path.write_text(
-                "species:\n  - Aye\n  - Bee\nreactions:\n" + reaction_lines + "\n",
+                "species:\n  - Aye\n  - Bee\nreactions:\n"
+                + reaction_lines
+                + "\n"
+                + BOUNDS_YAML,
                 encoding="utf-8",
             )
             return load_case(path)
