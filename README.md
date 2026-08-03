@@ -2,7 +2,8 @@
 
 `rxn-checker` validates symbolic reaction implementations. It currently checks
 that selected reactions exist, use case-owned state symbols, reference declared
-species, and conserve atoms and mass.
+species, conserve atoms and mass, and have non-negative rates in the physical
+domain.
 
 ## Running a case
 
@@ -85,6 +86,12 @@ imbalances. Mass conservation reports reactant mass, product mass, and their
 signed difference in kg/mol. Both checks accept `rel_tol` and `abs_tol`
 overrides. Missing molecular weights make the registered mass check
 `UNAVAILABLE` rather than failed.
+
+Rate non-negativity asks SymPy to prove that an expression is non-negative when
+all of its state variables are non-negative. A symbolic proof is a `PASS`, and
+a rate proven negative in the positive interior is a `FAIL`. Other expressions
+remain `INDETERMINATE`; a later interval branch-and-bound check will use ranges
+specified by the case to resolve them.
 
 Checks return `CheckOutcome` objects with an optional qualitative status,
 details, and numerical values. Supported statuses, from least to most

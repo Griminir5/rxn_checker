@@ -43,11 +43,11 @@ class CheckFrameworkTests(unittest.TestCase):
     def test_registered_checks_are_explicit_and_ordered(self) -> None:
         self.assertEqual(
             tuple(check.id for check in CHECK_REGISTRY),
-            ("atom_conservation", "mass_conservation"),
+            ("atom_conservation", "mass_conservation", "rate_nonnegativity"),
         )
         self.assertEqual(
             tuple(execution.definition.id for execution in run_checks(self.case)),
-            ("atom_conservation", "mass_conservation"),
+            ("atom_conservation", "mass_conservation", "rate_nonnegativity"),
         )
 
     def test_case_check_can_return_sampled_status_and_numerical_values(self) -> None:

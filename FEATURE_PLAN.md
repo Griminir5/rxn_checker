@@ -10,7 +10,7 @@ are documented in the README. Remaining work is grouped below.
 
 ## Physical checks
 
-- Non-negative rates in the physical domain
+- Bounded rate non-negativity using interval branch-and-bound
 - Zero rates at missing reactant or catalyst boundaries
 - Network positivity, equilibria, and terminal faces
 - Jacobian eigenvalues within the stoichiometric subspace

@@ -45,7 +45,10 @@ class CliTests(unittest.TestCase):
             self.assertIn(
                 "Mass conservation [mass_conservation; reaction]", report_text
             )
-            self.assertEqual(report_text.count("aye_to_bee.simple: PASS"), 2)
+            self.assertIn(
+                "Rate non-negativity [rate_nonnegativity; reaction]", report_text
+            )
+            self.assertEqual(report_text.count("aye_to_bee.simple: PASS"), 3)
             self.assertIn("Case loading: PASS", report_text)
             self.assertIn("Overall: PASS", report_text)
             self.assertIn(f"Report written to {report_path}", stdout)

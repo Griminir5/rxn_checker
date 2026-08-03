@@ -1,0 +1,21 @@
+rxn-checker report
+Case: example_case
+Source: /home/w96380vz/Repos/rxn_checker/example_case/case.yaml
+Reactions: 1
+Case loading: PASS
+
+Basic checks
+  Atom conservation [atom_conservation; reaction]
+    aye_to_bee.simple: PASS
+  Mass conservation [mass_conservation; reaction]
+    aye_to_bee.simple: PASS
+
+Physical checks
+  Rate non-negativity [rate_nonnegativity; reaction]
+    aye_to_bee.simple: PASS
+      Rate is symbolically non-negative for non-negative state variables.
+
+Summary
+  Overall: PASS
+  Statuses: PASS=3, SAMPLED_PASS=0, FAIL=0, INDETERMINATE=0, UNAVAILABLE=0
+  Numerical values: 0

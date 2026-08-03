@@ -20,6 +20,10 @@ from .models import (
     CheckValue,
     aggregate_status,
 )
+from .nonnegative_rate import (
+    RateNonnegativityResult,
+    check_rate_nonnegativity,
+)
 from .registry import CHECK_REGISTRY
 from .runner import run_checks
 
@@ -36,8 +40,10 @@ __all__ = (
     "CheckStatus",
     "CheckValue",
     "MassConservationResult",
+    "RateNonnegativityResult",
     "aggregate_status",
     "check_atom_conservation",
     "check_mass_conservation",
+    "check_rate_nonnegativity",
     "run_checks",
 )

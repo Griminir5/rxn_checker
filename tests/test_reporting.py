@@ -62,7 +62,7 @@ class CheckReportTests(unittest.TestCase):
 
         self.assertFalse(report.passed)
         self.assertEqual(report.overall_status, CheckStatus.UNAVAILABLE)
-        self.assertEqual(report.status_counts[CheckStatus.PASS], 1)
+        self.assertEqual(report.status_counts[CheckStatus.PASS], 2)
         self.assertEqual(report.status_counts[CheckStatus.UNAVAILABLE], 1)
         self.assertIn("example.conversion: PASS", report.text)
         self.assertIn("example.conversion: UNAVAILABLE", report.text)

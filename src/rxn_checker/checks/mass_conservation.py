@@ -16,8 +16,8 @@ from .models import (
     CheckValue,
 )
 
-MASS_RELATIVE_TOLERANCE = 1.0e-4
-MASS_ABSOLUTE_TOLERANCE = 1.0e-9
+MASS_RELATIVE_TOLERANCE = 1.0e-9
+MASS_ABSOLUTE_TOLERANCE = 1.0e-12
 
 
 @dataclass(frozen=True)
