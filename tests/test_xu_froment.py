@@ -4,6 +4,7 @@ from pathlib import Path
 from sympy import Expr, Pow, Rational, sqrt
 
 from rxn_checker import StateVariables, load_case
+from rxn_checker.checks import check_mass_conservation
 from rxn_checker.checks.zero_at_depletion import check_zero_at_depletion
 from rxn_checker.reactions.xu_froment import (
     H2_MOLE_FRACTION_SMOOTH_EPS_SQUARED,
@@ -98,6 +99,12 @@ class XuFromentTests(unittest.TestCase):
                 self.assertEqual(backward.products, forward.reactants)
                 self.assertEqual(forward.catalysts, ("Ni",))
                 self.assertEqual(backward.catalysts, ("Ni",))
+
+    def test_split_reactions_conserve_mass(self) -> None:
+        for builder in REACTIONS.values():
+            reaction = builder(self.states)
+            with self.subTest(reaction=reaction.id):
+                self.assertTrue(check_mass_conservation(reaction).passed)
 
     def test_split_rates_match_the_reference_driving_force_terms(self) -> None:
         terms = xu_froment_terms(self.states)

@@ -56,7 +56,7 @@ class ConservationCheckTests(unittest.TestCase):
         self.assertNotIn("Ni", result.reactant_totals)
         self.assertNotIn("Ni", result.product_totals)
 
-    def test_mass_conservation_allows_for_tabulated_weight_rounding(self) -> None:
+    def test_mass_conservation_uses_consistent_molecular_weights(self) -> None:
         result = check_mass_conservation(self.combustion)
 
         self.assertTrue(result.passed)
@@ -65,7 +65,7 @@ class ConservationCheckTests(unittest.TestCase):
             result.product_mass - result.reactant_mass,
         )
 
-    def test_mass_tolerance_handles_lower_precision_registry_entries(self) -> None:
+    def test_copper_oxidation_uses_consistent_molecular_weights(self) -> None:
         reaction = Reaction(
             name="oxidation",
             family="copper",
@@ -89,9 +89,9 @@ class ConservationCheckTests(unittest.TestCase):
         result = check_mass_conservation(reaction)
 
         self.assertFalse(result.passed)
-        self.assertAlmostEqual(result.reactant_mass, 16.043e-3)
+        self.assertAlmostEqual(result.reactant_mass, 16.04246e-3)
         self.assertAlmostEqual(result.product_mass, 44.0095e-3)
-        self.assertAlmostEqual(result.imbalance, 27.9665e-3)
+        self.assertAlmostEqual(result.imbalance, 27.96704e-3)
 
     def test_mass_check_requires_every_consumed_species_weight(self) -> None:
         registry = PropertyRegistry(
@@ -119,7 +119,7 @@ class ConservationCheckTests(unittest.TestCase):
         registry = PropertyRegistry(
             {
                 "A": SpeciesProperties("A", "gas", {"X": 1}, 1.0),
-                "B": SpeciesProperties("B", "gas", {"X": 1}, 1.000005),
+                "B": SpeciesProperties("B", "gas", {"X": 1}, 1.0000000005),
             }
         )
         reaction = Reaction(

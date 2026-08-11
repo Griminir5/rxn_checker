@@ -55,52 +55,64 @@ class PropertyRegistry:
             ) from exc
 
 
+# Real-species molar masses use one atomic-weight basis throughout: H=1.00794,
+# C=12.0107, N=14.0067, O=15.9994, Al=26.9815386, Ca=40.078,
+# Fe=55.845, Ni=58.6934, and Cu=63.546 g/mol.
 PROPERTY_REGISTRY = PropertyRegistry(
     records={
         "Aye": SpeciesProperties("Aye", "gas", {"Ex": 1}, 10.0e-3),
         "Bee": SpeciesProperties("Bee", "gas", {"Ex": 1}, 10.0e-3),
         "Cee": SpeciesProperties("Cee", "gas", {"Ex": 2}, 20.0e-3),
         "Ar": SpeciesProperties("Argon", "gas", {"Ar": 1}, 39.948e-3),
-        "CH4": SpeciesProperties("Methane", "gas", {"C": 1, "H": 4}, 16.043e-3),
-        "CO": SpeciesProperties("Carbon Monoxide", "gas", {"C": 1, "O": 1}, 28.010e-3),
+        "CH4": SpeciesProperties("Methane", "gas", {"C": 1, "H": 4}, 16.04246e-3),
+        "CO": SpeciesProperties("Carbon Monoxide", "gas", {"C": 1, "O": 1}, 28.0101e-3),
         "CO2": SpeciesProperties("Carbon Dioxide", "gas", {"C": 1, "O": 2}, 44.0095e-3),
         "H2": SpeciesProperties("Hydrogen", "gas", {"H": 2}, 2.01588e-3),
         "H2O": SpeciesProperties("Water", "gas", {"H": 2, "O": 1}, 18.01528e-3),
         "He": SpeciesProperties("Helium", "gas", {"He": 1}, 4.002602e-3),
         "N2": SpeciesProperties("Nitrogen", "gas", {"N": 2}, 28.0134e-3),
         "O2": SpeciesProperties("Oxygen", "gas", {"O": 2}, 31.9988e-3),
-        "Ni": SpeciesProperties("Nickel", "solid", {"Ni": 1}, 58.693e-3),
+        "Ni": SpeciesProperties("Nickel", "solid", {"Ni": 1}, 58.6934e-3),
         "NiO": SpeciesProperties(
             "Nickel Oxide", "solid", {"Ni": 1, "O": 1}, 74.6928e-3
         ),
         "CaAl2O4": SpeciesProperties(
-            "Calcium Aluminate", "solid", {"Ca": 1, "Al": 2, "O": 4}, 158.039e-3
+            "Calcium Aluminate",
+            "solid",
+            {"Ca": 1, "Al": 2, "O": 4},
+            158.0386772e-3,
         ),
-        "Cu": SpeciesProperties("Copper", "solid", {"Cu": 1}, 63.55e-3),
+        "Cu": SpeciesProperties("Copper", "solid", {"Cu": 1}, 63.546e-3),
         "Cu2O": SpeciesProperties(
-            "Copper(I) Oxide", "solid", {"Cu": 2, "O": 1}, 143.091e-3
+            "Copper(I) Oxide", "solid", {"Cu": 2, "O": 1}, 143.0914e-3
         ),
         "CuO": SpeciesProperties(
-            "Copper(II) Oxide", "solid", {"Cu": 1, "O": 1}, 79.545e-3
+            "Copper(II) Oxide", "solid", {"Cu": 1, "O": 1}, 79.5454e-3
         ),
         "Al2O3": SpeciesProperties(
-            "Aluminium Oxide", "solid", {"Al": 2, "O": 3}, 101.961e-3
+            "Aluminium Oxide", "solid", {"Al": 2, "O": 3}, 101.9612772e-3
         ),
         "CuAlO2": SpeciesProperties(
-            "Copper(I) Aluminate", "solid", {"Cu": 1, "Al": 1, "O": 2}, 122.526e-3
+            "Copper(I) Aluminate",
+            "solid",
+            {"Cu": 1, "Al": 1, "O": 2},
+            122.5263386e-3,
         ),
         "CuAl2O4": SpeciesProperties(
-            "Copper(II) Aluminate", "solid", {"Cu": 1, "Al": 2, "O": 4}, 181.508e-3
+            "Copper(II) Aluminate",
+            "solid",
+            {"Cu": 1, "Al": 2, "O": 4},
+            181.5066772e-3,
         ),
         "Fe": SpeciesProperties("Iron", "solid", {"Fe": 1}, 55.845e-3),
         "FeO": SpeciesProperties(
-            "Iron(II) Oxide", "solid", {"Fe": 1, "O": 1}, 71.844e-3
+            "Iron(II) Oxide", "solid", {"Fe": 1, "O": 1}, 71.8444e-3
         ),
         "Fe3O4": SpeciesProperties(
-            "Iron(II,III) Oxide", "solid", {"Fe": 3, "O": 4}, 231.533e-3
+            "Iron(II,III) Oxide", "solid", {"Fe": 3, "O": 4}, 231.5326e-3
         ),
         "Fe2O3": SpeciesProperties(
-            "Iron(III) Oxide", "solid", {"Fe": 2, "O": 3}, 159.687e-3
+            "Iron(III) Oxide", "solid", {"Fe": 2, "O": 3}, 159.6882e-3
         ),
     }
 )
