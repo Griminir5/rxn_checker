@@ -15,6 +15,8 @@ class SpeciesProperties:
     def __post_init__(self) -> None:
         if not self.name or self.name != self.name.strip():
             raise ValueError("Species name must not be blank or padded.")
+        if self.phase not in {"gas", "solid"}:
+            raise ValueError("Species phase must be either 'gas' or 'solid'.")
         if not self.atoms:
             raise ValueError(f"Species '{self.name}' must define its atoms.")
         if self.mw is not None and (not math.isfinite(self.mw) or self.mw <= 0):

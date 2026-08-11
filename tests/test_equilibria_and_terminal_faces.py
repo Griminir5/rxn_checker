@@ -1,4 +1,8 @@
+import time
 import unittest
+from unittest.mock import patch
+
+import sympy as sp
 
 from rxn_checker import Case, Reaction, StateVariables
 from rxn_checker.checks import (
@@ -6,9 +10,15 @@ from rxn_checker.checks import (
     CheckStatus,
     check_equilibria_and_terminal_faces,
 )
-from rxn_checker.checks.equilibria_and_terminal_faces import CHECK, run
+from rxn_checker.checks.equilibria import solve_with_timeout
+from rxn_checker.checks.equilibria_and_terminal_faces import CHECK, _source_terms, run
 from rxn_checker.checks.models import CheckContext
+from rxn_checker.checks.terminal_faces import find_terminal_faces
 from tests import make_state_bounds
+
+
+def _slow_solver_worker(connection, equations, symbols):
+    time.sleep(60)
 
 
 class EquilibriaAndTerminalFacesTests(unittest.TestCase):
@@ -38,6 +48,32 @@ class EquilibriaAndTerminalFacesTests(unittest.TestCase):
         self.assertTrue(result.equilibria[0].physical)
         self.assertEqual(result.terminal_faces, (("A",),))
         self.assertEqual(result.invariant_faces, (("A",),))
+
+    def test_structural_single_reaction_solution_skips_nonlinear_solver(self) -> None:
+        states = StateVariables(("A", "B", "C"))
+        aye = states.concentration("A")
+        bee = states.concentration("B")
+        cee = states.concentration("C")
+        reaction = self.reaction(
+            "forward",
+            {"A": 1, "B": 1},
+            {"C": 1},
+            aye * bee * sp.exp(-1 / states.temperature) / (1 + cee) ** 2,
+        )
+        case = Case("network", states, (reaction,), make_state_bounds(states))
+
+        with patch(
+            "rxn_checker.checks.equilibria.solve_with_timeout",
+            side_effect=AssertionError("generic solver called"),
+        ):
+            result = check_equilibria_and_terminal_faces(case)
+
+        self.assertTrue(result.equilibrium_search_complete)
+        self.assertEqual(result.terminal_faces, (("A",), ("B",)))
+        self.assertEqual(
+            {tuple(family.coordinates.values()) for family in result.equilibria},
+            {(0, bee, cee), (aye, 0, cee)},
+        )
 
     def test_reversible_conversion_has_an_interior_family_and_origin_face(
         self,
@@ -151,6 +187,40 @@ class EquilibriaAndTerminalFacesTests(unittest.TestCase):
         self.assertEqual(outcome.status, CheckStatus.PASS)
         self.assertIn("Maximal terminal faces: A=0.", outcome.details)
         self.assertEqual(tuple(value.value for value in outcome.values), (1, 1, 1))
+
+    def test_face_search_does_not_simplify_or_call_equals(self) -> None:
+        states = StateVariables(("A", "B"))
+        aye = states.concentration("A")
+        reaction = self.reaction("forward", {"A": 1}, {"B": 1}, 2 * aye)
+        case = Case("network", states, (reaction,), make_state_bounds(states))
+
+        with (
+            patch("sympy.simplify", side_effect=AssertionError("simplify called")),
+            patch.object(
+                sp.Expr,
+                "equals",
+                side_effect=AssertionError("equals called"),
+            ),
+        ):
+            result = find_terminal_faces(case, _source_terms(case))
+
+        self.assertEqual(result.terminal_faces, (("A",),))
+        self.assertEqual(result.invariant_faces, (("A",),))
+
+    def test_nonlinear_solver_is_terminated_at_timeout(self) -> None:
+        symbol = sp.Symbol("A", real=True)
+        started = time.perf_counter()
+
+        solution, diagnostic = solve_with_timeout(
+            (symbol,),
+            (symbol,),
+            0.05,
+            _worker=_slow_solver_worker,
+        )
+
+        self.assertIsNone(solution)
+        self.assertEqual(diagnostic, "Solver timed out after 0.05 seconds")
+        self.assertLess(time.perf_counter() - started, 2.0)
 
 
 if __name__ == "__main__":

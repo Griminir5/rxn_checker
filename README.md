@@ -121,23 +121,23 @@ concentration to zero and requires the resulting symbolic rate to be exactly
 zero. Product-only species are not depletion boundaries. A disproven identity
 is a `FAIL`, while an identity SymPy cannot decide is `INDETERMINATE`.
 
-The case-level network positivity check first assembles the complete source
-vector `F = S r`. For each species `i`, it sets `c_i = 0` and asks SymPy to
-prove `F_i >= 0` while all other concentrations are non-negative. This checks
-that the vector field cannot point out of the non-negative concentration
-orthant. Reaction contributions are summed before their signs are tested, so
-coupled reactions and exact cancellations are handled at the network level.
+The equilibrium and terminal-face check asks a generic symbolic solver to solve
+the complete source vector `F = S r = 0` for concentration coordinates,
+leaving temperature, pressure, and unconstrained concentrations as symbolic
+parameters. The solver runs in a separate process and is terminated after ten
+seconds; a timeout is reported as `INDETERMINATE` while any independently
+certified terminal-face equilibria are retained. Definitely out-of-bounds
+solutions are discarded; solutions whose bounds depend on free parameters are
+reported as conditional. Before starting the general solver, simple
+single-reaction product rates are solved directly from their symbolic factor
+tree.
 
-The equilibrium and terminal-face check solves the same complete source vector
-`F = S r = 0` for concentration coordinates, leaving temperature, pressure,
-and unconstrained concentrations as symbolic parameters. Definitely
-out-of-bounds solutions are discarded; solutions whose bounds depend on free
-parameters are reported as conditional. It separately substitutes zero for
-sets of concentrations. A terminal face makes every component of `F` vanish,
-so the entire face consists of equilibria. An invariant face only makes the
-depleted species' components vanish, so motion may continue within the face.
-Only maximal faces are reported. Exact face enumeration is combinatorial and
-stops as `INDETERMINATE` after 4096 symbolic face tests.
+Face discovery does not globally simplify expressions. It uses simultaneous
+zero substitution, existing symbolic sign facts, and exact interior witness
+points to prove or disprove zero identities. A terminal face makes every
+component of `F` vanish, while an invariant face only makes the depleted
+species' components vanish. Only maximal faces are reported. Enumeration is
+combinatorial and stops as `INDETERMINATE` after 4096 face tests.
 
 The conserved-quantity analysis builds the case stoichiometric matrix exactly
 and finds its left nullspace. It reports individually unchanged species,

@@ -96,8 +96,8 @@ class ConservationCheckTests(unittest.TestCase):
     def test_mass_check_requires_every_consumed_species_weight(self) -> None:
         registry = PropertyRegistry(
             {
-                "A": SpeciesProperties("A", {"X": 1}),
-                "B": SpeciesProperties("B", {"X": 1}),
+                "A": SpeciesProperties("A", "gas", {"X": 1}),
+                "B": SpeciesProperties("B", "gas", {"X": 1}),
             }
         )
         reaction = Reaction(
@@ -118,8 +118,8 @@ class ConservationCheckTests(unittest.TestCase):
     def test_callers_can_tighten_mass_tolerance(self) -> None:
         registry = PropertyRegistry(
             {
-                "A": SpeciesProperties("A", {"X": 1}, 1.0),
-                "B": SpeciesProperties("B", {"X": 1}, 1.000005),
+                "A": SpeciesProperties("A", "gas", {"X": 1}, 1.0),
+                "B": SpeciesProperties("B", "gas", {"X": 1}, 1.000005),
             }
         )
         reaction = Reaction(

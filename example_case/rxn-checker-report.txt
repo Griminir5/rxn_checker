@@ -23,10 +23,6 @@ Physical checks
       Rate is exactly zero at every reactant and catalyst depletion boundary.
     aye_plus_bee_to_cee.half_order: PASS
       Rate is exactly zero at every reactant and catalyst depletion boundary.
-  Network positivity [network_positivity; case]
-    Case: PASS
-      Every species source term is non-negative on its zero-concentration boundary.
-
 Network analysis
   Conserved stoichiometric quantities [stoichiometric_conservation; case]
     Case
@@ -49,5 +45,5 @@ Network analysis
 
 Summary
   Overall: PASS
-  Statuses: PASS=10, SAMPLED_PASS=0, FAIL=0, INDETERMINATE=0, UNAVAILABLE=0
+  Statuses: PASS=9, SAMPLED_PASS=0, FAIL=0, INDETERMINATE=0, UNAVAILABLE=0
   Numerical values: 5
