@@ -34,9 +34,7 @@ def _rate_at_depletion(rate: sp.Expr, species_id: str) -> sp.Expr:
     """Substitute zero for concentration symbols belonging to one species."""
 
     replacements = {
-        symbol: sp.S.Zero
-        for symbol in rate.free_symbols
-        if symbol.name == species_id
+        symbol: sp.S.Zero for symbol in rate.free_symbols if symbol.name == species_id
     }
     return sp.simplify(rate.xreplace(replacements))
 
@@ -59,9 +57,7 @@ def check_zero_at_depletion(reaction: Reaction) -> ZeroAtDepletionResult:
         species_id: _rate_at_depletion(reaction.rate, species_id)
         for species_id in _required_species(reaction)
     }
-    conclusions = tuple(
-        _is_exactly_zero(rate) for rate in rates_at_depletion.values()
-    )
+    conclusions = tuple(_is_exactly_zero(rate) for rate in rates_at_depletion.values())
     if any(conclusion is False for conclusion in conclusions):
         passed: bool | None = False
     elif any(conclusion is None for conclusion in conclusions):

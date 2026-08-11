@@ -13,9 +13,7 @@ RATE_CONSTANT = 2.0
 def build_simple(states: StateVariables) -> Reaction:
     aye = states.concentration("Aye")
     bee = states.concentration("Bee")
-    activation_factor = exp(
-        -ACTIVATION_ENERGY / (GAS_CONSTANT * states.temperature)
-    )
+    activation_factor = exp(-ACTIVATION_ENERGY / (GAS_CONSTANT * states.temperature))
     return Reaction(
         name="half_order",
         family="aye_plus_bee_to_cee",

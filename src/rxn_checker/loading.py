@@ -153,9 +153,7 @@ def _load_state_bounds(
                 f"Concentration bounds for '{species_id}' must be a YAML mapping."
             )
         upper = float(override.get("upper", default_upper))
-        excursion_lower = float(
-            override.get("excursion_lower", default_excursion)
-        )
+        excursion_lower = float(override.get("excursion_lower", default_excursion))
         state_bounds[states.concentration(species_id)] = VariableBounds(
             physical_lower=0.0,
             physical_upper=upper,

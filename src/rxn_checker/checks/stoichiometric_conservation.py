@@ -285,9 +285,7 @@ def _details(result: StoichiometricConservationResult) -> tuple[str, ...]:
         if component.extreme_rays:
             details.append("  Non-negative extreme rays:")
             for quantity in component.extreme_rays:
-                details.append(
-                    f"    Q{quantity_number} = {_format_quantity(quantity)}"
-                )
+                details.append(f"    Q{quantity_number} = {_format_quantity(quantity)}")
                 quantity_number += 1
         if component.signed_basis:
             label = (
@@ -297,9 +295,7 @@ def _details(result: StoichiometricConservationResult) -> tuple[str, ...]:
             )
             details.append(label)
             for quantity in component.signed_basis:
-                details.append(
-                    f"    Q{quantity_number} = {_format_quantity(quantity)}"
-                )
+                details.append(f"    Q{quantity_number} = {_format_quantity(quantity)}")
                 quantity_number += 1
     return tuple(details)
 

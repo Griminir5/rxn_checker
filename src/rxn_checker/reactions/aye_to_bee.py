@@ -24,9 +24,7 @@ def build_autocatalytic(states: StateVariables) -> Reaction:
         family="aye_to_bee",
         reactants={"Aye": 1, "Bee": 1},
         products={"Bee": 2},
-        rate=(
-            AUTOCATALYTIC_RATE_CONSTANT * _activation_factor(states) * aye * bee
-        ),
+        rate=(AUTOCATALYTIC_RATE_CONSTANT * _activation_factor(states) * aye * bee),
     )
 
 

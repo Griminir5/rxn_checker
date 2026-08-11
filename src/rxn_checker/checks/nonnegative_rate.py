@@ -79,8 +79,7 @@ def check_rate_nonnegativity(
         interior=True,
     )
     if any(
-        candidate.is_negative is True
-        for candidate in _sign_candidates(interior_rate)
+        candidate.is_negative is True for candidate in _sign_candidates(interior_rate)
     ):
         return RateNonnegativityResult(
             reaction_id=reaction.id,
@@ -100,9 +99,7 @@ def _outcome(result: RateNonnegativityResult) -> CheckOutcome:
         return CheckOutcome(
             status=CheckStatus.FAIL,
             subject=result.reaction_id,
-            details=(
-                "Rate is symbolically negative in the physical interior.",
-            ),
+            details=("Rate is symbolically negative in the physical interior.",),
         )
     if result.passed:
         return CheckOutcome(

@@ -19,7 +19,6 @@ from .models import (
 )
 from .network_positivity import network_source_terms
 
-
 MAX_FACE_TESTS = 4096
 
 
@@ -311,8 +310,7 @@ def check_equilibria_and_terminal_faces(
     equilibria = list(equilibria)
     for face in terminal_faces:
         substitutions = {
-            case.states.concentration(species_id): sp.S.Zero
-            for species_id in face
+            case.states.concentration(species_id): sp.S.Zero for species_id in face
         }
         point = tuple(
             sp.S.Zero if species_id in face else case.states.concentration(species_id)
