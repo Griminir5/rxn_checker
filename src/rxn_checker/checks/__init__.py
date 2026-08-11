@@ -17,10 +17,11 @@ from .atom_conservation import (
     AtomConservationResult,
     check_atom_conservation,
 )
-from .equilibria import EquilibriumFamily
-from .equilibria_and_terminal_faces import (
-    EquilibriaAndTerminalFacesResult,
-    check_equilibria_and_terminal_faces,
+from .equilibria import (
+    EquilibriumBranch,
+    EquilibriumHelper,
+    EquilibriumRelation,
+    check_equilibria,
 )
 from .mass_conservation import (
     MassConservationResult,
@@ -35,6 +36,10 @@ from .stoichiometric_conservation import (
     ConservedQuantity,
     StoichiometricConservationResult,
     find_conserved_quantities,
+)
+from .terminal_faces import (
+    TerminalFaceSearchResult,
+    check_terminal_faces,
 )
 from .zero_at_depletion import (
     ZeroAtDepletionResult,
@@ -55,17 +60,20 @@ __all__ = (
     "CheckValue",
     "ConservationComponent",
     "ConservedQuantity",
-    "EquilibriumFamily",
-    "EquilibriaAndTerminalFacesResult",
+    "EquilibriumBranch",
+    "EquilibriumHelper",
+    "EquilibriumRelation",
     "MassConservationResult",
     "RateNonnegativityResult",
     "StoichiometricConservationResult",
+    "TerminalFaceSearchResult",
     "ZeroAtDepletionResult",
     "aggregate_status",
     "check_atom_conservation",
-    "check_equilibria_and_terminal_faces",
+    "check_equilibria",
     "check_mass_conservation",
     "check_rate_nonnegativity",
+    "check_terminal_faces",
     "check_zero_at_depletion",
     "find_conserved_quantities",
     "run_checks",

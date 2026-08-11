@@ -3,10 +3,19 @@
 from collections.abc import Mapping
 from dataclasses import dataclass
 from itertools import combinations
+from types import MappingProxyType
 
 import sympy as sp
 
 from ..case import Case
+from .models import (
+    CheckContext,
+    CheckDefinition,
+    CheckOutcome,
+    CheckScope,
+    CheckStatus,
+    CheckValue,
+)
 
 MAX_FACE_TESTS = 4096
 _WITNESS_FRACTIONS = (
@@ -26,6 +35,23 @@ class TerminalFaceSearchResult:
     unresolved_invariant_faces: tuple[tuple[str, ...], ...]
     complete: bool
     tests: int
+
+
+def _source_terms(case: Case) -> Mapping[str, sp.Expr]:
+    """Construct ``F = S r`` in the ordering of the case species."""
+
+    return MappingProxyType(
+        {
+            species_id: sp.Add(
+                *(
+                    sp.sympify(reaction.net_stoichiometry.get(species_id, 0))
+                    * reaction.rate
+                    for reaction in case.reactions
+                )
+            )
+            for species_id in case.states.species_ids
+        }
+    )
 
 
 def zero_status(expression: sp.Expr) -> bool | None:
@@ -192,3 +218,81 @@ def find_terminal_faces(
         complete=True,
         tests=face_tests,
     )
+
+
+def check_terminal_faces(case: Case) -> TerminalFaceSearchResult:
+    """Locate maximal terminal and invariant concentration faces."""
+
+    return find_terminal_faces(case, _source_terms(case))
+
+
+def _format_face(face: tuple[str, ...], all_species: tuple[str, ...]) -> str:
+    if not face:
+        return "entire concentration domain"
+    equations = ", ".join(f"{species_id}=0" for species_id in face)
+    if len(face) == len(all_species):
+        return f"origin ({equations})"
+    return equations
+
+
+def _outcome(
+    result: TerminalFaceSearchResult,
+    species_ids: tuple[str, ...],
+) -> CheckOutcome:
+    details: list[str] = []
+    if result.terminal_faces:
+        rendered = "; ".join(
+            _format_face(face, species_ids) for face in result.terminal_faces
+        )
+        details.append(f"Maximal terminal faces: {rendered}.")
+    else:
+        details.append("No terminal concentration faces were found.")
+
+    if result.invariant_faces:
+        rendered = "; ".join(
+            _format_face(face, species_ids) for face in result.invariant_faces
+        )
+        details.append(f"Maximal invariant faces: {rendered}.")
+    else:
+        details.append("No proper invariant concentration faces were found.")
+
+    unresolved = len(result.unresolved_terminal_faces) + len(
+        result.unresolved_invariant_faces
+    )
+    if unresolved:
+        details.append(
+            "Symbolic zero testing was inconclusive for "
+            f"{len(result.unresolved_terminal_faces)} terminal and "
+            f"{len(result.unresolved_invariant_faces)} invariant face candidates."
+        )
+    if not result.complete:
+        details.append(
+            f"Face search stopped after {result.tests} symbolic tests "
+            f"(limit {MAX_FACE_TESTS})."
+        )
+
+    complete = result.complete and not unresolved
+    status = CheckStatus.PASS if complete else CheckStatus.INDETERMINATE
+    return CheckOutcome(
+        status=status,
+        details=tuple(details),
+        values=(
+            CheckValue("Terminal faces", len(result.terminal_faces)),
+            CheckValue("Invariant faces", len(result.invariant_faces)),
+        ),
+    )
+
+
+def run(case: Case, context: CheckContext) -> CheckOutcome:
+    """Run face discovery once for the complete case."""
+
+    return _outcome(check_terminal_faces(case), case.states.species_ids)
+
+
+CHECK = CheckDefinition(
+    id="terminal_faces",
+    name="Terminal faces",
+    group="Network analysis",
+    scope=CheckScope.CASE,
+    run=run,
+)

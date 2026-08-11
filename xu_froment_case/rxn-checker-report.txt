@@ -1,6 +1,6 @@
 rxn-checker report
 Case: xu_froment_case
-Source: /home/w96380vz/Repos/rxn_checker/xu_froment_case/case.yaml
+Source: C:\MyRepos\rxn_checker\xu_froment_case\case.yaml
 Reactions: 6
 Case loading: PASS
 
@@ -63,21 +63,74 @@ Network analysis
           Q5 = 3 [H2O] + 2 [CO2] + [H2]
       Stoichiometric rank: 2
       Conserved-quantity dimension: 5
-  Equilibria and terminal faces [equilibria_and_terminal_faces; case]
-    Case: INDETERMINATE
-      Equilibrium 1: CH4 free; H2O free; CO free; CO2 free; H2 free; N2 free; Ni=0 (physical).
-      Equilibrium 2: CH4 free; H2O=0; CO free; CO2 free; H2=0; N2 free; Ni free (physical).
-      Equilibrium 3: CH4=0; H2O free; CO=0; CO2=0; H2 free; N2 free; Ni free (physical).
-      Equilibrium 4: CH4=0; H2O free; CO=0; CO2 free; H2=0; N2 free; Ni free (physical).
-      Equilibrium 5: CH4 free; H2O=0; CO=0; CO2=0; H2 free; N2 free; Ni free (physical).
-      Equilibrium search incomplete: Solver timed out after 10 seconds.
+  Equilibrium relationships [equilibria; case]
+    Case: PASS
+      The complete physical steady-state relationship has 2 branches.
+      Branch 1: Ni = 0.
+      Branch 2: Ni > 0.
+        Definitions:
+          s1 = CH4 + CO + CO2 + H2 + H2O + N2 + 0.01
+          u = sqrt(H2^2/s1^2 + 0.0001)
+          s2 = 0.002*CH4 + 0.002*CO + 0.002*CO2 + 1.002*H2 + 0.002*H2O + 0.002*N2 + s1*u + 2.0e-5
+          v = sqrt(1/(p*(H2/(2*s1) + u/2 + 0.001)))
+          k1 = exp(-28877.3924457585/T)
+          k2 = exp(-8073.8831940182/T)
+          k3 = exp(
+            2.32844426047115e-13*T^4
+            + 4.24085991611101e-9*T^3
+            - 1.99430757658190e-5*T^2
+            + 0.0304525115685455*T
+          )
+          k4 = exp(
+            2.61188462628166e-11*T^4
+            - 1.36639283940245e-7*T^3
+            + 0.000280329186487247*T^2
+            - 0.282095558262226*T
+          )
+          k5 = exp(-29334.4273949209/T)
+          k6 = exp(
+            2.09330826181798e-11*T^4
+            - 1.09686395839527e-7*T^3
+            + 0.000225776305234964*T^2
+            - 0.229002065362964*T
+          )
+        Polynomial root constraints:
+          (R1) 0 =
+            - H2^2
+            + s1^2*u^2
+            - 0.000100000000000000*s1^2
+          (R2) 0 =
+            - 2*CH4
+            - 2*CO
+            - 2*CO2
+            - 2*H2
+            - 2*H2O
+            - 2*N2
+            + p*s2*v^2
+            - 0.0200000000000000
+        Balance equations:
+          (1) 0 =
+            2.17157648314612e+16*k1*p*s2*CH4*H2O*s1^2*v^5
+            - 4.77482391289570e+53*k1*k4*s2*CO*p^3*v^5*H2^3
+            - 0.637410324000000*k2*CO*H2O*s1^3
+            + 1.40223703449081e-7*k2*k3*CO2*H2*s1^3
+          (2) 0 =
+            5.21549565610308e+15*k5*s2*CH4*p^2*s1^2*v^7*H2O^2
+            + 0.637410324000000*k2*CO*H2O*s1^4
+            - 1.20190287416062e+44*k5*k6*s2*CO2*p^4*v^7*H2^4
+            - 1.40223703449081e-7*k2*k3*CO2*H2*s1^4
+        Conditions:
+          u > 0
+          v > 0
+      All branches are restricted to the configured physical bounds.
+  Terminal faces [terminal_faces; case]
+    Case: PASS
       Maximal terminal faces: Ni=0; H2O=0, H2=0; CH4=0, CO=0, CO2=0; CH4=0, CO=0, H2=0; H2O=0, CO=0, CO2=0.
       Maximal invariant faces: N2=0; Ni=0; H2O=0, H2=0; CH4=0, CO=0, CO2=0; CH4=0, CO=0, H2=0; H2O=0, CO=0, CO2=0.
-      Equilibrium families: 5
       Terminal faces: 5
       Invariant faces: 6
 
 Summary
-  Overall: INDETERMINATE
-  Statuses: PASS=24, SAMPLED_PASS=0, FAIL=0, INDETERMINATE=1, UNAVAILABLE=0
-  Numerical values: 5
+  Overall: PASS
+  Statuses: PASS=26, SAMPLED_PASS=0, FAIL=0, INDETERMINATE=0, UNAVAILABLE=0
+  Numerical values: 4

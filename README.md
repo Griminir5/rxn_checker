@@ -121,18 +121,54 @@ concentration to zero and requires the resulting symbolic rate to be exactly
 zero. Product-only species are not depletion boundaries. A disproven identity
 is a `FAIL`, while an identity SymPy cannot decide is `INDETERMINATE`.
 
-The equilibrium and terminal-face check asks a generic symbolic solver to solve
-the complete source vector `F = S r = 0` for concentration coordinates,
-leaving temperature, pressure, and unconstrained concentrations as symbolic
-parameters. The solver runs in a separate process and is terminated after ten
-seconds; a timeout is reported as `INDETERMINATE` while any independently
-certified terminal-face equilibria are retained. Definitely out-of-bounds
-solutions are discarded; solutions whose bounds depend on free parameters are
-reported as conditional. Before starting the general solver, simple
-single-reaction product rates are solved directly from their symbolic factor
-tree.
+The equilibrium check constructs the complete physical steady-state
+relationship instead of asking a general solver for explicit roots. It selects
+a low-complexity basis of the stoichiometric source rows, applies identities
+proved by the configured physical bounds, retains denominator conditions,
+names repeated algebraic values such as roots, and splits shared zero factors
+into exact alternatives. The result is read branch by branch: helper
+definitions first, balance equations second, then nonzero and sign conditions.
 
-Face discovery does not globally simplify expressions. It uses simultaneous
+The check is part of the default report. Its structured result is also
+available directly. The text report prints the complete branch equations in a
+width-limited form: repeated expressions receive short names, long sums place
+one term on each line, and helper definitions appear before the balances that
+use them.
+
+```python
+from rxn_checker import check_equilibria, load_case
+
+
+case = load_case("xu_froment_case/case.yaml")
+relation = check_equilibria(case)
+
+for branch in relation.branches:
+    print(branch.label)
+    for helper in branch.helpers:
+        print(f"  define {helper.symbol}: 0 = {helper.equation}")
+    for balance in branch.balances:
+        print(f"  0 = {balance}")
+    for expression in branch.nonzero:
+        print(f"  require {expression} != 0")
+    for condition in branch.conditions:
+        print(f"  require {condition}")
+```
+
+For algebraic rate laws, every branch is an exact constrained polynomial
+system. Concentration-dependent transcendental functions are retained as exact
+helper definitions and the result is marked mixed rather than pretending that
+polynomial elimination applies. “Equilibrium” here means a kinetic steady
+state, `S r = 0`; it does not require every reversible pair to be individually
+balanced.
+
+The repository also includes a standalone Xu–Froment equilibrium-surface toy
+at `plots/xu_froment_equilibrium.html`. It fixes a stoichiometric
+compatibility class from an editable reference mixture, numerically continues
+the Ni-positive steady state over a temperature/pressure grid, and renders six
+linked, dependency-free wireframe plots. Open the file directly in a browser;
+no local server or JavaScript packages are required.
+
+The terminal-face check does not globally simplify expressions. It uses simultaneous
 zero substitution, existing symbolic sign facts, and exact interior witness
 points to prove or disprove zero identities. A terminal face makes every
 component of `F` vanish, while an invariant face only makes the depleted

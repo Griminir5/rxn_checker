@@ -1,6 +1,6 @@
 rxn-checker report
 Case: example_case
-Source: /home/w96380vz/Repos/rxn_checker/example_case/case.yaml
+Source: C:\MyRepos\rxn_checker\example_case\case.yaml
 Reactions: 2
 Case loading: PASS
 
@@ -23,6 +23,7 @@ Physical checks
       Rate is exactly zero at every reactant and catalyst depletion boundary.
     aye_plus_bee_to_cee.half_order: PASS
       Rate is exactly zero at every reactant and catalyst depletion boundary.
+
 Network analysis
   Conserved stoichiometric quantities [stoichiometric_conservation; case]
     Case
@@ -33,17 +34,34 @@ Network analysis
           Q1 = [Aye] + [Bee] + 2 [Cee]
       Stoichiometric rank: 2
       Conserved-quantity dimension: 1
-  Equilibria and terminal faces [equilibria_and_terminal_faces; case]
+  Equilibrium relationships [equilibria; case]
     Case: PASS
-      Equilibrium 1: Aye=0; Bee free; Cee free (physical).
-      Equilibrium 2: Aye free; Bee=0; Cee free (physical).
+      The complete physical steady-state relationship has 2 branches.
+      Branch 1: Aye = 0.
+      Branch 2: Aye > 0.
+        Definitions:
+          u = sqrt(Bee)
+        Polynomial root constraints:
+          (R1) 0 =
+            - Bee
+            + u^2
+        Balance equations:
+          (1) 0 =
+            u
+          (2) 0 =
+            Bee
+            - u
+        Conditions:
+          u >= 0
+      All branches are restricted to the configured physical bounds.
+  Terminal faces [terminal_faces; case]
+    Case: PASS
       Maximal terminal faces: Aye=0; Bee=0.
       Maximal invariant faces: Aye=0; Bee=0.
-      Equilibrium families: 2
       Terminal faces: 2
       Invariant faces: 2
 
 Summary
   Overall: PASS
-  Statuses: PASS=9, SAMPLED_PASS=0, FAIL=0, INDETERMINATE=0, UNAVAILABLE=0
-  Numerical values: 5
+  Statuses: PASS=10, SAMPLED_PASS=0, FAIL=0, INDETERMINATE=0, UNAVAILABLE=0
+  Numerical values: 4

@@ -51,7 +51,8 @@ class CheckFrameworkTests(unittest.TestCase):
                 "rate_nonnegativity",
                 "zero_at_depletion",
                 "stoichiometric_conservation",
-                "equilibria_and_terminal_faces",
+                "equilibria",
+                "terminal_faces",
             ),
         )
         self.assertEqual(
@@ -62,7 +63,8 @@ class CheckFrameworkTests(unittest.TestCase):
                 "rate_nonnegativity",
                 "zero_at_depletion",
                 "stoichiometric_conservation",
-                "equilibria_and_terminal_faces",
+                "equilibria",
+                "terminal_faces",
             ),
         )
 

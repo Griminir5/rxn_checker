@@ -2,12 +2,45 @@ import unittest
 
 from rxn_checker import Case, Reaction, StateVariables
 from rxn_checker.checks import CheckContext, CheckStatus
+from rxn_checker.checks.equilibria import CHECK as EQUILIBRIA_CHECK
 from rxn_checker.reporting import build_check_report
 from rxn_checker.species import PropertyRegistry, SpeciesProperties
 from tests import make_state_bounds
 
 
 class CheckReportTests(unittest.TestCase):
+    def test_equilibrium_relationship_is_summarized_in_reading_order(self) -> None:
+        states = StateVariables(("A", "B", "C"))
+        aye = states.concentration("A")
+        cee = states.concentration("C")
+        reaction = Reaction(
+            name="catalysed",
+            family="example",
+            reactants={"A": 1},
+            products={"B": 1},
+            catalysts=("C",),
+            rate=aye * cee,
+        )
+        case = Case(
+            "readable",
+            states,
+            (reaction,),
+            make_state_bounds(states),
+        )
+
+        report = build_check_report(case, checks=(EQUILIBRIA_CHECK,))
+
+        self.assertIn("Equilibrium relationships [equilibria; case]", report.text)
+        self.assertLess(
+            report.text.index("Branch 1: A = 0."),
+            report.text.index("Branch 2: C = 0."),
+        )
+        self.assertIn(
+            "The complete physical steady-state relationship has 2 branches.",
+            report.text,
+        )
+        self.assertNotIn("Source operations", report.text)
+
     def test_failed_checks_include_atom_and_mass_diagnostics(self) -> None:
         states = StateVariables(("CH4", "CO2"))
         reaction = Reaction(
@@ -65,7 +98,7 @@ class CheckReportTests(unittest.TestCase):
 
         self.assertFalse(report.passed)
         self.assertEqual(report.overall_status, CheckStatus.UNAVAILABLE)
-        self.assertEqual(report.status_counts[CheckStatus.PASS], 4)
+        self.assertEqual(report.status_counts[CheckStatus.PASS], 5)
         self.assertEqual(report.status_counts[CheckStatus.UNAVAILABLE], 1)
         self.assertIn("example.conversion: PASS", report.text)
         self.assertIn("example.conversion: UNAVAILABLE", report.text)
