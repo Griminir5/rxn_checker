@@ -16,6 +16,9 @@ A case lists species, reaction selectors, and state bounds:
 species:
   - Aye
   - Bee
+  - Cee
+inerts:
+  - Cee
 reactions:
   - aye_to_bee.simple
 bounds:
@@ -67,11 +70,15 @@ assert aye_bounds.interval(include_excursion=True) == (-0.1, 100.0)
 
 Concentrations are real but not assumed non-negative, allowing later checks to
 inspect expressions just outside the physical domain. Their physical lower
-bound is always zero; `excursion_lower` separately defines how far a later
+bound is zero; species listed under `inerts` use the strict physical condition
+`concentration > 0`. An inert must be a case species and cannot be a reactant,
+product, or catalyst in any selected reaction, though it may still affect a
+rate through dilution. `excursion_lower` separately defines how far a later
 recovery check may inspect the unphysical region. Concentration defaults apply
 to every species and entries under `overrides` replace either value for one
 species. Loading rejects invalid bounds, unknown species or reactions, duplicate
-selections, missing reaction species, and rate symbols not owned by the case.
+selections, participating inerts, missing reaction species, and rate symbols
+not owned by the case.
 
 Each module in `rxn_checker.reactions` is an automatically discovered reaction
 family. It exposes a `REACTIONS` mapping from local names to builder functions:

@@ -10,10 +10,16 @@ from .species import PROPERTY_REGISTRY, PropertyRegistry
 from .state import StateVariables, VariableBounds
 
 
-def _string_list(config: object, key: str) -> tuple[str, ...]:
-    if not isinstance(config, dict) or not isinstance(config.get(key), list):
+def _string_list(
+    config: object,
+    key: str,
+    *,
+    optional: bool = False,
+) -> tuple[str, ...]:
+    values = config.get(key, []) if isinstance(config, dict) else None
+    if not isinstance(values, list) or (not optional and key not in config):
         raise ValueError(f"Case '{key}' must be a YAML sequence.")
-    values = tuple(config[key])
+    values = tuple(values)
     if any(not isinstance(value, str) or not value for value in values):
         raise ValueError(f"Case '{key}' entries must be non-empty strings.")
     return values
@@ -174,6 +180,7 @@ def load_case(
         config = yaml.safe_load(stream)
 
     species_ids = _string_list(config, "species")
+    inert_species = _string_list(config, "inerts", optional=True)
     reaction_selectors = _string_list(config, "reactions")
     missing_species = [
         species_id
@@ -191,4 +198,5 @@ def load_case(
         states=states,
         reactions=reactions,
         state_bounds=state_bounds,
+        inert_species=inert_species,
     )

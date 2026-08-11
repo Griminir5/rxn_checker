@@ -72,6 +72,23 @@ class TerminalFacesTests(unittest.TestCase):
         self.assertEqual(result.terminal_faces, ())
         self.assertEqual(result.invariant_faces, ())
 
+    def test_strictly_positive_inerts_are_not_face_coordinates(self) -> None:
+        states = StateVariables(("A", "B", "I"))
+        aye = states.concentration("A")
+        reaction = self.reaction("forward", {"A": 1}, {"B": 1}, aye)
+        case = Case(
+            "network",
+            states,
+            (reaction,),
+            make_state_bounds(states),
+            inert_species=("I",),
+        )
+
+        result = check_terminal_faces(case)
+
+        self.assertEqual(result.terminal_faces, (("A",),))
+        self.assertNotIn("I", {item for face in result.invariant_faces for item in face})
+
     def test_identically_zero_network_reports_the_whole_domain(self) -> None:
         states = StateVariables(("A", "B"))
         aye = states.concentration("A")

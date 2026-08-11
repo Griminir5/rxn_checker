@@ -101,6 +101,41 @@ class CaseLoadingTests(unittest.TestCase):
             (-0.1, 1000.0),
         )
 
+    def test_inert_species_are_loaded_as_strictly_positive(self) -> None:
+        with TemporaryDirectory() as directory:
+            path = Path(directory) / "case.yaml"
+            path.write_text(
+                "species:\n  - Aye\n  - Bee\n  - Cee\n"
+                "inerts:\n  - Cee\n"
+                "reactions:\n  - aye_to_bee.simple\n"
+                + BOUNDS_YAML,
+                encoding="utf-8",
+            )
+
+            case = load_case(path)
+
+        cee = case.states.concentration("Cee")
+        self.assertEqual(case.inert_species, ("Cee",))
+        self.assertTrue(case.state_bounds[cee].strict_lower)
+        self.assertEqual(case.state_bounds[cee].physical_lower, 0.0)
+
+    def test_inert_species_must_be_known_and_nonparticipating(self) -> None:
+        for inert, message in (
+            ("Missing", "unknown inert species: Missing"),
+            ("Aye", "participate in reaction 'aye_to_bee.simple': Aye"),
+        ):
+            with self.subTest(inert=inert), TemporaryDirectory() as directory:
+                path = Path(directory) / "case.yaml"
+                path.write_text(
+                    "species:\n  - Aye\n  - Bee\n"
+                    f"inerts:\n  - {inert}\n"
+                    "reactions:\n  - aye_to_bee.simple\n"
+                    + BOUNDS_YAML,
+                    encoding="utf-8",
+                )
+                with self.assertRaisesRegex(ValueError, message):
+                    load_case(path)
+
     def load_selectors(self, selectors: tuple[str, ...]):
         with TemporaryDirectory() as directory:
             path = Path(directory) / "case.yaml"

@@ -69,9 +69,9 @@ Network analysis
       Branch 1: Ni = 0.
       Branch 2: Ni > 0.
         Definitions:
-          s1 = CH4 + CO + CO2 + H2 + H2O + N2 + 0.01
+          s1 = CH4 + CO + CO2 + H2 + H2O + N2
           u = sqrt(H2^2/s1^2 + 0.0001)
-          s2 = 0.002*CH4 + 0.002*CO + 0.002*CO2 + 1.002*H2 + 0.002*H2O + 0.002*N2 + s1*u + 2.0e-5
+          s2 = 0.002*CH4 + 0.002*CO + 0.002*CO2 + 1.002*H2 + 0.002*H2O + 0.002*N2 + s1*u
           v = sqrt(1/(p*(H2/(2*s1) + u/2 + 0.001)))
           k1 = exp(-28877.3924457585/T)
           k2 = exp(-8073.8831940182/T)
@@ -107,7 +107,6 @@ Network analysis
             - 2*H2O
             - 2*N2
             + p*s2*v^2
-            - 0.0200000000000000
         Balance equations:
           (1) 0 =
             2.17157648314612e+16*k1*p*s2*CH4*H2O*s1^2*v^5
@@ -126,9 +125,9 @@ Network analysis
   Terminal faces [terminal_faces; case]
     Case: PASS
       Maximal terminal faces: Ni=0; H2O=0, H2=0; CH4=0, CO=0, CO2=0; CH4=0, CO=0, H2=0; H2O=0, CO=0, CO2=0.
-      Maximal invariant faces: N2=0; Ni=0; H2O=0, H2=0; CH4=0, CO=0, CO2=0; CH4=0, CO=0, H2=0; H2O=0, CO=0, CO2=0.
+      Maximal invariant faces: Ni=0; H2O=0, H2=0; CH4=0, CO=0, CO2=0; CH4=0, CO=0, H2=0; H2O=0, CO=0, CO2=0.
       Terminal faces: 5
-      Invariant faces: 6
+      Invariant faces: 5
 
 Summary
   Overall: PASS

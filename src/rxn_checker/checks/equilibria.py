@@ -135,7 +135,10 @@ def _physical_domain(case: Case) -> tuple[sp.Expr, ...]:
     for symbol, bounds in case.state_bounds.items():
         conditions.extend(
             (
-                sp.Ge(symbol, _rational(bounds.physical_lower)),
+                (sp.Gt if bounds.strict_lower else sp.Ge)(
+                    symbol,
+                    _rational(bounds.physical_lower),
+                ),
                 sp.Le(symbol, _rational(bounds.physical_upper)),
             )
         )
@@ -147,7 +150,7 @@ def _physical_symbols(case: Case) -> Mapping[sp.Symbol, sp.Symbol]:
 
     replacements = {}
     for symbol, bounds in case.state_bounds.items():
-        if bounds.physical_lower > 0:
+        if bounds.physical_lower > 0 or bounds.strict_lower:
             assumptions = {"positive": True}
         elif bounds.physical_lower == 0:
             assumptions = {"nonnegative": True}
@@ -751,9 +754,15 @@ def _nonzero_text(expression: sp.Expr, result: EquilibriumRelation) -> str:
         for condition in result.physical_domain:
             if condition.lhs != expression:
                 continue
-            if isinstance(condition, sp.GreaterThan) and condition.rhs >= 0:
+            if isinstance(
+                condition,
+                (sp.GreaterThan, sp.StrictGreaterThan),
+            ) and condition.rhs >= 0:
                 return f"{_text(expression)} > 0"
-            if isinstance(condition, sp.LessThan) and condition.rhs <= 0:
+            if isinstance(
+                condition,
+                (sp.LessThan, sp.StrictLessThan),
+            ) and condition.rhs <= 0:
                 return f"{_text(expression)} < 0"
     return f"{_text(expression)} != 0"
 

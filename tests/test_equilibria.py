@@ -230,6 +230,29 @@ class EquilibriaTests(unittest.TestCase):
         self.assertEqual(result.branches[0].balances, (aye,))
         self.assertEqual(result.branches[0].nonzero, (bee,))
 
+    def test_positive_inert_proves_a_total_concentration_nonzero(self) -> None:
+        states = StateVariables(("A", "B", "I"))
+        aye = states.concentration("A")
+        inert = states.concentration("I")
+        reaction = self.reaction(
+            "diluted",
+            {"A": 1},
+            {"B": 1},
+            aye / (aye + inert),
+        )
+        case = Case(
+            "network",
+            states,
+            (reaction,),
+            make_state_bounds(states),
+            inert_species=("I",),
+        )
+
+        result = check_equilibria(case)
+
+        self.assertEqual(result.branches[0].nonzero, ())
+        self.assertIn(sp.Gt(inert, 0), result.physical_domain)
+
     def test_xu_froment_has_two_complete_compact_branches(self) -> None:
         result = check_equilibria(load_case("xu_froment_case/case.yaml"))
 
@@ -272,7 +295,7 @@ class EquilibriaTests(unittest.TestCase):
 
         self.assertIn("Branch 1: Ni = 0.", text)
         self.assertIn("Branch 2: Ni > 0.", text)
-        self.assertIn("s1 = CH4 + CO + CO2 + H2 + H2O + N2 + 0.01", text)
+        self.assertIn("s1 = CH4 + CO + CO2 + H2 + H2O + N2", text)
         self.assertIn("u = sqrt", text)
         self.assertIn("k6 = exp(", text)
         self.assertIn("Balance equations:", text)

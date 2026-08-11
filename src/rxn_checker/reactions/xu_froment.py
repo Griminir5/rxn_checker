@@ -62,7 +62,7 @@ def _total_gas_concentration(states: StateVariables) -> Expr:
     if not gas_concentrations:
         raise ValueError("Xu-Froment kinetics require at least one gas species.")
 
-    return 0.01 + Add(*gas_concentrations)
+    return Add(*gas_concentrations)
 
 
 def _adsorption_constant_expression(species_id: str, temperature_k: Expr) -> Expr:

@@ -13,8 +13,11 @@ class VariableBounds:
     physical_lower: float
     physical_upper: float
     excursion_lower: float | None = None
+    strict_lower: bool = False
 
     def __post_init__(self) -> None:
+        if not isinstance(self.strict_lower, bool):
+            raise ValueError("Strict-lower flag must be boolean.")
         if not math.isfinite(self.physical_lower) or not math.isfinite(
             self.physical_upper
         ):

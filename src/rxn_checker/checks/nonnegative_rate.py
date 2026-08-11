@@ -36,8 +36,9 @@ def _rate_with_bound_assumptions(
 
     replacements = {}
     for symbol in rate.free_symbols:
-        lower = state_bounds[symbol].physical_lower
-        if lower > 0 or (interior and lower == 0):
+        bounds = state_bounds[symbol]
+        lower = bounds.physical_lower
+        if lower > 0 or bounds.strict_lower or (interior and lower == 0):
             assumptions = {"positive": True}
         elif lower == 0:
             assumptions = {"nonnegative": True}

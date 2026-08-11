@@ -150,7 +150,13 @@ def find_terminal_faces(
     call is made.
     """
 
-    species_ids = case.states.species_ids
+    species_ids = tuple(
+        species_id
+        for species_id in case.states.species_ids
+        if not case.state_bounds[
+            case.states.concentration(species_id)
+        ].strict_lower
+    )
     terminal_faces: list[tuple[str, ...]] = []
     invariant_faces: list[tuple[str, ...]] = []
     unresolved_terminal: list[tuple[str, ...]] = []
