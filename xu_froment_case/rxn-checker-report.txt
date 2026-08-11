@@ -1,0 +1,83 @@
+rxn-checker report
+Case: xu_froment_case
+Source: /home/w96380vz/Repos/rxn_checker/xu_froment_case/case.yaml
+Reactions: 6
+Case loading: PASS
+
+Basic checks
+  Atom conservation [atom_conservation; reaction]
+    xu_froment.wgs_fw: PASS
+    xu_froment.smr_fw: PASS
+    xu_froment.overall_fw: PASS
+    xu_froment.wgs_bw: PASS
+    xu_froment.smr_bw: PASS
+    xu_froment.overall_bw: PASS
+  Mass conservation [mass_conservation; reaction]
+    xu_froment.wgs_fw: PASS
+    xu_froment.smr_fw: PASS
+    xu_froment.overall_fw: PASS
+    xu_froment.wgs_bw: PASS
+    xu_froment.smr_bw: PASS
+    xu_froment.overall_bw: PASS
+
+Physical checks
+  Rate non-negativity [rate_nonnegativity; reaction]
+    xu_froment.wgs_fw: PASS
+      Rate is symbolically non-negative under its physical lower-bound assumptions.
+    xu_froment.smr_fw: PASS
+      Rate is symbolically non-negative under its physical lower-bound assumptions.
+    xu_froment.overall_fw: PASS
+      Rate is symbolically non-negative under its physical lower-bound assumptions.
+    xu_froment.wgs_bw: PASS
+      Rate is symbolically non-negative under its physical lower-bound assumptions.
+    xu_froment.smr_bw: PASS
+      Rate is symbolically non-negative under its physical lower-bound assumptions.
+    xu_froment.overall_bw: PASS
+      Rate is symbolically non-negative under its physical lower-bound assumptions.
+  Zero rate at depletion [zero_at_depletion; reaction]
+    xu_froment.wgs_fw: PASS
+      Rate is exactly zero at every reactant and catalyst depletion boundary.
+    xu_froment.smr_fw: PASS
+      Rate is exactly zero at every reactant and catalyst depletion boundary.
+    xu_froment.overall_fw: PASS
+      Rate is exactly zero at every reactant and catalyst depletion boundary.
+    xu_froment.wgs_bw: PASS
+      Rate is exactly zero at every reactant and catalyst depletion boundary.
+    xu_froment.smr_bw: PASS
+      Rate is exactly zero at every reactant and catalyst depletion boundary.
+    xu_froment.overall_bw: PASS
+      Rate is exactly zero at every reactant and catalyst depletion boundary.
+
+Network analysis
+  Conserved stoichiometric quantities [stoichiometric_conservation; case]
+    Case
+      Quantities are conserved by the selected reaction source terms; flows, dilution, and changing volume are not included.
+      Only expressions are shown because the case has no initial concentrations.
+      Individually unchanged species: N2, Ni.
+      Component 1 (CH4, H2O, CO, CO2, H2):
+        Non-negative extreme rays:
+          Q1 = 2 [CH4] + [H2O] + [H2]
+          Q2 = [CH4] + [CO] + [CO2]
+          Q3 = 4 [CH4] + [CO] + [H2]
+          Q4 = [H2O] + [CO] + 2 [CO2]
+          Q5 = 3 [H2O] + 2 [CO2] + [H2]
+      Stoichiometric rank: 2
+      Conserved-quantity dimension: 5
+  Equilibria and terminal faces [equilibria_and_terminal_faces; case]
+    Case: INDETERMINATE
+      Equilibrium 1: CH4 free; H2O free; CO free; CO2 free; H2 free; N2 free; Ni=0 (physical).
+      Equilibrium 2: CH4 free; H2O=0; CO free; CO2 free; H2=0; N2 free; Ni free (physical).
+      Equilibrium 3: CH4=0; H2O free; CO=0; CO2=0; H2 free; N2 free; Ni free (physical).
+      Equilibrium 4: CH4=0; H2O free; CO=0; CO2 free; H2=0; N2 free; Ni free (physical).
+      Equilibrium 5: CH4 free; H2O=0; CO=0; CO2=0; H2 free; N2 free; Ni free (physical).
+      Equilibrium search incomplete: Solver timed out after 10 seconds.
+      Maximal terminal faces: Ni=0; H2O=0, H2=0; CH4=0, CO=0, CO2=0; CH4=0, CO=0, H2=0; H2O=0, CO=0, CO2=0.
+      Maximal invariant faces: N2=0; Ni=0; H2O=0, H2=0; CH4=0, CO=0, CO2=0; CH4=0, CO=0, H2=0; H2O=0, CO=0, CO2=0.
+      Equilibrium families: 5
+      Terminal faces: 5
+      Invariant faces: 6
+
+Summary
+  Overall: INDETERMINATE
+  Statuses: PASS=24, SAMPLED_PASS=0, FAIL=0, INDETERMINATE=1, UNAVAILABLE=0
+  Numerical values: 5

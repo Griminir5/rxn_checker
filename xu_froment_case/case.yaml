@@ -1,0 +1,20 @@
+species:
+  - CH4
+  - H2O
+  - CO
+  - CO2
+  - H2
+  - N2
+  - Ni
+reactions:
+  - xu_froment
+bounds:
+  temperature: [573.15, 1473.15]
+  pressure: [100000.0, 3000000.0]
+  concentrations:
+    default:
+      upper: 1000.0
+      excursion_lower: -0.1
+    overrides:
+      Ni:
+        upper: 10000.0
