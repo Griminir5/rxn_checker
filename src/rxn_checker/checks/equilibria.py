@@ -234,6 +234,7 @@ class _ExpressionCompiler:
         self.roots: dict[tuple[sp.Expr, int], sp.Symbol] = {}
         self.functions: dict[sp.Expr, sp.Symbol] = {}
         self.coefficients: dict[sp.Expr, sp.Symbol] = {}
+        self.compiled: dict[sp.Expr, sp.Expr] = {}
         self.counts: Counter[str] = Counter()
 
     def _symbol(self, kind: str, **assumptions: bool) -> sp.Symbol:
@@ -384,6 +385,17 @@ class _ExpressionCompiler:
         )
 
     def lift(self, expression: sp.Expr) -> sp.Expr:
+        compiled = self.compiled.get(expression)
+        if compiled is not None:
+            return compiled
+
+        compiled = self._lift(expression)
+        self.compiled[expression] = compiled
+        return compiled
+
+    def _lift(self, expression: sp.Expr) -> sp.Expr:
+        """Lift one expression after the shared-expression cache misses."""
+
         if not expression.args:
             return expression
         arguments = tuple(self.lift(argument) for argument in expression.args)

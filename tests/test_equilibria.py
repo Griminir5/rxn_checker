@@ -186,6 +186,24 @@ class EquilibriaTests(unittest.TestCase):
                     (kind,),
                 )
 
+    def test_repeated_ordered_values_share_one_helper_definition(self) -> None:
+        states = StateVariables(("A", "B", "C"))
+        aye = states.concentration("A")
+        bee = states.concentration("B")
+        maximum = sp.Max(aye - bee, 0)
+        minimum = sp.Min(aye + bee, 1)
+        rate = maximum / (minimum + 1) + (maximum + 1) / (minimum + 2)
+        reaction = self.reaction("reused", {"A": 1}, {"C": 1}, rate)
+        case = Case("network", states, (reaction,), make_state_bounds(states))
+
+        result = check_equilibria(case)
+
+        self.assertEqual(len(result.helpers), 2)
+        self.assertEqual(
+            {helper.kind: helper.expression for helper in result.helpers},
+            {"maximum": maximum, "minimum": minimum},
+        )
+
     def test_physical_clamp_is_removed_without_a_helper(self) -> None:
         states = StateVariables(("A", "B"))
         aye = states.concentration("A")
@@ -267,6 +285,21 @@ class EquilibriaTests(unittest.TestCase):
             sum(helper.kind == "parameter coefficient" for helper in interior.helpers),
             6,
         )
+        self.assertLess(result.relation_operations, result.source_operations)
+
+    def test_medrano_reuses_its_distinct_minimum_and_maximum_helpers(self) -> None:
+        result = check_equilibria(load_case("medrano_case/case.yaml"))
+
+        for branch in result.branches:
+            with self.subTest(branch=branch.label):
+                self.assertEqual(
+                    sum(helper.kind == "minimum" for helper in branch.helpers),
+                    2,
+                )
+                self.assertEqual(
+                    sum(helper.kind == "maximum" for helper in branch.helpers),
+                    6,
+                )
         self.assertLess(result.relation_operations, result.source_operations)
 
     def test_registered_report_is_short_and_sequential(self) -> None:
