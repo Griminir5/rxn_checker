@@ -1,0 +1,236 @@
+rxn-checker report
+Case: reforming_case
+Source: /home/w96380vz/Repos/rxn_checker/reforming_case/case.yaml
+Reactions: 9
+Case loading: PASS
+
+Basic checks
+  Atom conservation [atom_conservation; reaction]
+    medrano.reduction_h2: PASS
+    medrano.reduction_co: PASS
+    medrano.oxidation_o2: PASS
+    xu_froment.wgs_fw: PASS
+    xu_froment.smr_fw: PASS
+    xu_froment.overall_fw: PASS
+    xu_froment.wgs_bw: PASS
+    xu_froment.smr_bw: PASS
+    xu_froment.overall_bw: PASS
+  Mass conservation [mass_conservation; reaction]
+    medrano.reduction_h2: PASS
+    medrano.reduction_co: PASS
+    medrano.oxidation_o2: PASS
+    xu_froment.wgs_fw: PASS
+    xu_froment.smr_fw: PASS
+    xu_froment.overall_fw: PASS
+    xu_froment.wgs_bw: PASS
+    xu_froment.smr_bw: PASS
+    xu_froment.overall_bw: PASS
+
+Physical checks
+  Rate non-negativity [rate_nonnegativity; reaction]
+    medrano.reduction_h2: PASS
+      Rate is symbolically non-negative under its physical lower-bound assumptions.
+    medrano.reduction_co: PASS
+      Rate is symbolically non-negative under its physical lower-bound assumptions.
+    medrano.oxidation_o2: PASS
+      Rate is symbolically non-negative under its physical lower-bound assumptions.
+    xu_froment.wgs_fw: PASS
+      Rate is symbolically non-negative under its physical lower-bound assumptions.
+    xu_froment.smr_fw: PASS
+      Rate is symbolically non-negative under its physical lower-bound assumptions.
+    xu_froment.overall_fw: PASS
+      Rate is symbolically non-negative under its physical lower-bound assumptions.
+    xu_froment.wgs_bw: PASS
+      Rate is symbolically non-negative under its physical lower-bound assumptions.
+    xu_froment.smr_bw: PASS
+      Rate is symbolically non-negative under its physical lower-bound assumptions.
+    xu_froment.overall_bw: PASS
+      Rate is symbolically non-negative under its physical lower-bound assumptions.
+  Zero rate at depletion [zero_at_depletion; reaction]
+    medrano.reduction_h2: PASS
+      Rate is exactly zero at every reactant and catalyst depletion boundary.
+    medrano.reduction_co: PASS
+      Rate is exactly zero at every reactant and catalyst depletion boundary.
+    medrano.oxidation_o2: PASS
+      Rate is exactly zero at every reactant and catalyst depletion boundary.
+    xu_froment.wgs_fw: PASS
+      Rate is exactly zero at every reactant and catalyst depletion boundary.
+    xu_froment.smr_fw: PASS
+      Rate is exactly zero at every reactant and catalyst depletion boundary.
+    xu_froment.overall_fw: PASS
+      Rate is exactly zero at every reactant and catalyst depletion boundary.
+    xu_froment.wgs_bw: PASS
+      Rate is exactly zero at every reactant and catalyst depletion boundary.
+    xu_froment.smr_bw: PASS
+      Rate is exactly zero at every reactant and catalyst depletion boundary.
+    xu_froment.overall_bw: PASS
+      Rate is exactly zero at every reactant and catalyst depletion boundary.
+  Recovery from nonphysical concentrations [nonphysical_recovery; case]
+    Case: INDETERMINATE
+      Network rates and source terms exceed the total symbolic operation limit (9661 > 1500).
+
+Network analysis
+  Conserved stoichiometric quantities [stoichiometric_conservation; case]
+    Case
+      Quantities are conserved by the selected reaction source terms; flows, dilution, and changing volume are not included.
+      Only expressions are shown because the case has no initial concentrations.
+      Individually unchanged species: Ar, He, N2, CaAl2O4.
+      Component 1 (CH4, CO, CO2, H2, H2O, O2, Ni, NiO):
+        Non-negative extreme rays:
+          Q1 = [Ni] + [NiO]
+          Q2 = [CH4] + [CO] + [CO2]
+          Q3 = 2 [CH4] + [H2] + [H2O]
+          Q4 = [CO] + 2 [CO2] + [H2O] + 2 [O2] + [NiO]
+          Q5 = 2 [CO2] + [H2] + 3 [H2O] + 4 [O2] + 2 [NiO]
+      Stoichiometric rank: 4
+      Conserved-quantity dimension: 8
+  Equilibrium relationships [equilibria; case]
+    Case: PASS
+      The complete physical steady-state relationship has 1 branch.
+      Branch 1.
+        Definitions:
+          s1 = Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2
+          minimum1 = Min(1, Ni/(Ni + NiO + 1.0e-10))
+          maximum1 = Max(0, O2/s1)
+          k1 = exp(-841.906485299082/T)
+          maximum2 =
+            Max(1.0e-16, 1.03456664654537e-10*k1*(p/T)^0.9*(0.468448915046507*maximum1/(8.53678409*maximum1 + 1.0) + 1.01723766910183*maximum1/(0.06978578*maximum1 + 1.0))*(39.0300480480667*minimum1/(103.2164461*minimum1 + 1.0) - 3.17700465175681*minimum1/(18.51100221*minimum1 + 1.0) + 1.37471766748843*minimum1/(1.19782338*minimum1 + 1.0) - 1.10327524869435*minimum1/(0.31786513*minimum1 + 1.0)) + 0.148644633124335*(p/T)^0.9*(0.468448915046507*maximum1/(8.53678409*maximum1 + 1.0) + 1.01723766910183*maximum1/(0.06978578*maximum1 + 1.0)))
+          u = sqrt(H2^2/s1^2 + 0.0001)
+          s3 =
+            0.00200000000000000*Ar
+            + 0.00200000000000000*CH4
+            + 0.00200000000000000*CO
+            + 0.00200000000000000*CO2
+            + 1.00200000000000*H2
+            + 0.00200000000000000*H2O
+            + 0.00200000000000000*He
+            + 0.00200000000000000*N2
+            + 0.00200000000000000*O2
+            + s1*u
+          v = sqrt(1/(p*(H2/(2*s1) + u/2 + 0.001)))
+          k2 = exp(-10665.7524451889/T)
+          k3 = exp(4604.02575103555/T)
+          k4 = exp(8497.24188376859/T)
+          k5 = exp(9970.57823304199/T)
+          k6 = exp(-29334.4273949209/T)
+          k7 = exp(-28877.3924457585/T)
+          k8 = exp(
+            2.61188462628166e-11*T^4
+            - 1.36639283940245e-7*T^3
+            + 0.000280329186487247*T^2
+            - 0.282095558262226*T
+          )
+          k9 = exp(
+            2.09330826181798e-11*T^4
+            - 1.09686395839527e-7*T^3
+            + 0.000225776305234964*T^2
+            - 0.229002065362964*T
+          )
+          k10 = exp(-8073.8831940182/T)
+          k11 = exp(
+            2.32844426047115e-13*T^4
+            + 4.24085991611101e-9*T^3
+            - 1.99430757658190e-5*T^2
+            + 0.0304525115685455*T
+          )
+          minimum2 = Min(1, NiO/(Ni + NiO + 1.0e-10))
+          s2 =
+            39.0300480480667*minimum2*1/(103.2164461*minimum2 + 1.0)
+            - 3.17700465175681*minimum2*1/(18.51100221*minimum2 + 1.0)
+            + 1.37471766748843*minimum2*1/(1.19782338*minimum2 + 1.0)
+            - 1.10327524869435*minimum2*1/(0.31786513*minimum2 + 1.0)
+          maximum3 = Max(0, CO/s1)
+          f1 = exp(-15.0*minimum1)
+          k12 = exp(-36081.7065128178/T)
+          k13 = exp(-5412.25597692267/T)
+          maximum4 =
+            Max(1.0e-16, 1867839.25943382*f1*k12*(p/T)^0.65*(3.55239144723648*maximum3/(19.72954101*maximum3 + 1.0) + 1.11222975596334*maximum3/(0.34224903*maximum3 + 1.0)) + 2.76515933609426e-11*k13*s2*(p/T)^0.65*(3.55239144723648*maximum3/(19.72954101*maximum3 + 1.0) + 1.11222975596334*maximum3/(0.34224903*maximum3 + 1.0)))
+          k14 = exp(-41493.9624897405/T)
+          maximum5 = Max(0, H2/s1)
+          f2 = exp(-5.0*minimum1)
+          k15 = exp(-18040.8532564089/T)
+          k16 = exp(-3608.17065128178/T)
+          maximum6 =
+            Max(1.0e-16, 0.000477032985511127*f2*k15*(p/T)^0.6*(4.96458623104962*maximum5/(24.11159535*maximum5 + 1.0) + 1.14167632328348*maximum5/(0.42300595*maximum5 + 1.0)) + 7.90471717755791e-12*k16*s2*(p/T)^0.6*(4.96458623104962*maximum5/(24.11159535*maximum5 + 1.0) + 1.14167632328348*maximum5/(0.42300595*maximum5 + 1.0)))
+          k17 = exp(-21649.0239076907/T)
+        Polynomial root constraints:
+          (R1) 0 =
+            - H2^2
+            + s1^2*u^2
+            - 0.000100000000000000*s1^2
+          (R2) 0 =
+            - 2*Ar
+            - 2*CH4
+            - 2*CO
+            - 2*CO2
+            - 2*H2
+            - 2*H2O
+            - 2*He
+            - 2*N2
+            - 2*O2
+            + p*s3*v^2
+        Balance equations:
+          (1) 0 =
+            maximum1^3*minimum1^2*(8.7166294222639*maximum1 + 1.48568658414834)^2
+            *(128.595537380765*minimum1 + 25.681679402707)*(Ni + NiO)
+          (2) 0 =
+            Ni
+            *(-5.21549565610308e+15*CH4*H2O^2*k6*p*s1^2*v^2 - 2.17157648314612e+16*CH4*H2O*k7*s1^3 + 4.7748239128957e+53*CO*H2^3*k7*k8*p^2*s1 + 1.20190287416062e+44*CO2*H2^4*k6*k9*p^3*v^2)
+          (3) 0 =
+            2.17157648314612e+16*k7*maximum4*CH4*H2O*Ni*p^2*s1^2*s3^2*v^5*(19.72954101*maximum3 + 1.0)^2
+            *(0.34224903*maximum3 + 1.0)^2*(18.51100221*minimum2 + 1.0)*(0.31786513*minimum2 + 1.0)
+            *(minimum2 + 0.001)*(maximum3 + 0.0001)
+            - 4.77482391289570e+53*k7*k8*maximum4*CO*Ni*p^4*s3^2*v^5*H2^3*(19.72954101*maximum3 + 1.0)^2
+              *(0.34224903*maximum3 + 1.0)^2*(18.51100221*minimum2 + 1.0)*(0.31786513*minimum2 + 1.0)
+              *(minimum2 + 0.001)*(maximum3 + 0.0001)
+            - 0.637410324000000*k10*maximum4*p*s3*CO*H2O*Ni*s1^3*(19.72954101*maximum3 + 1.0)^2
+              *(0.34224903*maximum3 + 1.0)^2*(18.51100221*minimum2 + 1.0)*(0.31786513*minimum2 + 1.0)
+              *(minimum2 + 0.001)*(maximum3 + 0.0001)
+            + 1.40223703449081e-7*k10*k11*maximum4*p*s3*CO2*H2*Ni*s1^3*(19.72954101*maximum3 + 1.0)^2
+              *(0.34224903*maximum3 + 1.0)^2*(18.51100221*minimum2 + 1.0)*(0.31786513*minimum2 + 1.0)
+              *(minimum2 + 0.001)*(maximum3 + 0.0001)
+            - 586032.280779006*f1*k14*maximum3^3*minimum2^2*s1^2*(p/T)^1.3
+              *(23.1595851098179*maximum3 + 4.66462120319981)^2
+              *(6.65e-9*CH4*k3*p*s3 + 8.23e-10*CO*k4*p*s3 + 6.12e-14*H2*k5*p*s3 + 354000.0*H2O*k2*s1 + s1*s3)^2
+              *(64.2977686903823*minimum2 + 12.8408397013535)*(Ni + NiO)
+          (4) 0 =
+            (Ni + NiO)
+            *(586032.280779006*f1*k14*maximum2*maximum3^3*maximum6*minimum2^2*(p/T)^1.3*(0.06978578*maximum1 + 1.0)^2*(maximum1 + 0.0001)*(8.53678409*maximum1 + 1.0)^2*(23.1595851098179*maximum3 + 4.66462120319981)^2*(0.42300595*maximum5 + 1.0)^2*(maximum5 + 0.0001)*(24.11159535*maximum5 + 1.0)^2*(0.31786513*minimum1 + 1.0)*(minimum1 + 0.001)*(18.51100221*minimum1 + 1.0)*(64.2977686903823*minimum2 + 12.8408397013535) + 4.27855012633343e-5*f2*k17*maximum2*maximum4*maximum5^3*minimum2^2*(p/T)^1.2*(0.06978578*maximum1 + 1.0)^2*(maximum1 + 0.0001)*(8.53678409*maximum1 + 1.0)^2*(0.34224903*maximum3 + 1.0)^2*(maximum3 + 0.0001)*(19.72954101*maximum3 + 1.0)^2*(29.6276870427092*maximum5 + 6.1062625543331)^2*(0.31786513*minimum1 + 1.0)*(minimum1 + 0.001)*(18.51100221*minimum1 + 1.0)*(64.2977686903823*minimum2 + 12.8408397013535) - 0.000302343007069897*k1*maximum1^3*maximum4*maximum6*minimum1^2*(p/T)^1.8*(8.7166294222639*maximum1 + 1.48568658414834)^2*(0.34224903*maximum3 + 1.0)^2*(maximum3 + 0.0001)*(19.72954101*maximum3 + 1.0)^2*(0.42300595*maximum5 + 1.0)^2*(maximum5 + 0.0001)*(24.11159535*maximum5 + 1.0)^2*(128.595537380765*minimum1 + 25.681679402707)*(0.31786513*minimum2 + 1.0)*(minimum2 + 0.001)*(18.51100221*minimum2 + 1.0))
+        Conditions:
+          maximum2*(0.06978578*maximum1 + 1.0)^2*(maximum1 + 0.0001)*(8.53678409*maximum1 + 1.0)^2*(0.31786513*minimum1 + 1.0)*(minimum1 + 0.001)*(18.51100221*minimum1 + 1.0) != 0
+          maximum4*(0.34224903*maximum3 + 1.0)^2*(maximum3 + 0.0001)*(19.72954101*maximum3 + 1.0)^2*(0.31786513*minimum2 + 1.0)*(minimum2 + 0.001)*(18.51100221*minimum2 + 1.0)*(6.65e-9*CH4*k3*p*(0.002*Ar + 0.002*CH4 + 0.002*CO + 0.002*CO2 + 1.002*H2 + 0.002*H2O + 0.002*He + 0.002*N2 + 0.002*O2 + u*(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)) + 8.23e-10*CO*k4*p*(0.002*Ar + 0.002*CH4 + 0.002*CO + 0.002*CO2 + 1.002*H2 + 0.002*H2O + 0.002*He + 0.002*N2 + 0.002*O2 + u*(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)) + 6.12e-14*H2*k5*p*(0.002*Ar + 0.002*CH4 + 0.002*CO + 0.002*CO2 + 1.002*H2 + 0.002*H2O + 0.002*He + 0.002*N2 + 0.002*O2 + u*(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)) + 354000.0*H2O*k2*(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2) + (Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)*(0.002*Ar + 0.002*CH4 + 0.002*CO + 0.002*CO2 + 1.002*H2 + 0.002*H2O + 0.002*He + 0.002*N2 + 0.002*O2 + u*(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)))^2*(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)^2 != 0
+          maximum2*maximum4*maximum6*(0.06978578*maximum1 + 1.0)^2*(maximum1 + 0.0001)*(8.53678409*maximum1 + 1.0)^2*(0.34224903*maximum3 + 1.0)^2*(maximum3 + 0.0001)*(19.72954101*maximum3 + 1.0)^2*(0.42300595*maximum5 + 1.0)^2*(maximum5 + 0.0001)*(24.11159535*maximum5 + 1.0)^2*(0.31786513*minimum1 + 1.0)*(minimum1 + 0.001)*(18.51100221*minimum1 + 1.0)*(0.31786513*minimum2 + 1.0)*(minimum2 + 0.001)*(18.51100221*minimum2 + 1.0) != 0
+          (0.06978578*maximum1 + 1.0)*(8.53678409*maximum1 + 1.0)*(0.31786513*minimum1 + 1.0)*(1.19782338*minimum1 + 1.0)*(18.51100221*minimum1 + 1.0)*(103.2164461*minimum1 + 1.0) != 0
+          (0.34224903*maximum3 + 1.0)*(19.72954101*maximum3 + 1.0)*(0.31786513*minimum2 + 1.0)*(1.19782338*minimum2 + 1.0)*(18.51100221*minimum2 + 1.0)*(103.2164461*minimum2 + 1.0) != 0
+          (0.42300595*maximum5 + 1.0)*(24.11159535*maximum5 + 1.0)*(0.31786513*minimum2 + 1.0)*(1.19782338*minimum2 + 1.0)*(18.51100221*minimum2 + 1.0)*(103.2164461*minimum2 + 1.0) != 0
+          minimum1 <= 1
+          minimum1 <= Ni/(Ni + NiO + 1.0e-10)
+          maximum1 >= 0
+          maximum1 >= O2/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)
+          maximum2 >= 1.0e-16
+          maximum2 >= 1.03456664654537e-10*k1*(p/T)^0.9*(0.468448915046507*maximum1/(8.53678409*maximum1 + 1.0) + 1.01723766910183*maximum1/(0.06978578*maximum1 + 1.0))*(39.0300480480667*minimum1/(103.2164461*minimum1 + 1.0) - 3.17700465175681*minimum1/(18.51100221*minimum1 + 1.0) + 1.37471766748843*minimum1/(1.19782338*minimum1 + 1.0) - 1.10327524869435*minimum1/(0.31786513*minimum1 + 1.0)) + 0.148644633124335*(p/T)^0.9*(0.468448915046507*maximum1/(8.53678409*maximum1 + 1.0) + 1.01723766910183*maximum1/(0.06978578*maximum1 + 1.0))
+          u > 0
+          v > 0
+          minimum2 <= 1
+          minimum2 <= NiO/(Ni + NiO + 1.0e-10)
+          maximum3 >= 0
+          maximum3 >= CO/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)
+          maximum4 >= 1.0e-16
+          maximum4 >= 1867839.25943382*f1*k12*(p/T)^0.65*(3.55239144723648*maximum3/(19.72954101*maximum3 + 1.0) + 1.11222975596334*maximum3/(0.34224903*maximum3 + 1.0)) + 2.76515933609426e-11*k13*(p/T)^0.65*(3.55239144723648*maximum3/(19.72954101*maximum3 + 1.0) + 1.11222975596334*maximum3/(0.34224903*maximum3 + 1.0))*(39.0300480480667*minimum2/(103.2164461*minimum2 + 1.0) - 3.17700465175681*minimum2/(18.51100221*minimum2 + 1.0) + 1.37471766748843*minimum2/(1.19782338*minimum2 + 1.0) - 1.10327524869435*minimum2/(0.31786513*minimum2 + 1.0))
+          maximum5 >= 0
+          maximum5 >= H2/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)
+          maximum6 >= 1.0e-16
+          maximum6 >= 0.000477032985511127*f2*k15*(p/T)^0.6*(4.96458623104962*maximum5/(24.11159535*maximum5 + 1.0) + 1.14167632328348*maximum5/(0.42300595*maximum5 + 1.0)) + 7.90471717755791e-12*k16*(p/T)^0.6*(4.96458623104962*maximum5/(24.11159535*maximum5 + 1.0) + 1.14167632328348*maximum5/(0.42300595*maximum5 + 1.0))*(39.0300480480667*minimum2/(103.2164461*minimum2 + 1.0) - 3.17700465175681*minimum2/(18.51100221*minimum2 + 1.0) + 1.37471766748843*minimum2/(1.19782338*minimum2 + 1.0) - 1.10327524869435*minimum2/(0.31786513*minimum2 + 1.0))
+      All branches are restricted to the configured physical bounds.
+      Concentration-dependent nonalgebraic functions remain as exact definitions.
+  Terminal faces [terminal_faces; case]
+    Case: PASS
+      Maximal terminal faces: Ni=0, NiO=0; CO=0, H2=0, Ni=0; CH4=0, CO=0, H2=0, O2=0; CO=0, H2=0, H2O=0, O2=0; H2=0, H2O=0, O2=0, NiO=0; CH4=0, CO=0, CO2=0, O2=0, NiO=0; CO=0, CO2=0, H2O=0, O2=0, NiO=0.
+      Maximal invariant faces: O2=0; H2=0, H2O=0; Ni=0, NiO=0; CH4=0, CO=0, CO2=0; CH4=0, CO=0, H2=0; CO=0, H2=0, Ni=0.
+      Terminal faces: 7
+      Invariant faces: 6
+
+Summary
+  Overall: INDETERMINATE
+  Statuses: PASS=38, SAMPLED_PASS=0, FAIL=0, INDETERMINATE=1, UNAVAILABLE=0
+  Numerical values: 4

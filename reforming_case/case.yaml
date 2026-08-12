@@ -1,14 +1,24 @@
 species:
+  - Ar
   - CH4
-  - H2O
   - CO
   - CO2
   - H2
+  - H2O
+  - He
   - N2
+  - O2
+
   - Ni
+  - NiO
+  - CaAl2O4
 inerts:
+  - Ar
+  - He
   - N2
+  - CaAl2O4
 reactions:
+  - medrano
   - xu_froment
 bounds:
   temperature: [573.15, 1473.15]
@@ -19,4 +29,8 @@ bounds:
       excursion_lower: -0.1
     overrides:
       Ni:
+        upper: 10000.0
+      NiO:
+        upper: 10000.0
+      CaAl2O4:
         upper: 10000.0
