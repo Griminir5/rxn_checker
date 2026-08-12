@@ -3,7 +3,6 @@
 from collections.abc import Mapping
 from dataclasses import dataclass
 from itertools import combinations
-from types import MappingProxyType
 
 import sympy as sp
 
@@ -16,6 +15,7 @@ from .models import (
     CheckStatus,
     CheckValue,
 )
+from .network import source_terms as _source_terms
 
 MAX_FACE_TESTS = 4096
 _WITNESS_FRACTIONS = (
@@ -35,23 +35,6 @@ class TerminalFaceSearchResult:
     unresolved_invariant_faces: tuple[tuple[str, ...], ...]
     complete: bool
     tests: int
-
-
-def _source_terms(case: Case) -> Mapping[str, sp.Expr]:
-    """Construct ``F = S r`` in the ordering of the case species."""
-
-    return MappingProxyType(
-        {
-            species_id: sp.Add(
-                *(
-                    sp.sympify(reaction.net_stoichiometry.get(species_id, 0))
-                    * reaction.rate
-                    for reaction in case.reactions
-                )
-            )
-            for species_id in case.states.species_ids
-        }
-    )
 
 
 def zero_status(expression: sp.Expr) -> bool | None:
