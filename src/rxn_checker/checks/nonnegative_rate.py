@@ -1,6 +1,6 @@
 """Symbolic rate non-negativity check."""
 
-from collections.abc import Mapping
+from collections.abc import Iterator, Mapping
 from dataclasses import dataclass
 
 import sympy as sp
@@ -48,8 +48,12 @@ def _rate_with_bound_assumptions(
     return rate.xreplace(replacements)
 
 
-def _sign_candidates(rate: sp.Expr) -> tuple[sp.Expr, ...]:
-    return rate, sp.factor_terms(rate), sp.factor(rate)
+def _sign_candidates(rate: sp.Expr) -> Iterator[sp.Expr]:
+    """Yield increasingly expensive rewrites only when the caller needs them."""
+
+    yield rate
+    yield sp.factor_terms(rate)
+    yield sp.factor(rate)
 
 
 def check_rate_nonnegativity(

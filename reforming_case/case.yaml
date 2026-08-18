@@ -26,7 +26,7 @@ bounds:
   concentrations:
     default:
       upper: 1000.0
-      excursion_lower: -0.1
+      excursion_lower: -0.05
     overrides:
       Ni:
         upper: 10000.0

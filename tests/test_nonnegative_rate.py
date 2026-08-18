@@ -1,4 +1,5 @@
 import unittest
+from unittest.mock import patch
 
 from rxn_checker import Case, Reaction, StateVariables
 from rxn_checker.checks import CheckStatus, check_rate_nonnegativity
@@ -29,6 +30,18 @@ class RateNonnegativityCheckTests(unittest.TestCase):
             self.reaction(2 * self.aye * self.bee),
             self.state_bounds,
         )
+
+        self.assertTrue(result.passed)
+
+    def test_expensive_rewrites_are_lazy_when_raw_sign_is_known(self) -> None:
+        with (
+            patch("sympy.factor_terms", side_effect=AssertionError("factor_terms")),
+            patch("sympy.factor", side_effect=AssertionError("factor")),
+        ):
+            result = check_rate_nonnegativity(
+                self.reaction(2 * self.aye * self.bee),
+                self.state_bounds,
+            )
 
         self.assertTrue(result.passed)
 

@@ -18,7 +18,7 @@ from .models import (
     CheckStatus,
     CheckValue,
 )
-from .network import source_terms as network_source_terms
+from .network import NetworkExpressions, network_expressions
 from .stoichiometric_conservation import (
     StoichiometricConservationResult,
     find_conserved_quantities,
@@ -38,8 +38,6 @@ from .symbolic_domain import (
 MAX_NEGATIVE_REGIONS = 128
 MAX_SYMBOLIC_OPERATIONS = 5000
 MAX_TOTAL_SYMBOLIC_OPERATIONS = 15000
-MAX_SPECIES = 32
-MAX_REACTIONS = 64
 
 
 class RecoveryVerdict(StrEnum):
@@ -141,24 +139,34 @@ def _region_domain(
     }
     weak: list[Relational] = []
     strict: list[sp.Expr] = []
+    box: list[tuple[sp.Expr, sp.Expr]] = []
 
     for symbol, bounds in case.state_bounds.items():
         species_id = species.get(symbol)
         if species_id in negative:
             lower = -_excursion_size(case, species_id)
+            box_lower = lower
             weak.append(sp.Ge(symbol - lower, 0, evaluate=False))
             strict.append(-symbol)
         elif bounds.strict_lower:
+            box_lower = number(bounds.physical_lower)
             strict.append(symbol - number(bounds.physical_lower))
         else:
+            box_lower = number(bounds.physical_lower)
             weak.append(
                 sp.Ge(symbol - number(bounds.physical_lower), 0, evaluate=False)
             )
         weak.append(
             sp.Ge(number(bounds.physical_upper) - symbol, 0, evaluate=False)
         )
+        box.append((box_lower, number(bounds.physical_upper)))
     weak.extend(sp.Ge(ray, 0, evaluate=False) for ray in conservation_rays)
-    return LinearDomain(tuple(case.state_bounds), tuple(weak), tuple(strict))
+    return LinearDomain(
+        tuple(case.state_bounds),
+        tuple(weak),
+        tuple(strict),
+        tuple(box),
+    )
 
 
 def _negative_sets(
@@ -202,6 +210,9 @@ def _assumptions(
     domain: LinearDomain,
 ) -> Mapping[sp.Symbol, sp.Symbol]:
     negative = frozenset(negative_species)
+    feasible, point = domain.feasible()
+    if not feasible:
+        point = None
     replacements = {}
     for symbol, bounds in case.state_bounds.items():
         if symbol.name in negative:
@@ -209,9 +220,14 @@ def _assumptions(
         elif bounds.physical_lower > 0 or bounds.strict_lower:
             kind = "positive"
         elif bounds.physical_lower == 0:
-            can_be_zero = domain.feasible(
-                weak=(sp.Le(symbol, 0, evaluate=False),)
-            )[0]
+            # The phase-I witness often places optional species exactly at
+            # zero. That is already an exact feasibility certificate, avoiding
+            # a separate simplex solve for the same question.
+            can_be_zero = point is not None and point[symbol] == 0
+            if not can_be_zero:
+                can_be_zero = domain.feasible(
+                    weak=(sp.Le(symbol, 0, evaluate=False),)
+                )[0]
             kind = "nonnegative" if can_be_zero else "positive"
         elif bounds.physical_upper <= 0:
             kind = "nonpositive"
@@ -239,10 +255,10 @@ def _analyse_region(
     point = raw_point
     assumptions = _assumptions(case, negative_species, domain)
     proof = Proof(domain, assumptions, point)
-    expressions = (
-        *(reaction.rate for reaction in case.reactions),
-        *source_terms.values(),
-    )
+    # A finite real linear combination of finite real rates is necessarily
+    # finite and real, so traversing every much-larger source expression would
+    # repeat the rate-law proof without adding a condition.
+    expressions = tuple(reaction.rate for reaction in case.reactions)
     defined: bool | None = True
     for expression in expressions:
         conclusion, bad_point = proof.defined(expression)
@@ -361,20 +377,17 @@ def _limited_result(
     )
 
 
-def check_nonphysical_recovery(case: Case) -> NonphysicalRecoveryResult:
+def check_nonphysical_recovery(
+    case: Case,
+    *,
+    stop_on_failure: bool = False,
+    network: NetworkExpressions | None = None,
+    conservation: StoichiometricConservationResult | None = None,
+) -> NonphysicalRecoveryResult:
     """Classify every declared, repairable negative concentration region."""
 
-    species_count = len(case.states.species_ids)
-    reaction_count = len(case.reactions)
-    if species_count > MAX_SPECIES or reaction_count > MAX_REACTIONS:
-        return _limited_result(
-            MappingProxyType({}),
-            "Network exceeds the recovery-check size limit "
-            f"(species {species_count}/{MAX_SPECIES}, "
-            f"reactions {reaction_count}/{MAX_REACTIONS}).",
-        )
-
-    source_terms = network_source_terms(case)
+    network = network or network_expressions(case)
+    source_terms = network.source_terms
     expressions = (
         *(reaction.rate for reaction in case.reactions),
         *source_terms.values(),
@@ -395,19 +408,37 @@ def check_nonphysical_recovery(case: Case) -> NonphysicalRecoveryResult:
             f"limit ({total} > {MAX_TOTAL_SYMBOLIC_OPERATIONS}).",
         )
 
-    conservation = find_conserved_quantities(case)
+    conservation = conservation or find_conserved_quantities(case, network)
     conservation_rays = _conservation_rays(case, conservation)
     candidates, complete = _negative_sets(case, conservation)
-    regions = tuple(
-        _analyse_region(case, negative, source_terms, conservation_rays)
-        for negative in candidates
-    )
+    regions_list: list[RecoveryRegionResult] = []
+    stopped_on_failure = False
+    for negative in candidates:
+        region = _analyse_region(case, negative, source_terms, conservation_rays)
+        regions_list.append(region)
+        if stop_on_failure and (
+            region.verdict
+            in (
+                RecoveryVerdict.STUCK,
+                RecoveryVerdict.WORSENING,
+                RecoveryVerdict.UNDEFINED_IN_EXTENSION,
+            )
+            or any(value is False for value in region.lower_faces.values())
+        ):
+            stopped_on_failure = True
+            break
+    regions = tuple(regions_list)
     return NonphysicalRecoveryResult(
         source_terms,
         conservation_rays,
         regions,
-        complete,
-        len(candidates),
+        complete and not stopped_on_failure,
+        len(regions),
+        (
+            "Stopped after an exact failure certificate was found."
+            if stopped_on_failure
+            else None
+        ),
     )
 
 
@@ -459,8 +490,23 @@ _FAILURES = {
 }
 
 
-def run(case: Case, _context: CheckContext) -> CheckOutcome:
-    result = check_nonphysical_recovery(case)
+def run(case: Case, context: CheckContext) -> CheckOutcome:
+    network = context.cached(
+        case,
+        "network",
+        lambda: network_expressions(case),
+    )
+    conservation = context.cached(
+        case,
+        "conservation",
+        lambda: find_conserved_quantities(case, network),
+    )
+    result = check_nonphysical_recovery(
+        case,
+        stop_on_failure=True,
+        network=network,
+        conservation=conservation,
+    )
     if not result.regions:
         status = (
             CheckStatus.INDETERMINATE
@@ -492,9 +538,13 @@ def run(case: Case, _context: CheckContext) -> CheckOutcome:
     for region in result.regions:
         details.extend(_region_details(case, region))
     if not result.complete:
-        details.append(
-            f"Stopped after {result.tests} regions (limit {MAX_NEGATIVE_REGIONS})."
-        )
+        if result.diagnostic:
+            details.append(result.diagnostic)
+        else:
+            details.append(
+                f"Stopped after {result.tests} regions "
+                f"(limit {MAX_NEGATIVE_REGIONS})."
+            )
     return CheckOutcome(
         status=status,
         details=tuple(details),

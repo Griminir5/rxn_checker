@@ -135,6 +135,30 @@ class TerminalFacesTests(unittest.TestCase):
         self.assertEqual(result.terminal_faces, (("A",),))
         self.assertEqual(result.invariant_faces, (("A",),))
 
+    def test_dependency_search_scales_to_one_hundred_sparse_species(self) -> None:
+        species_ids = tuple(f"S{index}" for index in range(100))
+        states = StateVariables(species_ids)
+        reactions = tuple(
+            self.reaction(
+                f"decay_{index}",
+                {species_id: 1},
+                {},
+                states.concentration(species_id),
+            )
+            for index, species_id in enumerate(species_ids)
+        )
+        case = Case("large-sparse", states, reactions, make_state_bounds(states))
+
+        result = check_terminal_faces(case)
+
+        self.assertTrue(result.complete)
+        self.assertEqual(result.terminal_faces, (species_ids,))
+        self.assertEqual(
+            result.invariant_faces,
+            tuple((species_id,) for species_id in species_ids),
+        )
+        self.assertLessEqual(result.tests, 2 * len(species_ids))
+
 
 if __name__ == "__main__":
     unittest.main()

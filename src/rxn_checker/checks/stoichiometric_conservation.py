@@ -2,7 +2,6 @@
 
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from itertools import combinations
 import math
 from types import MappingProxyType
 
@@ -10,6 +9,7 @@ import sympy as sp
 
 from ..case import Case
 from .models import CheckContext, CheckDefinition, CheckOutcome, CheckScope, CheckValue
+from .network import NetworkExpressions, network_expressions
 
 
 @dataclass(frozen=True)
@@ -134,36 +134,97 @@ def _connected_components(
 
 
 def _extreme_ray_vectors(constraints: sp.MatrixBase) -> tuple[tuple[int, ...], ...]:
-    """Enumerate the support-minimal nonnegative vectors in ``ker(constraints)``."""
+    """Find exact rays of ``ker(constraints)`` intersected with the orthant.
 
-    dimension = constraints.cols
-    maximum_support = min(dimension, int(constraints.rank()) + 1)
-    rays: list[tuple[int, ...]] = []
-    seen: set[tuple[int, ...]] = set()
+    This is an incremental double-description calculation. Unlike enumerating
+    every possible species support up to ``rank + 1``, its combinatorics follow
+    the rays actually present while coordinate inequalities are introduced.
+    """
 
-    # An extreme ray has a strictly positive vector on a support whose
-    # restricted nullspace is one-dimensional. Such a support contains no
-    # more than rank(constraints) + 1 species.
-    for support_size in range(1, maximum_support + 1):
-        for support in combinations(range(dimension), support_size):
-            nullspace = constraints[:, support].nullspace()
-            if len(nullspace) != 1:
+    nullspace = constraints.nullspace()
+    if not nullspace:
+        return ()
+    basis = sp.Matrix.hstack(*nullspace)
+    cone_dimension = basis.cols
+
+    # Independent coordinate inequalities form an initial simplicial cone in
+    # nullspace coordinates: B0*y >= 0. Its rays are B0**-1 columns.
+    initial_rows = tuple(int(index) for index in basis.T.rref()[1])
+    initial = basis.extract(initial_rows, range(cone_dimension))
+    inverse = initial.inv()
+    rays = [inverse[:, column] for column in range(cone_dimension)]
+    processed_rows = list(initial_rows)
+
+    def direction(vector: sp.MatrixBase) -> tuple[int, ...]:
+        rationals = tuple(sp.Rational(value) for value in vector)
+        denominator = math.lcm(*(int(value.q) for value in rationals))
+        integers = tuple(int(value * denominator) for value in rationals)
+        divisor = math.gcd(*(abs(value) for value in integers))
+        return tuple(value // divisor for value in integers)
+
+    def retain_extreme(
+        candidates: Sequence[sp.MatrixBase],
+        rows: Sequence[int],
+    ) -> list[sp.Matrix]:
+        kept: dict[tuple[int, ...], sp.Matrix] = {}
+        inequalities = basis.extract(rows, range(cone_dimension))
+        for candidate in candidates:
+            key = direction(candidate)
+            if key in kept:
                 continue
+            active = tuple(
+                row
+                for row in range(inequalities.rows)
+                if (inequalities[row, :] * candidate)[0] == 0
+            )
+            active_matrix = inequalities.extract(active, range(cone_dimension))
+            if int(active_matrix.rank()) >= cone_dimension - 1:
+                kept[key] = sp.Matrix(candidate)
+        return list(kept.values())
 
-            supported_vector = tuple(nullspace[0])
-            if all(value < 0 for value in supported_vector):
-                supported_vector = tuple(-value for value in supported_vector)
-            if not all(value > 0 for value in supported_vector):
-                continue
+    for row in range(basis.rows):
+        if row in initial_rows:
+            continue
+        inequality = basis[row, :]
+        positive: list[tuple[sp.Matrix, sp.Expr]] = []
+        zero: list[sp.Matrix] = []
+        negative: list[tuple[sp.Matrix, sp.Expr]] = []
+        for ray in rays:
+            value = (inequality * ray)[0]
+            if value > 0:
+                positive.append((ray, value))
+            elif value < 0:
+                negative.append((ray, value))
+            else:
+                zero.append(ray)
 
-            vector = [sp.S.Zero] * dimension
-            for index, value in zip(support, supported_vector, strict=True):
-                vector[index] = value
-            ray = _primitive_integers(vector)
-            if ray not in seen:
-                seen.add(ray)
-                rays.append(ray)
-    return tuple(rays)
+        candidates: list[sp.MatrixBase] = [*zero, *(ray for ray, _ in positive)]
+        candidates.extend(
+            positive_value * negative_ray - negative_value * positive_ray
+            for positive_ray, positive_value in positive
+            for negative_ray, negative_value in negative
+        )
+        processed_rows.append(row)
+        rays = retain_extreme(candidates, processed_rows)
+        if not rays:
+            return ()
+
+    result: dict[tuple[int, ...], None] = {}
+    for ray in rays:
+        vector = basis * ray
+        if any(value < 0 for value in vector):
+            continue
+        result.setdefault(_primitive_integers(vector), None)
+    return tuple(
+        sorted(
+            result,
+            key=lambda vector: (
+                sum(value != 0 for value in vector),
+                tuple(index for index, value in enumerate(vector) if value),
+                vector,
+            ),
+        )
+    )
 
 
 def _span_rank(vectors: Sequence[Sequence[int]]) -> int:
@@ -218,10 +279,17 @@ def _analyse_component(
     )
 
 
-def find_conserved_quantities(case: Case) -> StoichiometricConservationResult:
+def find_conserved_quantities(
+    case: Case,
+    network: NetworkExpressions | None = None,
+) -> StoichiometricConservationResult:
     """Find exact linear concentration invariants of the selected reactions."""
 
-    matrix = _stoichiometric_matrix(case)
+    matrix = (
+        network.stoichiometric_matrix
+        if network is not None
+        else _stoichiometric_matrix(case)
+    )
     components = _connected_components(matrix)
     unchanged_species = tuple(
         species_id
@@ -300,10 +368,19 @@ def _details(result: StoichiometricConservationResult) -> tuple[str, ...]:
     return tuple(details)
 
 
-def run(case: Case, _context: CheckContext) -> CheckOutcome:
+def run(case: Case, context: CheckContext) -> CheckOutcome:
     """Report conserved quantities once for the complete case."""
 
-    result = find_conserved_quantities(case)
+    network = context.cached(
+        case,
+        "network",
+        lambda: network_expressions(case),
+    )
+    result = context.cached(
+        case,
+        "conservation",
+        lambda: find_conserved_quantities(case, network),
+    )
     return CheckOutcome(
         details=_details(result),
         values=(

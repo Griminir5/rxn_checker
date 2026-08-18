@@ -19,6 +19,7 @@ from .models import (
     CheckScope,
     CheckStatus,
 )
+from .network import NetworkExpressions, network_expressions
 
 
 # Public result -------------------------------------------------------------
@@ -527,10 +528,16 @@ def _make_branch(
 # Public construction -------------------------------------------------------
 
 
-def check_equilibria(case: Case) -> EquilibriumRelation:
+def check_equilibria(
+    case: Case,
+    network: NetworkExpressions | None = None,
+) -> EquilibriumRelation:
     """Build an exact, domain-aware relationship for every steady state."""
 
-    matrix, source = _network(case)
+    if network is None:
+        matrix, source = _network(case)
+    else:
+        matrix, source = network.stoichiometric_matrix, network.source_vector
     source_equations = tuple(expression for expression in source if expression != 0)
     selected_rows = _independent_rows(matrix, source)
     selected = tuple(
@@ -889,8 +896,13 @@ def _outcome(result: EquilibriumRelation) -> CheckOutcome:
     )
 
 
-def run(case: Case, _context: CheckContext) -> CheckOutcome:
-    return _outcome(check_equilibria(case))
+def run(case: Case, context: CheckContext) -> CheckOutcome:
+    network = context.cached(
+        case,
+        "network",
+        lambda: network_expressions(case),
+    )
+    return _outcome(check_equilibria(case, network))
 
 
 CHECK = CheckDefinition(

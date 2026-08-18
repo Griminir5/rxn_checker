@@ -1,7 +1,7 @@
 """Common types shared by every rxn-checker check."""
 
 from collections.abc import Callable, Iterable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import StrEnum
 from numbers import Real
 
@@ -54,6 +54,27 @@ class CheckContext:
     """Shared dependencies supplied to every check runner."""
 
     property_registry: PropertyRegistry = PROPERTY_REGISTRY
+    _analysis: dict[tuple[int, str], tuple[Case, object]] = field(
+        default_factory=dict,
+        compare=False,
+        repr=False,
+    )
+
+    def cached(
+        self,
+        case: Case,
+        key: str,
+        factory: Callable[[], object],
+    ) -> object:
+        """Return one case-owned analysis product shared by registered checks."""
+
+        cache_key = id(case), key
+        cached = self._analysis.get(cache_key)
+        if cached is not None and cached[0] is case:
+            return cached[1]
+        value = factory()
+        self._analysis[cache_key] = case, value
+        return value
 
 
 CheckReturn = CheckOutcome | Iterable[CheckOutcome]

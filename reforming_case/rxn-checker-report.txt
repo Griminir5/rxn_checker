@@ -66,8 +66,26 @@ Physical checks
     xu_froment.overall_bw: PASS
       Rate is exactly zero at every reactant and catalyst depletion boundary.
   Recovery from nonphysical concentrations [nonphysical_recovery; case]
-    Case: INDETERMINATE
-      Network rates and source terms exceed the total symbolic operation limit (9661 > 1500).
+    Case: FAIL
+      Assumptions: declared bounds, each sign-region, and non-negative conservation rays.
+      Restoring verdicts do not assert finite-time re-entry.
+      Negative species CH4: INDETERMINATE.
+        Restoration score: -400*CH4*(-5.21549565610308e+15*CH4*H2O**2*pressure**3*(1/(pressure*(H2/(2*(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)) + sqrt(H2**2/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)**2 + 0.0001)/2 + 0.001)))**(7/2)*exp(-29334.4273949209/temperature)*Max(0, Ni)/((6.65e-9*CH4*pressure*exp(4604.0....
+        Componentwise inward source: CH4=failed.
+        Lower excursion faces: CH4=unresolved.
+      Negative species CO: INDETERMINATE.
+        Restoration score: -400*CO*(2.17157648314612e+16*CH4*H2O*pressure**2*(1/(pressure*(H2/(2*(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)) + sqrt(H2**2/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)**2 + 0.0001)/2 + 0.001)))**(5/2)*exp(-28877.3924457585/temperature)*Max(0, Ni)/((6.65e-9*CH4*pressure*exp(4604.025751....
+        Componentwise inward source: CO=failed.
+        Lower excursion faces: CO=unresolved.
+      Negative species CO2: INDETERMINATE.
+        Restoration score: -400*CO2*(5.21549565610308e+15*CH4*H2O**2*pressure**3*(1/(pressure*(H2/(2*(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)) + sqrt(H2**2/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)**2 + 0.0001)/2 + 0.001)))**(7/2)*exp(-29334.4273949209/temperature)*Max(0, Ni)/((6.65e-9*CH4*pressure*exp(4604.02....
+        Componentwise inward source: CO2=failed.
+        Lower excursion faces: CO2=unresolved.
+      Negative species H2: UNDEFINED_IN_EXTENSION.
+        Decisive expression: 4.27855012633343e-5*(pressure/temperature)**1.2*(4.96458623104962*Max(0, H2/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2))/(24.11159535*Max(0, H2/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)) + 1.0) + 1.14167632328348*Max(0, H2/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2))/(0.42300595*Max....
+        Exact counterexample: Ar=1/120, CH4=1/40, CO=0, CO2=0, H2=-1/20, H2O=0, He=1/120, N2=1/120, O2=0, Ni=0, NiO=1/40, CaAl2O4=1/120.
+      Stopped after an exact failure certificate was found.
+      Regions checked: 4
 
 Network analysis
   Conserved stoichiometric quantities [stoichiometric_conservation; case]
@@ -231,6 +249,6 @@ Network analysis
       Invariant faces: 6
 
 Summary
-  Overall: INDETERMINATE
-  Statuses: PASS=38, SAMPLED_PASS=0, FAIL=0, INDETERMINATE=1, UNAVAILABLE=0
-  Numerical values: 4
+  Overall: FAIL
+  Statuses: PASS=38, SAMPLED_PASS=0, FAIL=1, INDETERMINATE=0, UNAVAILABLE=0
+  Numerical values: 5

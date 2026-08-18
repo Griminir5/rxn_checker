@@ -2,7 +2,7 @@
 
 from collections.abc import Mapping
 from dataclasses import dataclass
-from itertools import combinations
+import heapq
 
 import sympy as sp
 
@@ -15,7 +15,7 @@ from .models import (
     CheckStatus,
     CheckValue,
 )
-from .network import source_terms as _source_terms
+from .network import NetworkExpressions, network_expressions, source_terms as _source_terms
 
 MAX_FACE_TESTS = 4096
 _WITNESS_FRACTIONS = (
@@ -93,6 +93,47 @@ def _zero_status_on_domain(expression: sp.Expr, case: Case) -> bool | None:
     return None
 
 
+class _ZeroProver:
+    """Reuse physical assumptions, witnesses, and conclusions across faces."""
+
+    def __init__(self, case: Case) -> None:
+        self.replacements = {
+            symbol: sp.Dummy(
+                symbol.name,
+                **(
+                    {"positive": True}
+                    if bounds.physical_lower >= 0
+                    else {"negative": True}
+                    if bounds.physical_upper <= 0
+                    else {"real": True}
+                ),
+            )
+            for symbol, bounds in case.state_bounds.items()
+        }
+        self.witnesses = tuple(
+            _witness_values(case, fraction) for fraction in _WITNESS_FRACTIONS
+        )
+        self.cache: dict[sp.Expr, bool | None] = {}
+
+    def status(self, expression: sp.Expr) -> bool | None:
+        cached = self.cache.get(expression, ...)
+        if cached is not ...:
+            return cached
+
+        conclusion = zero_status(expression)
+        if conclusion is None:
+            physical_expression = expression.xreplace(self.replacements)
+            if zero_status(physical_expression) is False:
+                conclusion = False
+            else:
+                for witness in self.witnesses:
+                    if zero_status(expression.xreplace(witness)) is False:
+                        conclusion = False
+                        break
+        self.cache[expression] = conclusion
+        return conclusion
+
+
 def all_zero(
     expressions: tuple[sp.Expr, ...],
     case: Case | None = None,
@@ -121,9 +162,239 @@ def _has_known_parent(
     return any(set(face).issubset(depleted_set) for face in known_faces)
 
 
+class _FaceEvaluator:
+    """Restrict shared expressions one symbol at a time and cache every face."""
+
+    def __init__(
+        self,
+        case: Case,
+        source_terms: Mapping[str, sp.Expr],
+        *,
+        use_reaction_rates: bool,
+    ) -> None:
+        self.case = case
+        self.prover = _ZeroProver(case)
+        self.symbols = case.states.concentrations
+        self.symbol_order = {
+            symbol: index
+            for index, symbol in enumerate(case.states.concentrations.values())
+        }
+        self.original_source = source_terms
+        eligible_symbols = {
+            case.states.concentration(species_id)
+            for species_id in case.states.species_ids
+            if not case.state_bounds[
+                case.states.concentration(species_id)
+            ].strict_lower
+        }
+        self.proof_order = tuple(
+            sorted(
+                case.states.species_ids,
+                key=lambda species_id: (
+                    len(source_terms[species_id].free_symbols & eligible_symbols),
+                    source_terms[species_id] is not sp.S.Zero,
+                ),
+            )
+        )
+        self.expression_cache: dict[tuple[frozenset[str], str], sp.Expr] = {
+            (frozenset(), species_id): expression
+            for species_id, expression in source_terms.items()
+        }
+        self.rate_cache: dict[tuple[frozenset[str], int], sp.Expr] | None = None
+        self.rate_zeroers: tuple[frozenset[str], ...] = ()
+        if use_reaction_rates:
+            self.rate_cache = {
+                (frozenset(), index): reaction.rate
+                for index, reaction in enumerate(case.reactions)
+            }
+            self.rate_zeroers = tuple(
+                frozenset(
+                    species_id
+                    for species_id in dict.fromkeys(
+                        (*reaction.reactants, *reaction.catalysts)
+                    )
+                    if not case.state_bounds[
+                        case.states.concentration(species_id)
+                    ].strict_lower
+                    and zero_status(
+                        reaction.rate.xreplace(
+                            {case.states.concentration(species_id): sp.S.Zero}
+                        )
+                    )
+                    is True
+                )
+                for reaction in case.reactions
+            )
+
+    def _parent(self, depleted: frozenset[str]) -> tuple[frozenset[str], str]:
+        species_id = max(
+            depleted,
+            key=lambda item: self.symbol_order[self.symbols[item]],
+        )
+        return depleted - {species_id}, species_id
+
+    def _restricted_rate(self, depleted: frozenset[str], index: int) -> sp.Expr:
+        assert self.rate_cache is not None
+        key = depleted, index
+        cached = self.rate_cache.get(key)
+        if cached is not None:
+            return cached
+        parent, species_id = self._parent(depleted)
+        rate = self._restricted_rate(parent, index)
+        symbol = self.symbols[species_id]
+        restricted = (
+            sp.S.Zero
+            if species_id in self.rate_zeroers[index]
+            else rate
+            if rate is sp.S.Zero or not rate.has(symbol)
+            else rate.xreplace({symbol: sp.S.Zero})
+        )
+        self.rate_cache[key] = restricted
+        return restricted
+
+    def expression(self, depleted: frozenset[str], species_id: str) -> sp.Expr:
+        key = depleted, species_id
+        cached = self.expression_cache.get(key)
+        if cached is not None:
+            return cached
+
+        if self.rate_cache is None:
+            parent, depleted_species = self._parent(depleted)
+            expression = self.expression(parent, species_id)
+            symbol = self.symbols[depleted_species]
+            restricted = (
+                expression
+                if expression is sp.S.Zero or not expression.has(symbol)
+                else expression.xreplace({symbol: sp.S.Zero})
+            )
+        else:
+            restricted = sp.Add(
+                *(
+                    sp.Rational(
+                        str(
+                            reaction.net_stoichiometry.get(
+                                species_id,
+                                0,
+                            )
+                        )
+                    )
+                    * self._restricted_rate(depleted, index)
+                    for index, reaction in enumerate(self.case.reactions)
+                    if reaction.net_stoichiometry.get(species_id, 0)
+                    and self._restricted_rate(depleted, index) is not sp.S.Zero
+                )
+            )
+        self.expression_cache[key] = restricted
+        return restricted
+
+    def source(self, depleted: frozenset[str]) -> Mapping[str, sp.Expr]:
+        return {
+            species_id: self.expression(depleted, species_id)
+            for species_id in self.case.states.species_ids
+        }
+
+
+def _face_key(face: frozenset[str], order: Mapping[str, int]) -> tuple[object, ...]:
+    indices = tuple(sorted(order[item] for item in face))
+    return len(face), indices
+
+
+def _search_faces(
+    evaluator: _FaceEvaluator,
+    species_ids: tuple[str, ...],
+    *,
+    invariant: bool,
+    evaluated: set[frozenset[str]],
+) -> tuple[list[tuple[str, ...]], list[tuple[str, ...]], bool]:
+    """Find minimal depleted sets with exact dependency-directed branching."""
+
+    order = {species_id: index for index, species_id in enumerate(species_ids)}
+    initial = (
+        (frozenset((species_id,)) for species_id in species_ids)
+        if invariant
+        else (frozenset(),)
+    )
+    queue: list[tuple[tuple[object, ...], frozenset[str]]] = []
+    enqueued: set[frozenset[str]] = set()
+    for face in initial:
+        heapq.heappush(queue, (_face_key(face, order), face))
+        enqueued.add(face)
+
+    found: list[tuple[str, ...]] = []
+    unresolved: list[tuple[str, ...]] = []
+    while queue:
+        _, face = heapq.heappop(queue)
+        if _has_known_parent(
+            tuple(sorted(face, key=order.__getitem__)),
+            found,
+        ):
+            continue
+        if face not in evaluated:
+            if len(evaluated) >= MAX_FACE_TESTS:
+                return found, unresolved, False
+            evaluated.add(face)
+
+        relevant = tuple(
+            species_id
+            for species_id in evaluator.proof_order
+            if not invariant or species_id in face
+        )
+        unresolved_identity = False
+        failed_expression = None
+        for species_id in relevant:
+            expression = evaluator.expression(face, species_id)
+            status = evaluator.prover.status(expression)
+            if status is False:
+                failed_expression = expression
+                break
+            if status is None:
+                unresolved_identity = True
+        conclusion = (
+            False
+            if failed_expression is not None
+            else None
+            if unresolved_identity
+            else True
+        )
+        ordered_face = tuple(sorted(face, key=order.__getitem__))
+        if conclusion is True:
+            found.append(ordered_face)
+            continue
+        if conclusion is None:
+            unresolved.append(ordered_face)
+
+        if failed_expression is not None:
+            # Every terminal/invariant descendant must eliminate each failed
+            # expression. Its remaining dependencies are therefore a complete
+            # set of branches for every possible descendant.
+            dependencies = {
+                item
+                for item in species_ids
+                if item not in face
+                and evaluator.symbols[item] in failed_expression.free_symbols
+            }
+        else:
+            # An unresolved identity supplies no sound necessary variable.
+            # Fall back to every extension so completeness is not weakened.
+            dependencies = {item for item in species_ids if item not in face}
+
+        for species_id in sorted(dependencies, key=order.__getitem__):
+            child = face | {species_id}
+            if child in enqueued:
+                continue
+            enqueued.add(child)
+            heapq.heappush(queue, (_face_key(child, order), child))
+
+    found.sort(key=lambda face: (len(face), tuple(order[item] for item in face)))
+    unresolved.sort(key=lambda face: (len(face), tuple(order[item] for item in face)))
+    return found, unresolved, True
+
+
 def find_terminal_faces(
     case: Case,
     source_terms: Mapping[str, sp.Expr],
+    *,
+    use_reaction_rates: bool = False,
 ) -> TerminalFaceSearchResult:
     """Enumerate maximal terminal and invariant coordinate faces.
 
@@ -140,79 +411,55 @@ def find_terminal_faces(
             case.states.concentration(species_id)
         ].strict_lower
     )
-    terminal_faces: list[tuple[str, ...]] = []
-    invariant_faces: list[tuple[str, ...]] = []
-    unresolved_terminal: list[tuple[str, ...]] = []
-    unresolved_invariant: list[tuple[str, ...]] = []
-    face_tests = 0
-
-    for depleted_count in range(len(species_ids) + 1):
-        for depleted in combinations(species_ids, depleted_count):
-            if _has_known_parent(depleted, terminal_faces):
-                continue
-            if face_tests >= MAX_FACE_TESTS:
-                return TerminalFaceSearchResult(
-                    terminal_faces=tuple(terminal_faces),
-                    invariant_faces=tuple(invariant_faces),
-                    unresolved_terminal_faces=tuple(unresolved_terminal),
-                    unresolved_invariant_faces=tuple(unresolved_invariant),
-                    complete=False,
-                    tests=face_tests,
-                )
-
-            substitutions = {
-                case.states.concentration(species_id): sp.S.Zero
-                for species_id in depleted
-            }
-            restricted = {
-                species_id: expression.xreplace(substitutions)
-                for species_id, expression in source_terms.items()
-            }
-            face_tests += 1
-
-            terminal = all_zero(tuple(restricted.values()), case)
-            if terminal is True:
-                terminal_faces.append(depleted)
-                if not depleted:
-                    return TerminalFaceSearchResult(
-                        terminal_faces=tuple(terminal_faces),
-                        invariant_faces=tuple(invariant_faces),
-                        unresolved_terminal_faces=tuple(unresolved_terminal),
-                        unresolved_invariant_faces=tuple(unresolved_invariant),
-                        complete=True,
-                        tests=face_tests,
-                    )
-            elif terminal is None:
-                unresolved_terminal.append(depleted)
-
-            if not depleted:
-                continue
-            invariant = all_zero(
-                tuple(restricted[species_id] for species_id in depleted),
-                case,
-            )
-            if invariant is True and not _has_known_parent(
-                depleted,
-                invariant_faces,
-            ):
-                invariant_faces.append(depleted)
-            elif invariant is None:
-                unresolved_invariant.append(depleted)
+    evaluator = _FaceEvaluator(
+        case,
+        source_terms,
+        use_reaction_rates=use_reaction_rates,
+    )
+    evaluated: set[frozenset[str]] = set()
+    terminal_faces, unresolved_terminal, terminal_complete = _search_faces(
+        evaluator,
+        species_ids,
+        invariant=False,
+        evaluated=evaluated,
+    )
+    if terminal_faces == [()] and not unresolved_terminal:
+        return TerminalFaceSearchResult(
+            terminal_faces=((),),
+            invariant_faces=((),),
+            unresolved_terminal_faces=(),
+            unresolved_invariant_faces=(),
+            complete=terminal_complete,
+            tests=len(evaluated),
+        )
+    invariant_faces, unresolved_invariant, invariant_complete = _search_faces(
+        evaluator,
+        species_ids,
+        invariant=True,
+        evaluated=evaluated,
+    )
 
     return TerminalFaceSearchResult(
         terminal_faces=tuple(terminal_faces),
         invariant_faces=tuple(invariant_faces),
         unresolved_terminal_faces=tuple(unresolved_terminal),
         unresolved_invariant_faces=tuple(unresolved_invariant),
-        complete=True,
-        tests=face_tests,
+        complete=terminal_complete and invariant_complete,
+        tests=len(evaluated),
     )
 
 
-def check_terminal_faces(case: Case) -> TerminalFaceSearchResult:
+def check_terminal_faces(
+    case: Case,
+    network: NetworkExpressions | None = None,
+) -> TerminalFaceSearchResult:
     """Locate maximal terminal and invariant concentration faces."""
 
-    return find_terminal_faces(case, _source_terms(case))
+    return find_terminal_faces(
+        case,
+        network.source_terms if network is not None else _source_terms(case),
+        use_reaction_rates=True,
+    )
 
 
 def _format_face(face: tuple[str, ...], all_species: tuple[str, ...]) -> str:
@@ -275,7 +522,12 @@ def _outcome(
 def run(case: Case, context: CheckContext) -> CheckOutcome:
     """Run face discovery once for the complete case."""
 
-    return _outcome(check_terminal_faces(case), case.states.species_ids)
+    network = context.cached(
+        case,
+        "network",
+        lambda: network_expressions(case),
+    )
+    return _outcome(check_terminal_faces(case, network), case.states.species_ids)
 
 
 CHECK = CheckDefinition(

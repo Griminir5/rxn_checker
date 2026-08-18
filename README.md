@@ -4,9 +4,9 @@
 that selected reactions exist, use case-owned state symbols, reference declared
 species, conserve atoms and mass, have non-negative rates in the physical
 domain, stop when a reactant or catalyst is depleted, and form a positive
-reaction network. It also reports the conserved stoichiometric quantities of
-the selected reaction network, symbolic equilibrium families, and terminal or
-invariant concentration faces.
+reaction network. It also checks symbolic recovery from declared small negative
+concentration excursions and reports the conserved stoichiometric quantities,
+symbolic equilibrium families, and terminal or invariant concentration faces.
 
 ## Running a case
 
@@ -73,8 +73,8 @@ inspect expressions just outside the physical domain. Their physical lower
 bound is zero; species listed under `inerts` use the strict physical condition
 `concentration > 0`. An inert must be a case species and cannot be a reactant,
 product, or catalyst in any selected reaction, though it may still affect a
-rate through dilution. `excursion_lower` separately defines how far a later
-recovery check may inspect the unphysical region. Concentration defaults apply
+rate through dilution. `excursion_lower` defines how far the recovery check may
+inspect the unphysical region. Concentration defaults apply
 to every species and entries under `overrides` replace either value for one
 species. Loading rejects invalid bounds, unknown species or reactions, duplicate
 selections, participating inerts, missing reaction species, and rate symbols
@@ -175,22 +175,44 @@ the Ni-positive steady state over a temperature/pressure grid, and renders six
 linked, dependency-free wireframe plots. Open the file directly in a browser;
 no local server or JavaScript packages are required.
 
-The terminal-face check does not globally simplify expressions. It uses simultaneous
-zero substitution, existing symbolic sign facts, and exact interior witness
-points to prove or disprove zero identities. A terminal face makes every
-component of `F` vanish, while an invariant face only makes the depleted
-species' components vanish. Only maximal faces are reported. Enumeration is
-combinatorial and stops as `INDETERMINATE` after 4096 face tests.
+The terminal-face check does not globally simplify expressions. It incrementally
+restricts shared rate expressions, reuses symbolic sign facts and exact interior
+witness points, and branches only on concentration dependencies that can make a
+disproved source identity vanish. A terminal face makes every component of `F`
+vanish, while an invariant face only makes the depleted species' components
+vanish. Only maximal faces are reported. Dense adversarial expressions can
+still require combinatorial search, which stops as `INDETERMINATE` after 4096
+distinct face tests.
 
 The conserved-quantity analysis builds the case stoichiometric matrix exactly
 and finds its left nullspace. It reports individually unchanged species,
 analyzes disconnected reaction-network components separately, and presents the
 non-negative extreme rays of each component's conservation cone. Signed basis
-relations are included when those rays do not span the complete nullspace.
+relations are included when those rays do not span the complete nullspace. The
+extreme rays are constructed by an exact incremental double-description
+algorithm rather than by enumerating candidate species supports.
 These expressions are conserved by the selected reaction source terms; external
 flows, dilution, and changing volume are outside the analysis. Cases do not yet
 define initial concentrations, so the report gives expressions rather than
 their constant numerical values.
+
+The nonphysical-recovery check constructs the complete network source
+`F = S r` and examines every nonempty negative-species set within each
+stoichiometric component. Non-negative conservation rays exclude sign-regions
+whose compatibility classes cannot reach the physical orthant. On every
+remaining region it checks that rates and source terms are real and finite,
+classifies the normalized restoration score, reports the stronger
+componentwise result, and verifies every lower excursion face. Results use the
+verdicts `STRONGLY_RESTORING`, `NET_RESTORING`, `NON_WORSENING`, `STUCK`,
+`WORSENING`, `UNDEFINED_IN_EXTENSION`, `STOICHIOMETRICALLY_UNREPAIRABLE`, and
+`INDETERMINATE`. All proofs and counterexamples are exact; there is no numerical
+sampling. A bounded region count and symbolic-operation limit make large
+expressions terminate conservatively as `INDETERMINATE`. The public
+`check_nonphysical_recovery()` function performs the full bounded enumeration
+by default. The registered report check may stop earlier after an exact failure
+certificate, because later regions cannot change the case-level `FAIL` result.
+A restoring verdict does not claim finite-time re-entry into the physical
+domain.
 
 Checks return `CheckOutcome` objects with an optional qualitative status,
 details, and numerical values. Supported statuses, from least to most

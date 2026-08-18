@@ -212,6 +212,8 @@ class NonphysicalRecoveryTests(unittest.TestCase):
         self.assertTrue(
             any("Negative species A: WORSENING." in line for line in outcome.details)
         )
+        self.assertEqual(outcome.values[0].value, 1)
+        self.assertIn("exact failure certificate", outcome.details[-1])
 
     def test_complex_network_stops_before_region_analysis(self) -> None:
         case = self.case(

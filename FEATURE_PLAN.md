@@ -12,7 +12,6 @@ are documented in the README. Remaining work is grouped below.
 
 - Bounded rate non-negativity using interval branch-and-bound
 - Jacobian eigenvalues within the stoichiometric subspace
-- Recovery from the nonphysical domain and bound violations
 - Unbounded growth, finite-time blow-up, and unintended stable equilibria
 
 ## Numerical robustness
