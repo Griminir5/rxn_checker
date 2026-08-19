@@ -9,6 +9,11 @@ dependencies = [
     "sympy>=1.14.0",
 ]
 
+[dependency-groups]
+dev = [
+    "pytest>=8.4.1",
+]
+
 [project.scripts]
 rxn-checker = "rxn_checker.cli:main"
 

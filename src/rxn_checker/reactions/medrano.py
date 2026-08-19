@@ -1,10 +1,10 @@
+from collections.abc import Mapping
 from dataclasses import dataclass
 
-from sympy import Abs, Add, Expr, Max, Min, exp, sympify
+from sympy import Abs, Add, Expr, Max, Min, Rational, exp, sympify
 
-from ..reaction import Reaction
+from ..model import CaseSymbols, Reaction
 from ..species.registry import PROPERTY_REGISTRY
-from ..state import StateVariables
 
 
 GAS_CONSTANT_J_PER_MOL_K = 8.31446261815324
@@ -91,16 +91,28 @@ class MedranoTerms:
 
 
 @dataclass(frozen=True)
+class MedranoFamilyTerms:
+    temperature_k: Expr
+    total_gas_conc_molm3: Expr
+    summed_gas_conc_molm3: Expr
+    ni_conc_molm3: Expr
+    nio_conc_molm3: Expr
+    total_solid_inventory_molm3: Expr
+    frac_reduced: Expr
+    frac_oxidised: Expr
+
+
+@dataclass(frozen=True)
 class MedranoReactionState:
     conversion: Expr
     unreacted_fraction: Expr
     total_solid_inventory_molm3: Expr
 
 
-def _total_gas_concentration(states: StateVariables) -> Expr:
+def _total_gas_concentration(symbols: CaseSymbols) -> Expr:
     gas_concentrations = tuple(
         concentration
-        for species_id, concentration in states.concentrations.items()
+        for species_id, concentration in symbols.concentrations.items()
         if PROPERTY_REGISTRY.get_record(species_id).phase == "gas"
     )
 
@@ -123,29 +135,44 @@ def _availability_gate_expr(x: Expr, gate: float) -> Expr:
     return available / (available + gate)
 
 
-def medrano_terms(
-    states: StateVariables,
-    gas_species_id: str,
-) -> MedranoTerms:
-    temperature_k = states.temperature
-    c_ni = _available_expr(states.concentration("Ni"))
-    c_nio = _available_expr(states.concentration("NiO"))
+def _family_terms(symbols: CaseSymbols) -> MedranoFamilyTerms:
+    temperature_k = symbols.temperature
+    c_ni = _available_expr(symbols.concentration("Ni"))
+    c_nio = _available_expr(symbols.concentration("NiO"))
     c_solid_total = c_ni + c_nio
     c_solid_denominator = c_solid_total + POS_EPS
-
-    return MedranoTerms(
+    return MedranoFamilyTerms(
         temperature_k=temperature_k,
         total_gas_conc_molm3=(
-            states.pressure / (GAS_CONSTANT_J_PER_MOL_K * temperature_k)
+            symbols.pressure / (GAS_CONSTANT_J_PER_MOL_K * temperature_k)
         ),
-        gas_mole_fraction=(
-            states.concentration(gas_species_id) / _total_gas_concentration(states)
-        ),
+        summed_gas_conc_molm3=_total_gas_concentration(symbols),
         ni_conc_molm3=c_ni,
         nio_conc_molm3=c_nio,
         total_solid_inventory_molm3=c_solid_total,
         frac_reduced=c_ni / c_solid_denominator,
         frac_oxidised=c_nio / c_solid_denominator,
+    )
+
+
+def medrano_terms(
+    symbols: CaseSymbols,
+    gas_species_id: str,
+    *,
+    shared: MedranoFamilyTerms | None = None,
+) -> MedranoTerms:
+    shared = shared or _family_terms(symbols)
+    return MedranoTerms(
+        temperature_k=shared.temperature_k,
+        total_gas_conc_molm3=shared.total_gas_conc_molm3,
+        gas_mole_fraction=(
+            symbols.concentration(gas_species_id) / shared.summed_gas_conc_molm3
+        ),
+        ni_conc_molm3=shared.ni_conc_molm3,
+        nio_conc_molm3=shared.nio_conc_molm3,
+        total_solid_inventory_molm3=shared.total_solid_inventory_molm3,
+        frac_reduced=shared.frac_reduced,
+        frac_oxidised=shared.frac_oxidised,
     )
 
 
@@ -305,8 +332,13 @@ def _medrano_reaction_rate_expr(
     )
 
 
-def _reaction_rate(states: StateVariables, comp_key: str) -> Expr:
-    terms = medrano_terms(states, comp_key)
+def _reaction_rate(
+    symbols: CaseSymbols,
+    comp_key: str,
+    *,
+    shared: MedranoFamilyTerms | None = None,
+) -> Expr:
+    terms = medrano_terms(symbols, comp_key, shared=shared)
     state = _medrano_reaction_state_expr(comp_key, terms)
     return _medrano_reaction_rate_expr(
         comp_key,
@@ -319,50 +351,40 @@ def _reaction_rate(states: StateVariables, comp_key: str) -> Expr:
     )
 
 
-def reduction_h2_rate(states: StateVariables) -> Expr:
-    return _reaction_rate(states, "H2")
+def reduction_h2_rate(symbols: CaseSymbols) -> Expr:
+    return _reaction_rate(symbols, "H2")
 
 
-def build_reduction_h2(states: StateVariables) -> Reaction:
-    return Reaction(
-        name="reduction_h2",
-        family="medrano",
-        reactants={"H2": 1, "NiO": 1},
-        products={"Ni": 1, "H2O": 1},
-        rate=reduction_h2_rate(states),
-    )
+def reduction_co_rate(symbols: CaseSymbols) -> Expr:
+    return _reaction_rate(symbols, "CO")
 
 
-def reduction_co_rate(states: StateVariables) -> Expr:
-    return _reaction_rate(states, "CO")
+def oxidation_o2_rate(symbols: CaseSymbols) -> Expr:
+    return _reaction_rate(symbols, "O2")
 
 
-def build_reduction_co(states: StateVariables) -> Reaction:
-    return Reaction(
-        name="reduction_co",
-        family="medrano",
-        reactants={"CO": 1, "NiO": 1},
-        products={"Ni": 1, "CO2": 1},
-        rate=reduction_co_rate(states),
-    )
-
-
-def oxidation_o2_rate(states: StateVariables) -> Expr:
-    return _reaction_rate(states, "O2")
-
-
-def build_oxidation_o2(states: StateVariables) -> Reaction:
-    return Reaction(
-        name="oxidation_o2",
-        family="medrano",
-        reactants={"O2": 0.5, "Ni": 1},
-        products={"NiO": 1},
-        rate=oxidation_o2_rate(states),
-    )
-
-
-REACTIONS = {
-    "reduction_h2": build_reduction_h2,
-    "reduction_co": build_reduction_co,
-    "oxidation_o2": build_oxidation_o2,
-}
+def build_family(symbols: CaseSymbols) -> Mapping[str, Reaction]:
+    shared = _family_terms(symbols)
+    return {
+        "reduction_h2": Reaction(
+            id="medrano.reduction_h2",
+            reactants={"H2": 1, "NiO": 1},
+            products={"Ni": 1, "H2O": 1},
+            catalysts=(),
+            rate=_reaction_rate(symbols, "H2", shared=shared),
+        ),
+        "reduction_co": Reaction(
+            id="medrano.reduction_co",
+            reactants={"CO": 1, "NiO": 1},
+            products={"Ni": 1, "CO2": 1},
+            catalysts=(),
+            rate=_reaction_rate(symbols, "CO", shared=shared),
+        ),
+        "oxidation_o2": Reaction(
+            id="medrano.oxidation_o2",
+            reactants={"O2": Rational(1, 2), "Ni": 1},
+            products={"NiO": 1},
+            catalysts=(),
+            rate=_reaction_rate(symbols, "O2", shared=shared),
+        ),
+    }

@@ -1,118 +1,145 @@
+"""Built-in exact species definitions."""
+
 from collections.abc import Mapping
 from dataclasses import dataclass
-import math
+from types import MappingProxyType
 
-
-@dataclass(frozen=True)
-class SpeciesProperties:
-    """Properties of one species, with molecular weight in kg/mol."""
-
-    name: str
-    phase: str
-    atoms: Mapping[str, float]
-    mw: float | None = None
-
-    def __post_init__(self) -> None:
-        if not self.name or self.name != self.name.strip():
-            raise ValueError("Species name must not be blank or padded.")
-        if self.phase not in {"gas", "solid"}:
-            raise ValueError("Species phase must be either 'gas' or 'solid'.")
-        if not self.atoms:
-            raise ValueError(f"Species '{self.name}' must define its atoms.")
-        if self.mw is not None and (not math.isfinite(self.mw) or self.mw <= 0):
-            raise ValueError(
-                f"Molecular weight must be finite and positive for species "
-                f"'{self.name}'."
-            )
-        for element, count in self.atoms.items():
-            if not element or element != element.strip():
-                raise ValueError(f"Species '{self.name}' has an invalid element name.")
-            if not math.isfinite(count) or count <= 0:
-                raise ValueError(
-                    f"Atom count for '{element}' in species '{self.name}' "
-                    "must be finite and positive."
-                )
+from ..model import Phase, Species
 
 
 @dataclass(frozen=True)
 class PropertyRegistry:
-    records: Mapping[str, SpeciesProperties]
+    """Explicit lookup table for species definitions."""
+
+    records: Mapping[str, Species]
 
     def __post_init__(self) -> None:
-        for species_id in self.records:
-            if not species_id or species_id != species_id.strip():
+        records = dict(self.records)
+        for species_id, species in records.items():
+            if species_id != species.id:
                 raise ValueError(
-                    "Property registry species identifiers must not be blank or padded."
+                    f"Species registry key '{species_id}' does not match "
+                    f"record id '{species.id}'."
                 )
+        object.__setattr__(self, "records", MappingProxyType(records))
 
-    def get_record(self, species_id: str) -> SpeciesProperties:
+    def get_record(self, species_id: str) -> Species:
         try:
             return self.records[species_id]
-        except KeyError as exc:
+        except KeyError as error:
             available = ", ".join(self.records)
             raise KeyError(
                 f"Unknown species '{species_id}'. Available species: {available}"
-            ) from exc
+            ) from error
 
 
-# Real-species molar masses use one atomic-weight basis throughout: H=1.00794,
-# C=12.0107, N=14.0067, O=15.9994, Al=26.9815386, Ca=40.078,
-# Fe=55.845, Ni=58.6934, and Cu=63.546 g/mol.
+def _species(
+    species_id: str,
+    name: str,
+    phase: Phase,
+    atoms: Mapping[str, int | float | str],
+    molar_mass: int | float | str | None,
+) -> Species:
+    return Species(species_id, name, phase, atoms, molar_mass)
+
+
+# Molar masses use one atomic-weight basis throughout and are stored exactly as
+# their declared decimal spellings in kg/mol.
 PROPERTY_REGISTRY = PropertyRegistry(
     records={
-        "Aye": SpeciesProperties("Aye", "gas", {"Ex": 1}, 10.0e-3),
-        "Bee": SpeciesProperties("Bee", "gas", {"Ex": 1}, 10.0e-3),
-        "Cee": SpeciesProperties("Cee", "gas", {"Ex": 2}, 20.0e-3),
-        "Ar": SpeciesProperties("Argon", "gas", {"Ar": 1}, 39.948e-3),
-        "CH4": SpeciesProperties("Methane", "gas", {"C": 1, "H": 4}, 16.04246e-3),
-        "CO": SpeciesProperties("Carbon Monoxide", "gas", {"C": 1, "O": 1}, 28.0101e-3),
-        "CO2": SpeciesProperties("Carbon Dioxide", "gas", {"C": 1, "O": 2}, 44.0095e-3),
-        "H2": SpeciesProperties("Hydrogen", "gas", {"H": 2}, 2.01588e-3),
-        "H2O": SpeciesProperties("Water", "gas", {"H": 2, "O": 1}, 18.01528e-3),
-        "He": SpeciesProperties("Helium", "gas", {"He": 1}, 4.002602e-3),
-        "N2": SpeciesProperties("Nitrogen", "gas", {"N": 2}, 28.0134e-3),
-        "O2": SpeciesProperties("Oxygen", "gas", {"O": 2}, 31.9988e-3),
-        "Ni": SpeciesProperties("Nickel", "solid", {"Ni": 1}, 58.6934e-3),
-        "NiO": SpeciesProperties(
-            "Nickel Oxide", "solid", {"Ni": 1, "O": 1}, 74.6928e-3
+        "Aye": _species("Aye", "Aye", Phase.GAS, {"Ex": 1}, "0.010"),
+        "Bee": _species("Bee", "Bee", Phase.GAS, {"Ex": 1}, "0.010"),
+        "Cee": _species("Cee", "Cee", Phase.GAS, {"Ex": 2}, "0.020"),
+        "Ar": _species("Ar", "Argon", Phase.GAS, {"Ar": 1}, "0.039948"),
+        "CH4": _species(
+            "CH4", "Methane", Phase.GAS, {"C": 1, "H": 4}, "0.01604246"
         ),
-        "CaAl2O4": SpeciesProperties(
+        "CO": _species(
+            "CO", "Carbon Monoxide", Phase.GAS, {"C": 1, "O": 1}, "0.0280101"
+        ),
+        "CO2": _species(
+            "CO2", "Carbon Dioxide", Phase.GAS, {"C": 1, "O": 2}, "0.0440095"
+        ),
+        "H2": _species("H2", "Hydrogen", Phase.GAS, {"H": 2}, "0.00201588"),
+        "H2O": _species(
+            "H2O", "Water", Phase.GAS, {"H": 2, "O": 1}, "0.01801528"
+        ),
+        "He": _species("He", "Helium", Phase.GAS, {"He": 1}, "0.004002602"),
+        "N2": _species("N2", "Nitrogen", Phase.GAS, {"N": 2}, "0.0280134"),
+        "O2": _species("O2", "Oxygen", Phase.GAS, {"O": 2}, "0.0319988"),
+        "Ni": _species("Ni", "Nickel", Phase.SOLID, {"Ni": 1}, "0.0586934"),
+        "NiO": _species(
+            "NiO", "Nickel Oxide", Phase.SOLID, {"Ni": 1, "O": 1}, "0.0746928"
+        ),
+        "CaAl2O4": _species(
+            "CaAl2O4",
             "Calcium Aluminate",
-            "solid",
+            Phase.SOLID,
             {"Ca": 1, "Al": 2, "O": 4},
-            158.0386772e-3,
+            "0.1580386772",
         ),
-        "Cu": SpeciesProperties("Copper", "solid", {"Cu": 1}, 63.546e-3),
-        "Cu2O": SpeciesProperties(
-            "Copper(I) Oxide", "solid", {"Cu": 2, "O": 1}, 143.0914e-3
+        "Cu": _species("Cu", "Copper", Phase.SOLID, {"Cu": 1}, "0.063546"),
+        "Cu2O": _species(
+            "Cu2O", "Copper(I) Oxide", Phase.SOLID, {"Cu": 2, "O": 1}, "0.1430914"
         ),
-        "CuO": SpeciesProperties(
-            "Copper(II) Oxide", "solid", {"Cu": 1, "O": 1}, 79.5454e-3
+        "CuO": _species(
+            "CuO", "Copper(II) Oxide", Phase.SOLID, {"Cu": 1, "O": 1}, "0.0795454"
         ),
-        "Al2O3": SpeciesProperties(
-            "Aluminium Oxide", "solid", {"Al": 2, "O": 3}, 101.9612772e-3
+        "Al2O3": _species(
+            "Al2O3",
+            "Aluminium Oxide",
+            Phase.SOLID,
+            {"Al": 2, "O": 3},
+            "0.1019612772",
         ),
-        "CuAlO2": SpeciesProperties(
+        "CuAlO2": _species(
+            "CuAlO2",
             "Copper(I) Aluminate",
-            "solid",
+            Phase.SOLID,
             {"Cu": 1, "Al": 1, "O": 2},
-            122.5263386e-3,
+            "0.1225263386",
         ),
-        "CuAl2O4": SpeciesProperties(
+        "CuAl2O4": _species(
+            "CuAl2O4",
             "Copper(II) Aluminate",
-            "solid",
+            Phase.SOLID,
             {"Cu": 1, "Al": 2, "O": 4},
-            181.5066772e-3,
+            "0.1815066772",
         ),
-        "Fe": SpeciesProperties("Iron", "solid", {"Fe": 1}, 55.845e-3),
-        "FeO": SpeciesProperties(
-            "Iron(II) Oxide", "solid", {"Fe": 1, "O": 1}, 71.8444e-3
+        "Fe": _species("Fe", "Iron", Phase.SOLID, {"Fe": 1}, "0.055845"),
+        "FeO": _species(
+            "FeO", "Iron(II) Oxide", Phase.SOLID, {"Fe": 1, "O": 1}, "0.0718444"
         ),
-        "Fe3O4": SpeciesProperties(
-            "Iron(II,III) Oxide", "solid", {"Fe": 3, "O": 4}, 231.5326e-3
+        "Fe0.94O": _species(
+            "Fe0.94O",
+            "Wüstite",
+            Phase.SOLID,
+            {"Fe": "0.94", "O": 1},
+            "0.0684937",
         ),
-        "Fe2O3": SpeciesProperties(
-            "Iron(III) Oxide", "solid", {"Fe": 2, "O": 3}, 159.6882e-3
+        "Fe3O4": _species(
+            "Fe3O4",
+            "Iron(II,III) Oxide",
+            Phase.SOLID,
+            {"Fe": 3, "O": 4},
+            "0.2315326",
+        ),
+        "Fe2O3": _species(
+            "Fe2O3",
+            "Iron(III) Oxide",
+            Phase.SOLID,
+            {"Fe": 2, "O": 3},
+            "0.1596882",
         ),
     }
+)
+
+
+# Compatibility alias for code written against the pre-rewrite name.
+SpeciesProperties = Species
+
+__all__ = (
+    "PROPERTY_REGISTRY",
+    "PropertyRegistry",
+    "SpeciesProperties",
 )

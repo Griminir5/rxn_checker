@@ -1,171 +1,388 @@
+"""Strict schema-1 case loading with requested-family imports."""
+
+from collections.abc import Mapping
+import hashlib
+from importlib import import_module, util
 from pathlib import Path
+import sys
+from types import ModuleType
 
 import yaml
-from sympy import Symbol
 
-from .case import Case
-from .reaction import Reaction
-from .reactions import FAMILY_REGISTRY, REACTION_REGISTRY, ReactionBuilder
+from .case import (
+    Case,
+    CheckConfig,
+    ConcentrationModel,
+    DomainConfig,
+    ParameterBox,
+    ParameterRange,
+    ReportConfig,
+    TotalMinimumConfig,
+    TotalMinimumMode,
+)
+from .model import CaseSymbols, Phase, Reaction, Species, parse_rational
+from .reactions import BUILTIN_FAMILIES
 from .species import PROPERTY_REGISTRY, PropertyRegistry
-from .state import IdealGasClosure, StateVariables, VariableBounds
+from .state import GAS_CONSTANT_J_PER_MOL_K
+
+
+_TOP_LEVEL_KEYS = {
+    "schema",
+    "species",
+    "inerts",
+    "reactions",
+    "parameters",
+    "domain",
+    "checks",
+    "report",
+}
+
+
+def _mapping(value: object, label: str) -> dict:
+    if not isinstance(value, dict):
+        raise ValueError(f"{label} must be a YAML mapping.")
+    return value
+
+
+def _reject_unknown(config: Mapping, allowed: set[str], label: str) -> None:
+    unknown = set(config) - allowed
+    if unknown:
+        raise ValueError(
+            f"Unknown {label} keys: " + ", ".join(sorted(map(str, unknown))) + "."
+        )
 
 
 def _string_list(
-    config: object,
+    config: Mapping,
     key: str,
     *,
     optional: bool = False,
 ) -> tuple[str, ...]:
-    values = config.get(key, []) if isinstance(config, dict) else None
-    if not isinstance(values, list) or (not optional and key not in config):
+    if key not in config:
+        if optional:
+            return ()
         raise ValueError(f"Case '{key}' must be a YAML sequence.")
-    values = tuple(values)
-    if any(not isinstance(value, str) or not value for value in values):
+    values = config[key]
+    if not isinstance(values, list):
+        raise ValueError(f"Case '{key}' must be a YAML sequence.")
+    result = tuple(values)
+    if any(
+        not isinstance(value, str) or not value or value != value.strip()
+        for value in result
+    ):
         raise ValueError(f"Case '{key}' entries must be non-empty strings.")
-    return values
+    if len(result) != len(set(result)):
+        raise ValueError(f"Case '{key}' entries must be unique.")
+    return result
 
 
-def _selected_builders(
-    selectors: tuple[str, ...],
-) -> tuple[tuple[str, ReactionBuilder], ...]:
-    selected: list[tuple[str, ReactionBuilder]] = []
-    selected_ids: set[str] = set()
-
-    for selector in selectors:
-        parts = selector.split(".")
-        if len(parts) not in (1, 2) or any(not part.isidentifier() for part in parts):
-            raise ValueError(
-                f"Invalid reaction selector '{selector}'; expected "
-                "'family' or 'family.reaction'."
-            )
-
-        if len(parts) == 1:
-            try:
-                reaction_ids = FAMILY_REGISTRY[selector]
-            except KeyError as exc:
-                raise ValueError(f"Unknown reaction family '{selector}'.") from exc
-        else:
-            reaction_ids = (selector,)
-            if selector not in REACTION_REGISTRY:
-                family_id = parts[0]
-                available = ", ".join(FAMILY_REGISTRY.get(family_id, ()))
-                message = f"Unknown reaction '{selector}'."
-                if available:
-                    message += f" Available reactions: {available}."
-                raise ValueError(message)
-
-        for reaction_id in reaction_ids:
-            if reaction_id in selected_ids:
-                raise ValueError(
-                    f"Reaction '{reaction_id}' was selected more than once."
-                )
-            selected_ids.add(reaction_id)
-            selected.append((reaction_id, REACTION_REGISTRY[reaction_id]))
-
-    return tuple(selected)
+def _pair(config: Mapping, key: str) -> ParameterRange:
+    values = config.get(key)
+    if not isinstance(values, list) or len(values) != 2:
+        raise ValueError(f"Case parameter '{key}' must contain [lower, upper].")
+    return ParameterRange(values[0], values[1])
 
 
-def _build_reaction(
-    reaction_id: str,
-    builder: ReactionBuilder,
-    states: StateVariables,
-) -> Reaction:
-    reaction = builder(states)
-    if not isinstance(reaction, Reaction):
-        raise TypeError(f"Builder for '{reaction_id}' did not return a Reaction.")
-    family_id, reaction_name = reaction_id.split(".", 1)
-    if reaction.name != reaction_name:
-        raise ValueError(
-            f"Builder for '{reaction_id}' returned unexpected name '{reaction.name}'."
-        )
-
-    if reaction.family != family_id:
-        raise ValueError(
-            f"Reaction '{reaction_id}' declared family '{reaction.family}'."
-        )
-    return reaction
-
-
-def _load_reactions(
-    selectors: tuple[str, ...], states: StateVariables
-) -> tuple[Reaction, ...]:
-    return tuple(
-        _build_reaction(reaction_id, builder, states)
-        for reaction_id, builder in _selected_builders(selectors)
+def _load_parameters(value: object) -> ParameterBox:
+    config = _mapping(value, "Case 'parameters'")
+    _reject_unknown(config, {"temperature", "pressure"}, "parameter")
+    if set(config) != {"temperature", "pressure"}:
+        raise ValueError("Case parameters must define temperature and pressure.")
+    return ParameterBox(
+        temperature=_pair(config, "temperature"),
+        pressure=_pair(config, "pressure"),
     )
 
 
-def _number(config: dict, key: str) -> float:
-    value = config.get(key)
-    if not isinstance(value, (int, float)) or isinstance(value, bool):
-        raise ValueError(f"Case bound '{key}' must be numeric.")
-    return float(value)
-
-
-def _bounds_pair(config: dict, key: str) -> tuple[float, float]:
-    values = config.get(key)
-    if not isinstance(values, list) or len(values) != 2:
-        raise ValueError(f"Case bound '{key}' must contain [lower, upper].")
-    if any(
-        not isinstance(value, (int, float)) or isinstance(value, bool)
-        for value in values
-    ):
-        raise ValueError(f"Case bound '{key}' must contain numeric values.")
-    return float(values[0]), float(values[1])
-
-
-def _load_state_bounds(
-    config: object,
-    states: StateVariables,
-) -> dict[Symbol, VariableBounds]:
-    if not isinstance(config, dict):
-        raise ValueError("Case 'bounds' must be a YAML mapping.")
-
-    temperature = VariableBounds(*_bounds_pair(config, "temperature"))
-    pressure = VariableBounds(*_bounds_pair(config, "pressure"))
-    if temperature.physical_lower <= 0:
-        raise ValueError("Temperature lower bound must be positive.")
-    if pressure.physical_lower <= 0:
-        raise ValueError("Pressure lower bound must be positive.")
-
-    concentrations = config.get("concentrations")
-    if not isinstance(concentrations, dict):
-        raise ValueError("Case concentration bounds must be a YAML mapping.")
-    defaults = concentrations.get("default")
-    if not isinstance(defaults, dict):
-        raise ValueError("Case concentration bounds require a 'default' mapping.")
-    default_upper = _number(defaults, "upper")
-    default_excursion = _number(defaults, "excursion_lower")
-
-    overrides = concentrations.get("overrides", {})
-    if not isinstance(overrides, dict):
-        raise ValueError("Case concentration 'overrides' must be a YAML mapping.")
-    unknown_species = set(overrides) - set(states.species_ids)
-    if unknown_species:
+def _resolved_bounds(
+    value: object,
+    species_ids: tuple[str, ...],
+    label: str,
+) -> dict[str, object]:
+    config = _mapping(value, f"Domain '{label}'")
+    _reject_unknown(config, {"default", "overrides"}, f"domain {label}")
+    if "default" not in config:
+        raise ValueError(f"Domain '{label}' requires a default value.")
+    default = parse_rational(config["default"], label=f"Default {label}")
+    overrides = _mapping(config.get("overrides", {}), f"Domain '{label}.overrides'")
+    unknown = set(overrides) - set(species_ids)
+    if unknown:
         raise ValueError(
-            "Concentration bounds reference unknown species: "
-            + ", ".join(sorted(unknown_species))
+            f"Domain '{label}' references unknown species: "
+            + ", ".join(sorted(unknown))
             + "."
         )
-
-    state_bounds = {
-        states.temperature: temperature,
-        states.pressure: pressure,
-    }
-    for species_id in states.species_ids:
-        override = overrides.get(species_id, {})
-        if not isinstance(override, dict):
-            raise ValueError(
-                f"Concentration bounds for '{species_id}' must be a YAML mapping."
-            )
-        upper = float(override.get("upper", default_upper))
-        excursion_lower = float(override.get("excursion_lower", default_excursion))
-        state_bounds[states.concentration(species_id)] = VariableBounds(
-            physical_lower=0.0,
-            physical_upper=upper,
-            excursion_lower=excursion_lower,
+    return {
+        species_id: parse_rational(
+            overrides.get(species_id, default),
+            label=f"{label} for '{species_id}'",
         )
-    return state_bounds
+        for species_id in species_ids
+    }
+
+
+def _load_total(
+    value: object | None,
+    *,
+    phase: Phase,
+    species: tuple[Species, ...],
+) -> TotalMinimumConfig:
+    label = phase.value
+    if value is None:
+        return TotalMinimumConfig(TotalMinimumMode.NONE)
+    config = _mapping(value, f"Domain total '{label}'")
+    _reject_unknown(config, {"mode", "species", "value"}, f"{label} total")
+    try:
+        mode = TotalMinimumMode(config.get("mode", "none"))
+    except ValueError as error:
+        allowed = "none, explicit"
+        if phase is Phase.GAS:
+            allowed += ", ideal_gas_minimum"
+        raise ValueError(f"{label.title()} total mode must be one of: {allowed}.") from error
+    if phase is Phase.SOLID and mode is TotalMinimumMode.IDEAL_GAS_MINIMUM:
+        raise ValueError("Solid totals do not support ideal_gas_minimum mode.")
+
+    selected_ids = tuple(item.id for item in species if item.phase is phase)
+    if "species" in config:
+        configured = config["species"]
+        if not isinstance(configured, list):
+            raise ValueError(f"Domain {label} total species must be a YAML sequence.")
+        selected_ids = tuple(configured)
+        if any(not isinstance(item, str) or not item for item in selected_ids):
+            raise ValueError(f"Domain {label} total species must be non-empty strings.")
+        if len(selected_ids) != len(set(selected_ids)):
+            raise ValueError(f"Domain {label} total species must be unique.")
+
+    by_id = {item.id: item for item in species}
+    unknown = set(selected_ids) - set(by_id)
+    wrong_phase = {
+        species_id
+        for species_id in selected_ids
+        if species_id in by_id and by_id[species_id].phase is not phase
+    }
+    if unknown:
+        raise ValueError(
+            f"Domain {label} total references unknown species: "
+            + ", ".join(sorted(unknown))
+            + "."
+        )
+    if wrong_phase:
+        raise ValueError(
+            f"Domain {label} total includes species from another phase: "
+            + ", ".join(sorted(wrong_phase))
+            + "."
+        )
+    if mode is not TotalMinimumMode.NONE and not selected_ids:
+        raise ValueError(f"Domain {label} total requires at least one species.")
+    if mode is TotalMinimumMode.NONE and ("species" in config or "value" in config):
+        raise ValueError(f"Domain {label} total options require a non-none mode.")
+
+    return TotalMinimumConfig(
+        mode=mode,
+        species=selected_ids if mode is not TotalMinimumMode.NONE else (),
+        value=config.get("value"),
+    )
+
+
+def _load_domain(
+    value: object,
+    species: tuple[Species, ...],
+    parameters: ParameterBox,
+) -> DomainConfig:
+    config = _mapping(value, "Case 'domain'")
+    _reject_unknown(
+        config,
+        {"concentration_model", "upper", "excursion_lower", "totals"},
+        "domain",
+    )
+    try:
+        model = ConcentrationModel(config.get("concentration_model"))
+    except (TypeError, ValueError) as error:
+        raise ValueError(
+            "Domain concentration_model must be 'independent' or 'chamfered'."
+        ) from error
+
+    species_ids = tuple(item.id for item in species)
+    upper = _resolved_bounds(config.get("upper"), species_ids, "upper")
+    excursion = _resolved_bounds(
+        config.get("excursion_lower"), species_ids, "excursion_lower"
+    )
+    totals = _mapping(config.get("totals", {}), "Domain 'totals'")
+    _reject_unknown(totals, {"gas", "solid"}, "domain totals")
+    gas_total = _load_total(totals.get("gas"), phase=Phase.GAS, species=species)
+    solid_total = _load_total(totals.get("solid"), phase=Phase.SOLID, species=species)
+    domain = DomainConfig(model, upper, excursion, gas_total, solid_total)
+
+    for total, label in ((gas_total, "gas"), (solid_total, "solid")):
+        if total.mode is TotalMinimumMode.EXPLICIT:
+            available = sum(domain.upper[species_id] for species_id in total.species)
+            if available < total.value:
+                raise ValueError(
+                    f"Domain {label} total minimum exceeds the selected upper bounds."
+                )
+    if gas_total.mode is TotalMinimumMode.IDEAL_GAS_MINIMUM:
+        if parameters.pressure.lower <= 0:
+            raise ValueError(
+                "Ideal-gas minimum requires a positive pressure lower bound."
+            )
+        minimum = parameters.pressure.lower / (
+            GAS_CONSTANT_J_PER_MOL_K * parameters.temperature.upper
+        )
+        available = sum(domain.upper[species_id] for species_id in gas_total.species)
+        if available < minimum:
+            raise ValueError(
+                "Domain gas total minimum exceeds the selected upper bounds."
+            )
+    return domain
+
+
+def _load_checks(value: object | None) -> CheckConfig:
+    if value is None:
+        return CheckConfig()
+    config = _mapping(value, "Case 'checks'")
+    _reject_unknown(config, {"profile", "include", "exclude", "fail_fast"}, "checks")
+    profile = config.get("profile", "physical")
+    if profile not in {"basic", "physical", "robust", "analysis", "all"}:
+        raise ValueError(f"Unknown check profile '{profile}'.")
+    include = _string_list(config, "include", optional=True)
+    exclude = _string_list(config, "exclude", optional=True)
+    fail_fast = config.get("fail_fast", "stage")
+    if fail_fast not in {"stage", "none"}:
+        raise ValueError("Check fail_fast must be 'stage' or 'none'.")
+    return CheckConfig(profile, include, exclude, fail_fast)
+
+
+def _load_report(value: object | None) -> ReportConfig:
+    if value is None:
+        return ReportConfig()
+    config = _mapping(value, "Case 'report'")
+    _reject_unknown(config, {"verbosity", "format", "output"}, "report")
+    verbosity = config.get("verbosity", "failures")
+    if verbosity not in {"summary", "failures", "full"}:
+        raise ValueError("Report verbosity must be 'summary', 'failures', or 'full'.")
+    output_format = config.get("format", "text")
+    if output_format not in {"text", "json"}:
+        raise ValueError("Report format must be 'text' or 'json'.")
+    output = config.get("output")
+    if output is not None and (not isinstance(output, str) or not output):
+        raise ValueError("Report output must be a non-empty path string.")
+    return ReportConfig(verbosity, output_format, output)
+
+
+def _selector(selector: str) -> tuple[str, str | None]:
+    parts = selector.split(".")
+    if len(parts) not in (1, 2) or any(not part.isidentifier() for part in parts):
+        raise ValueError(
+            f"Invalid reaction selector '{selector}'; expected "
+            "'family' or 'family.reaction'."
+        )
+    return parts[0], parts[1] if len(parts) == 2 else None
+
+
+def _local_family_module(path: Path, family_id: str) -> ModuleType:
+    digest = hashlib.sha256(str(path.resolve()).encode()).hexdigest()[:16]
+    module_name = f"_rxn_checker_case_{digest}_{family_id}"
+    spec = util.spec_from_file_location(module_name, path)
+    if spec is None or spec.loader is None:
+        raise ImportError(f"Could not load local reaction family '{family_id}'.")
+    module = util.module_from_spec(spec)
+    sys.modules[module_name] = module
+    try:
+        spec.loader.exec_module(module)
+    except Exception:
+        sys.modules.pop(module_name, None)
+        raise
+    return module
+
+
+def _family_module(case_directory: Path, family_id: str) -> ModuleType:
+    local_path = case_directory / "reactions" / f"{family_id}.py"
+    if local_path.is_file():
+        return _local_family_module(local_path, family_id)
+    try:
+        module_name = BUILTIN_FAMILIES[family_id]
+    except KeyError as error:
+        raise ValueError(f"Unknown reaction family '{family_id}'.") from error
+    return import_module(module_name)
+
+
+def _build_family(
+    case_directory: Path,
+    family_id: str,
+    symbols: CaseSymbols,
+) -> Mapping[str, Reaction]:
+    module = _family_module(case_directory, family_id)
+    builder = getattr(module, "build_family", None)
+    if not callable(builder):
+        raise TypeError(
+            f"Reaction family '{family_id}' must define callable build_family()."
+        )
+    built = builder(symbols)
+    if not isinstance(built, Mapping) or not built:
+        raise TypeError(
+            f"Reaction family '{family_id}' must return a non-empty mapping."
+        )
+
+    reactions: dict[str, Reaction] = {}
+    for local_id, reaction in built.items():
+        if not isinstance(local_id, str) or not local_id.isidentifier():
+            raise ValueError(
+                f"Reaction family '{family_id}' returned invalid id '{local_id}'."
+            )
+        if not isinstance(reaction, Reaction):
+            raise TypeError(
+                f"Reaction family '{family_id}' returned a non-Reaction value."
+            )
+        expected_id = f"{family_id}.{local_id}"
+        if reaction.id != expected_id:
+            raise ValueError(
+                f"Reaction family '{family_id}' key '{local_id}' returned "
+                f"reaction id '{reaction.id}', expected '{expected_id}'."
+            )
+        reactions[local_id] = reaction
+    return reactions
+
+
+def _load_reactions(
+    selectors: tuple[str, ...],
+    symbols: CaseSymbols,
+    case_directory: Path,
+) -> tuple[Reaction, ...]:
+    parsed = tuple(_selector(selector) for selector in selectors)
+    families: dict[str, Mapping[str, Reaction]] = {}
+    for family_id, _ in parsed:
+        if family_id not in families:
+            try:
+                families[family_id] = _build_family(
+                    case_directory, family_id, symbols
+                )
+            except Exception as error:
+                if isinstance(error, (ValueError, TypeError)):
+                    raise
+                raise RuntimeError(
+                    f"Could not build reaction family '{family_id}': {error}"
+                ) from error
+
+    selected: list[Reaction] = []
+    selected_ids: set[str] = set()
+    for family_id, local_id in parsed:
+        family = families[family_id]
+        local_ids = tuple(family) if local_id is None else (local_id,)
+        for reaction_name in local_ids:
+            if reaction_name not in family:
+                available = ", ".join(family)
+                raise ValueError(
+                    f"Unknown reaction '{family_id}.{reaction_name}'. "
+                    f"Available reactions: {available}."
+                )
+            reaction = family[reaction_name]
+            if reaction.id in selected_ids:
+                raise ValueError(
+                    f"Reaction '{reaction.id}' was selected more than once."
+                )
+            selected_ids.add(reaction.id)
+            selected.append(reaction)
+    return tuple(selected)
 
 
 def load_case(
@@ -173,15 +390,24 @@ def load_case(
     *,
     property_registry: PropertyRegistry = PROPERTY_REGISTRY,
 ) -> Case:
-    """Load a case and build only the reactions selected by its YAML."""
+    """Load and validate one schema-1 case without importing unselected families."""
 
     path = Path(path)
+    if path.is_dir():
+        path = path / "case.yaml"
     with path.open(encoding="utf-8") as stream:
-        config = yaml.safe_load(stream)
+        loaded = yaml.safe_load(stream)
+    config = _mapping(loaded, "Case document")
+    _reject_unknown(config, _TOP_LEVEL_KEYS, "top-level case")
+    if config.get("schema") != 1 or isinstance(config.get("schema"), bool):
+        raise ValueError("Case 'schema' must be integer 1.")
 
     species_ids = _string_list(config, "species")
     inert_species = _string_list(config, "inerts", optional=True)
-    reaction_selectors = _string_list(config, "reactions")
+    selectors = _string_list(config, "reactions")
+    if not selectors:
+        raise ValueError("Case must select at least one reaction.")
+
     missing_species = [
         species_id
         for species_id in species_ids
@@ -189,46 +415,23 @@ def load_case(
     ]
     if missing_species:
         raise ValueError("Unknown case species: " + ", ".join(missing_species) + ".")
+    species = tuple(property_registry.get_record(item) for item in species_ids)
+    symbols = CaseSymbols.for_species(species_ids)
+    parameters = _load_parameters(config.get("parameters"))
+    domain = _load_domain(config.get("domain"), species, parameters)
+    reactions = _load_reactions(selectors, symbols, path.parent)
 
-    states = StateVariables(species_ids)
-    reactions = _load_reactions(reaction_selectors, states)
-    state_bounds = _load_state_bounds(config.get("bounds"), states)
-    closure_config = config.get("gas_closure", {})
-    if not isinstance(closure_config, dict):
-        raise ValueError("Case 'gas_closure' must be a YAML mapping.")
-    unknown_closure_keys = set(closure_config) - {"minimum_total"}
-    if unknown_closure_keys:
-        raise ValueError(
-            "Unknown gas closure options: "
-            + ", ".join(sorted(unknown_closure_keys))
-            + "."
-        )
-    minimum_total = closure_config.get("minimum_total", "positive")
-    if minimum_total not in {"positive", "ideal_gas"}:
-        raise ValueError(
-            "Case gas closure 'minimum_total' must be 'positive' or "
-            "'ideal_gas'."
-        )
-    gas_concentrations = tuple(
-        states.concentration(species_id)
-        for species_id in species_ids
-        if property_registry.get_record(species_id).phase == "gas"
-    )
-    gas_closure = (
-        IdealGasClosure(
-            gas_concentrations=gas_concentrations,
-            temperature=states.temperature,
-            pressure=states.pressure,
-            minimum_total=minimum_total,
-        )
-        if gas_concentrations
-        else None
-    )
     return Case(
         name=path.parent.name,
-        states=states,
+        species=species,
+        symbols=symbols,
         reactions=reactions,
-        state_bounds=state_bounds,
+        parameters=parameters,
+        domain=domain,
         inert_species=inert_species,
-        gas_closure=gas_closure,
+        checks=_load_checks(config.get("checks")),
+        report=_load_report(config.get("report")),
     )
+
+
+__all__ = ("load_case",)

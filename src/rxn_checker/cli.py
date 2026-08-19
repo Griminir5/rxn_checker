@@ -8,8 +8,6 @@ import sys
 from .loading import load_case
 from .reporting import build_check_report
 
-REPORT_FILENAME = "rxn-checker-report.txt"
-
 
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
@@ -48,18 +46,6 @@ def _loading_error_report(case_path: Path, error: Exception) -> str:
     )
 
 
-def _output_report(case_path: Path, text: str) -> bool:
-    sys.stdout.write(text)
-    report_path = case_path.parent / REPORT_FILENAME
-    try:
-        report_path.write_text(text, encoding="utf-8")
-    except OSError as error:
-        print(f"Could not write report: {error}", file=sys.stderr)
-        return False
-    print(f"Report written to {report_path}")
-    return True
-
-
 def main(argv: Sequence[str] | None = None) -> int:
     """Run checks for one case and return a process exit code."""
 
@@ -70,12 +56,11 @@ def main(argv: Sequence[str] | None = None) -> int:
         case = load_case(case_path)
     except Exception as error:
         report_text = _loading_error_report(case_path, error)
-        _output_report(case_path, report_text)
+        sys.stdout.write(report_text)
         return 2
 
     report = build_check_report(case, source=case_path)
-    if not _output_report(case_path, report.text):
-        return 2
+    sys.stdout.write(report.text)
     return 0 if report.passed else 1
 
 

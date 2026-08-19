@@ -1,11 +1,11 @@
+from collections.abc import Mapping
 from dataclasses import dataclass
 
 from sympy import Add, Expr, Pow, Rational, exp, sqrt
 from sympy.functions.elementary.miscellaneous import Max
 
-from ..reaction import Reaction
+from ..model import CaseSymbols, Reaction
 from ..species.registry import PROPERTY_REGISTRY
-from ..state import StateVariables
 
 GAS_CONSTANT_J_PER_MOL_K = 8.31446261815324
 MIN_H2_MOLE_FRACTION = 0.001
@@ -52,10 +52,10 @@ class XuFromentTerms:
     catalyst_mass_density_kg_per_m3: Expr
 
 
-def _total_gas_concentration(states: StateVariables) -> Expr:
+def _total_gas_concentration(symbols: CaseSymbols) -> Expr:
     gas_concentrations = tuple(
         concentration
-        for species_id, concentration in states.concentrations.items()
+        for species_id, concentration in symbols.concentrations.items()
         if PROPERTY_REGISTRY.get_record(species_id).phase == "gas"
     )
 
@@ -144,15 +144,15 @@ def _rate_constant_expression(
     )
 
 
-def xu_froment_terms(states: StateVariables) -> XuFromentTerms:
-    temperature_k = states.temperature
-    pressure_pa = states.pressure
-    total_gas_concentration = _total_gas_concentration(states)
+def xu_froment_terms(symbols: CaseSymbols) -> XuFromentTerms:
+    temperature_k = symbols.temperature
+    pressure_pa = symbols.pressure
+    total_gas_concentration = _total_gas_concentration(symbols)
 
     def partial_pressure(species_id: str) -> Expr:
         return (
             pressure_pa
-            * states.concentration(species_id)
+            * symbols.concentration(species_id)
             / total_gas_concentration
         )
 
@@ -162,7 +162,7 @@ def xu_froment_terms(states: StateVariables) -> XuFromentTerms:
     p_h2_pa = partial_pressure("H2")
     p_h2o_pa = partial_pressure("H2O")
 
-    h2_mole_fraction = states.concentration("H2") / total_gas_concentration
+    h2_mole_fraction = symbols.concentration("H2") / total_gas_concentration
     controlled_h2_mole_fraction = MIN_H2_MOLE_FRACTION + Rational(1, 2) * (
         h2_mole_fraction
         + sqrt(
@@ -191,7 +191,7 @@ def xu_froment_terms(states: StateVariables) -> XuFromentTerms:
         p_inv_h2_pa_inv=p_inv_h2_pa_inv,
         denominator=denominator,
         catalyst_mass_density_kg_per_m3=(
-            Max(states.concentration("Ni"), 0) * NI_MW_KG_PER_MOL
+            Max(symbols.concentration("Ni"), 0) * NI_MW_KG_PER_MOL
         ),
     )
 
@@ -212,8 +212,7 @@ def _common_rate_factor(
     )
 
 
-def smr_fw_rate(states: StateVariables) -> Expr:
-    terms = xu_froment_terms(states)
+def _smr_fw_rate(terms: XuFromentTerms) -> Expr:
     driving_force = terms.p_ch4_pa * terms.p_h2o_pa
     return (
         _common_rate_factor(terms, "smr", Rational(5, 2), 10.0**-2.5)
@@ -221,19 +220,11 @@ def smr_fw_rate(states: StateVariables) -> Expr:
     )
 
 
-def build_smr_fw(states: StateVariables) -> Reaction:
-    return Reaction(
-        name="smr_fw",
-        family="xu_froment",
-        reactants={"CH4": 1, "H2O": 1},
-        products={"CO": 1, "H2": 3},
-        catalysts=("Ni",),
-        rate=smr_fw_rate(states),
-    )
+def smr_fw_rate(symbols: CaseSymbols) -> Expr:
+    return _smr_fw_rate(xu_froment_terms(symbols))
 
 
-def smr_bw_rate(states: StateVariables) -> Expr:
-    terms = xu_froment_terms(states)
+def _smr_bw_rate(terms: XuFromentTerms) -> Expr:
     driving_force = (
         Pow(terms.p_h2_pa, 3)
         * terms.p_co_pa
@@ -245,36 +236,20 @@ def smr_bw_rate(states: StateVariables) -> Expr:
     )
 
 
-def build_smr_bw(states: StateVariables) -> Reaction:
-    return Reaction(
-        name="smr_bw",
-        family="xu_froment",
-        reactants={"CO": 1, "H2": 3},
-        products={"CH4": 1, "H2O": 1},
-        catalysts=("Ni",),
-        rate=smr_bw_rate(states),
-    )
+def smr_bw_rate(symbols: CaseSymbols) -> Expr:
+    return _smr_bw_rate(xu_froment_terms(symbols))
 
 
-def wgs_fw_rate(states: StateVariables) -> Expr:
-    terms = xu_froment_terms(states)
+def _wgs_fw_rate(terms: XuFromentTerms) -> Expr:
     driving_force = terms.p_co_pa * terms.p_h2o_pa
     return _common_rate_factor(terms, "wgs", Rational(1), 1.0e5) * driving_force
 
 
-def build_wgs_fw(states: StateVariables) -> Reaction:
-    return Reaction(
-        name="wgs_fw",
-        family="xu_froment",
-        reactants={"CO": 1, "H2O": 1},
-        products={"CO2": 1, "H2": 1},
-        catalysts=("Ni",),
-        rate=wgs_fw_rate(states),
-    )
+def wgs_fw_rate(symbols: CaseSymbols) -> Expr:
+    return _wgs_fw_rate(xu_froment_terms(symbols))
 
 
-def wgs_bw_rate(states: StateVariables) -> Expr:
-    terms = xu_froment_terms(states)
+def _wgs_bw_rate(terms: XuFromentTerms) -> Expr:
     driving_force = (
         terms.p_h2_pa
         * terms.p_co2_pa
@@ -283,19 +258,11 @@ def wgs_bw_rate(states: StateVariables) -> Expr:
     return _common_rate_factor(terms, "wgs", Rational(1), 1.0e5) * driving_force
 
 
-def build_wgs_bw(states: StateVariables) -> Reaction:
-    return Reaction(
-        name="wgs_bw",
-        family="xu_froment",
-        reactants={"CO2": 1, "H2": 1},
-        products={"CO": 1, "H2O": 1},
-        catalysts=("Ni",),
-        rate=wgs_bw_rate(states),
-    )
+def wgs_bw_rate(symbols: CaseSymbols) -> Expr:
+    return _wgs_bw_rate(xu_froment_terms(symbols))
 
 
-def overall_fw_rate(states: StateVariables) -> Expr:
-    terms = xu_froment_terms(states)
+def _overall_fw_rate(terms: XuFromentTerms) -> Expr:
     driving_force = terms.p_ch4_pa * Pow(terms.p_h2o_pa, 2)
     return (
         _common_rate_factor(terms, "overall", Rational(7, 2), 10.0**-2.5)
@@ -303,19 +270,11 @@ def overall_fw_rate(states: StateVariables) -> Expr:
     )
 
 
-def build_overall_fw(states: StateVariables) -> Reaction:
-    return Reaction(
-        name="overall_fw",
-        family="xu_froment",
-        reactants={"CH4": 1, "H2O": 2},
-        products={"CO2": 1, "H2": 4},
-        catalysts=("Ni",),
-        rate=overall_fw_rate(states),
-    )
+def overall_fw_rate(symbols: CaseSymbols) -> Expr:
+    return _overall_fw_rate(xu_froment_terms(symbols))
 
 
-def overall_bw_rate(states: StateVariables) -> Expr:
-    terms = xu_froment_terms(states)
+def _overall_bw_rate(terms: XuFromentTerms) -> Expr:
     driving_force = (
         Pow(terms.p_h2_pa, 4)
         * terms.p_co2_pa
@@ -327,22 +286,53 @@ def overall_bw_rate(states: StateVariables) -> Expr:
     )
 
 
-def build_overall_bw(states: StateVariables) -> Reaction:
-    return Reaction(
-        name="overall_bw",
-        family="xu_froment",
-        reactants={"CO2": 1, "H2": 4},
-        products={"CH4": 1, "H2O": 2},
-        catalysts=("Ni",),
-        rate=overall_bw_rate(states),
-    )
+def overall_bw_rate(symbols: CaseSymbols) -> Expr:
+    return _overall_bw_rate(xu_froment_terms(symbols))
 
 
-REACTIONS = {
-    "wgs_fw": build_wgs_fw,
-    "smr_fw": build_smr_fw,
-    "overall_fw": build_overall_fw,
-    "wgs_bw": build_wgs_bw,
-    "smr_bw": build_smr_bw,
-    "overall_bw": build_overall_bw,
-}
+def build_family(symbols: CaseSymbols) -> Mapping[str, Reaction]:
+    terms = xu_froment_terms(symbols)
+    return {
+        "wgs_fw": Reaction(
+            id="xu_froment.wgs_fw",
+            reactants={"CO": 1, "H2O": 1},
+            products={"CO2": 1, "H2": 1},
+            catalysts=("Ni",),
+            rate=_wgs_fw_rate(terms),
+        ),
+        "smr_fw": Reaction(
+            id="xu_froment.smr_fw",
+            reactants={"CH4": 1, "H2O": 1},
+            products={"CO": 1, "H2": 3},
+            catalysts=("Ni",),
+            rate=_smr_fw_rate(terms),
+        ),
+        "overall_fw": Reaction(
+            id="xu_froment.overall_fw",
+            reactants={"CH4": 1, "H2O": 2},
+            products={"CO2": 1, "H2": 4},
+            catalysts=("Ni",),
+            rate=_overall_fw_rate(terms),
+        ),
+        "wgs_bw": Reaction(
+            id="xu_froment.wgs_bw",
+            reactants={"CO2": 1, "H2": 1},
+            products={"CO": 1, "H2O": 1},
+            catalysts=("Ni",),
+            rate=_wgs_bw_rate(terms),
+        ),
+        "smr_bw": Reaction(
+            id="xu_froment.smr_bw",
+            reactants={"CO": 1, "H2": 3},
+            products={"CH4": 1, "H2O": 1},
+            catalysts=("Ni",),
+            rate=_smr_bw_rate(terms),
+        ),
+        "overall_bw": Reaction(
+            id="xu_froment.overall_bw",
+            reactants={"CO2": 1, "H2": 4},
+            products={"CH4": 1, "H2O": 2},
+            catalysts=("Ni",),
+            rate=_overall_bw_rate(terms),
+        ),
+    }

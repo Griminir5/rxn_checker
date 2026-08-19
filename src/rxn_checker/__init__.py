@@ -1,6 +1,16 @@
 """Public API for rxn-checker."""
 
-from .case import Case
+from .case import (
+    Case,
+    CheckConfig,
+    ConcentrationModel,
+    DomainConfig,
+    ParameterBox,
+    ParameterRange,
+    ReportConfig,
+    TotalMinimumConfig,
+    TotalMinimumMode,
+)
 from .checks import (
     CHECK_REGISTRY,
     AtomConservationResult,
@@ -19,9 +29,6 @@ from .checks import (
     MassConservationResult,
     NegativeSideRecoveryResult,
     NegativeSideSpeciesResult,
-    NonphysicalRecoveryResult,
-    RecoveryRegionResult,
-    RecoveryVerdict,
     StoichiometricConservationResult,
     TerminalFaceSearchResult,
     check_atom_conservation,
@@ -29,13 +36,12 @@ from .checks import (
     check_lipschitz_continuity,
     check_mass_conservation,
     check_negative_side_recovery,
-    check_nonphysical_recovery,
     check_terminal_faces,
     find_conserved_quantities,
     run_checks,
 )
 from .loading import load_case
-from .reaction import Reaction
+from .model import CaseSymbols, Phase, Reaction, Species, parse_rational
 from .reporting import CheckReport, build_check_report
 from .state import IdealGasClosure, StateVariables, VariableBounds
 
@@ -43,6 +49,8 @@ __all__ = (
     "CHECK_REGISTRY",
     "AtomConservationResult",
     "Case",
+    "CaseSymbols",
+    "CheckConfig",
     "CheckContext",
     "CheckDefinition",
     "CheckOutcome",
@@ -51,7 +59,9 @@ __all__ = (
     "CheckStatus",
     "CheckValue",
     "ConservationComponent",
+    "ConcentrationModel",
     "ConservedQuantity",
+    "DomainConfig",
     "EquilibriumBranch",
     "EquilibriumHelper",
     "EquilibriumRelation",
@@ -60,13 +70,17 @@ __all__ = (
     "MassConservationResult",
     "NegativeSideRecoveryResult",
     "NegativeSideSpeciesResult",
-    "NonphysicalRecoveryResult",
+    "ParameterBox",
+    "ParameterRange",
+    "Phase",
     "Reaction",
-    "RecoveryRegionResult",
-    "RecoveryVerdict",
+    "ReportConfig",
+    "Species",
     "StateVariables",
     "StoichiometricConservationResult",
     "TerminalFaceSearchResult",
+    "TotalMinimumConfig",
+    "TotalMinimumMode",
     "VariableBounds",
     "build_check_report",
     "check_atom_conservation",
@@ -74,9 +88,9 @@ __all__ = (
     "check_lipschitz_continuity",
     "check_mass_conservation",
     "check_negative_side_recovery",
-    "check_nonphysical_recovery",
     "check_terminal_faces",
     "find_conserved_quantities",
     "load_case",
+    "parse_rational",
     "run_checks",
 )

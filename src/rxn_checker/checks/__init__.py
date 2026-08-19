@@ -36,12 +36,6 @@ from .negative_side_recovery import (
     NegativeSideSpeciesResult,
     check_negative_side_recovery,
 )
-from .nonphysical_recovery import (
-    NonphysicalRecoveryResult,
-    RecoveryRegionResult,
-    RecoveryVerdict,
-    check_nonphysical_recovery,
-)
 from .nonnegative_rate import (
     RateNonnegativityResult,
     check_rate_nonnegativity,
@@ -82,10 +76,7 @@ __all__ = (
     "MassConservationResult",
     "NegativeSideRecoveryResult",
     "NegativeSideSpeciesResult",
-    "NonphysicalRecoveryResult",
     "RateNonnegativityResult",
-    "RecoveryRegionResult",
-    "RecoveryVerdict",
     "StoichiometricConservationResult",
     "TerminalFaceSearchResult",
     "ZeroAtDepletionResult",
@@ -95,7 +86,6 @@ __all__ = (
     "check_lipschitz_continuity",
     "check_mass_conservation",
     "check_negative_side_recovery",
-    "check_nonphysical_recovery",
     "check_rate_nonnegativity",
     "check_terminal_faces",
     "check_zero_at_depletion",

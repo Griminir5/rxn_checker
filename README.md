@@ -4,36 +4,38 @@
 that selected reactions exist, use case-owned state symbols, reference declared
 species, conserve atoms and mass, have non-negative rates in the physical
 domain, stop when a reactant or catalyst is depleted, and form a positive
-reaction network. It also applies two independent symbolic checks to declared
-small negative concentration excursions and reports the conserved
+reaction network. It also applies a symbolic check to declared small negative
+concentration excursions and reports the conserved
 stoichiometric quantities, symbolic equilibrium families, and terminal or
 invariant concentration faces.
 
 ## Running a case
 
-A case lists species, reaction selectors, and state bounds:
+A schema-1 case separates bounded parameters from its concentration domain:
 
 ```yaml
+schema: 1
+
 species:
   - Aye
   - Bee
   - Cee
-inerts:
-  - Cee
+
 reactions:
   - aye_to_bee.simple
-bounds:
+
+parameters:
   temperature: [200.0, 1500.0]
   pressure: [10000.0, 10000000.0]
-  concentrations:
-    default:
-      upper: 1000.0
-      excursion_lower: -0.1
+
+domain:
+  concentration_model: independent
+  upper:
+    default: 1000.0
     overrides:
-      Aye:
-        upper: 100.0
-gas_closure:
-  minimum_total: ideal_gas
+      Aye: 100.0
+  excursion_lower:
+    default: -0.1
 ```
 
 A selector is either `family.reaction` for one implementation or `family` for
@@ -46,80 +48,67 @@ uv run rxn-checker example_case/case.yaml
 uv run rxn-checker example_case
 ```
 
-The command prints a report and writes `rxn-checker-report.txt` beside the case
-file. Exit codes are `0` for a successful report, `1` for a failed or
-inconclusive report, and `2` when the case cannot be loaded or the report cannot
-be written.
+The command prints its report to standard output. Redirect it to a file when a
+saved report is needed. Exit codes are `0` for a successful report, `1` for a
+failed or inconclusive report, and `2` when the case cannot be loaded.
 
 ## State and reactions
 
-`load_case()` creates the case's concentration, temperature, and pressure
-symbols:
+`load_case()` creates concentration coordinates separately from the bounded
+temperature and pressure parameter symbols. Numeric configuration and
+stoichiometry are converted to exact SymPy rationals from their decimal
+spellings:
 
 ```python
 from rxn_checker import load_case
 
 case = load_case("example_case/case.yaml")
-aye = case.states.concentration("Aye")
-temperature = case.states.temperature
-pressure = case.states.pressure
+aye = case.symbols.concentration("Aye")
+temperature = case.symbols.temperature
+pressure = case.symbols.pressure
 
-temperature_bounds = case.state_bounds[temperature]
-aye_bounds = case.state_bounds[aye]
-assert temperature_bounds.interval() == (200.0, 1500.0)
-assert aye_bounds.interval() == (0.0, 100.0)
-assert aye_bounds.interval(include_excursion=True) == (-0.1, 100.0)
+assert aye in case.symbols.concentration_symbols
+assert temperature in case.symbols.parameter_symbols
+assert case.parameters.temperature.lower == 200
+assert case.domain.upper["Aye"] == 100
 ```
 
-Gas species also receive the ideal-gas closure
-`pressure = total_gas_concentration * R * temperature`. The Lipschitz check's
-augmented domain uses the selected lower-total policy. `minimum_total:
-positive` assumes only that the gas total is strictly positive, leaving zero as
-a limiting boundary. `minimum_total: ideal_gas` derives the uniform lower bound
-`pressure_min / (R * temperature_max)`. Individual gas concentrations retain
-their independent bounds and negative excursions. Solid concentrations receive
-no corresponding total constraint. Omitting `gas_closure` defaults to
-`minimum_total: positive`.
+`concentration_model` is either `independent` or `chamfered`. A chamfered domain
+may configure one gas total and one solid total. Gas totals support `none`,
+`explicit`, and `ideal_gas_minimum`; the last is the robust lower envelope
+`pressure_min / (R * temperature_max)`, not an ideal-gas equality constraint.
+Solid totals support `none` and `explicit`. Inerts remain ordinary non-negative
+concentrations and may occur in a rate through dilution, but cannot participate
+as reactants, products, or catalysts.
 
-Concentrations are real but not assumed non-negative, allowing later checks to
-inspect expressions just outside the physical domain. Their physical lower
-bound is zero; species listed under `inerts` use the strict physical condition
-`concentration > 0`. An inert must be a case species and cannot be a reactant,
-product, or catalyst in any selected reaction, though it may still affect a
-rate through dilution. `excursion_lower` defines how far the recovery check may
-inspect the unphysical region. Concentration defaults apply
-to every species and entries under `overrides` replace either value for one
-species. Loading rejects invalid bounds, unknown species or reactions, duplicate
-selections, participating inerts, missing reaction species, and rate symbols
-not owned by the case.
-
-Each module in `rxn_checker.reactions` is an automatically discovered reaction
-family. It exposes a `REACTIONS` mapping from local names to builder functions:
+Reaction families are imported only when selected. Each module exposes one
+family-level builder so shared expressions are constructed once:
 
 ```python
-from rxn_checker import Reaction
+from sympy import Rational
+
+from rxn_checker import CaseSymbols, Reaction
 
 
-def build_simple(states):
-    aye = states.concentration("Aye")
-    return Reaction(
-        name="simple",
-        family="aye_to_bee",
-        reactants={"Aye": 1},
-        products={"Bee": 1},
-        rate=2.0 * aye,
-    )
-
-
-REACTIONS = {"simple": build_simple}
+def build_family(symbols: CaseSymbols):
+    aye = symbols.concentration("Aye")
+    return {
+        "simple": Reaction(
+            id="aye_to_bee.simple",
+            reactants={"Aye": Rational(1)},
+            products={"Bee": Rational(1)},
+            catalysts=(),
+            rate=2 * aye,
+        )
+    }
 ```
 
-Builders receive the case's state object, so reaction modules should not create
-their own SymPy symbols. A reaction's qualified id is derived as `family.name`.
-Its reactant and product mappings remain separate, while `net_stoichiometry` is
-derived. Catalysts are non-consumed species and therefore do not participate in
-atom or mass balances. Model each direction of a reversible reaction as a
-separate `Reaction`.
+Built-in families live in `rxn_checker.reactions`. A case may instead provide
+`reactions/<family>.py` beside `case.yaml`; local reaction modules are trusted
+Python code and execute when that family is selected. Builders must use the
+supplied symbols. Reactant and product mappings remain separate, while exact
+`net_stoichiometry` is computed once. Model each reaction direction as its own
+`Reaction`; no reversible pairing is inferred.
 
 ## Checks and reports
 

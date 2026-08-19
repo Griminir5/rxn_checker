@@ -1,3 +1,5 @@
+schema: 1
+
 species:
   - Ar
   - CH4
@@ -8,31 +10,59 @@ species:
   - He
   - N2
   - O2
-
   - Ni
   - NiO
   - CaAl2O4
+
 inerts:
   - Ar
   - He
   - N2
   - CaAl2O4
+
 reactions:
   - medrano
   - xu_froment
-gas_closure:
-  minimum_total: ideal_gas
-bounds:
+
+parameters:
   temperature: [573.15, 1473.15]
   pressure: [100000.0, 3000000.0]
-  concentrations:
-    default:
-      upper: 1000.0
-      excursion_lower: -0.05
+
+domain:
+  concentration_model: chamfered
+
+  upper:
+    default: 1000.0
     overrides:
-      Ni:
-        upper: 10000.0
-      NiO:
-        upper: 10000.0
-      CaAl2O4:
-        upper: 10000.0
+      Ni: 10000.0
+      NiO: 10000.0
+      CaAl2O4: 10000.0
+
+  excursion_lower:
+    default: -0.05
+    overrides:
+      CaAl2O4: -0.001
+
+  totals:
+    gas:
+      mode: ideal_gas_minimum
+
+    solid:
+      mode: explicit
+      species:
+        - Ni
+        - NiO
+      value: 1.0e-8
+
+checks:
+  profile: robust
+  include:
+    - conserved_quantities
+    - structural_faces
+  exclude:
+    - steady_state_equations
+  fail_fast: stage
+
+report:
+  verbosity: failures
+  format: text
