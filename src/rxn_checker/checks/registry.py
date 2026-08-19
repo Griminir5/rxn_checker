@@ -9,6 +9,8 @@ from .definedness import run_augmented as run_augmented_definedness
 from .definedness import run_physical as run_physical_definedness
 from .definitions import CheckScope, CheckSpec, Stage
 from .mass_conservation import run as run_mass_conservation
+from .lipschitz import run_augmented as run_augmented_lipschitz
+from .lipschitz import run_physical as run_physical_lipschitz
 from .nonnegative_rate import run as run_rate_nonnegativity
 from .zero_at_depletion import run as run_zero_at_depletion
 
@@ -80,7 +82,7 @@ CHECK_REGISTRY = (
         ("physical_rate_definedness",),
         True,
         _PHYSICAL,
-        _placeholder("Lipschitz certification is scheduled for Phase 5."),
+        run_physical_lipschitz,
     ),
     CheckSpec(
         "zero_at_depletion",
@@ -130,7 +132,7 @@ CHECK_REGISTRY = (
         ("augmented_rate_definedness",),
         True,
         _ROBUST,
-        _placeholder("Augmented Lipschitz certification is scheduled for Phase 5."),
+        run_augmented_lipschitz,
     ),
     CheckSpec(
         "negative_side_nonrepulsion",

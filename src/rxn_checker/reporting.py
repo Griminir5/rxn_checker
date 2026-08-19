@@ -53,12 +53,29 @@ def render_text(
                 current_stage = spec.stage
 
             findings = result.findings
-            passed = sum(item.verdict is Verdict.PASS for item in findings)
-            if len(findings) > 1 and passed == len(findings):
+            reaction_findings = tuple(
+                item for item in findings if item.subject != run.case_name
+            )
+            case_findings = tuple(
+                item for item in findings if item.subject == run.case_name
+            )
+            passed = sum(item.verdict is Verdict.PASS for item in reaction_findings)
+            show_passing_case_detail = False
+            aggregate = (
+                reaction_findings
+                and passed == len(reaction_findings)
+                and all(item.verdict is Verdict.PASS for item in case_findings)
+                and (len(reaction_findings) > 1 or bool(case_findings))
+            )
+            if aggregate:
                 lines.append(
-                    f"  PASS     {spec.name:<34} {passed}/{len(findings)} reactions"
+                    f"  PASS     {spec.name:<34} "
+                    f"{passed}/{len(reaction_findings)} reactions"
                 )
-                if verbosity != "full":
+                if verbosity == "failures" and case_findings:
+                    findings = case_findings
+                    show_passing_case_detail = True
+                elif verbosity != "full":
                     continue
             else:
                 lines.append(f"  {result.verdict.value:<8} {spec.name}")
@@ -66,7 +83,7 @@ def render_text(
             visible = findings
             if verbosity == "failures" and result.verdict is not Verdict.PASS:
                 visible = tuple(item for item in findings if item.verdict is not Verdict.PASS)
-            elif verbosity == "failures":
+            elif verbosity == "failures" and not show_passing_case_detail:
                 visible = ()
             for finding in visible:
                 subject = "" if finding.subject == run.case_name else f"{finding.subject}: "

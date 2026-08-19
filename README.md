@@ -3,9 +3,9 @@
 `rxn-checker` validates symbolic reaction implementations. It currently checks
 that selected reactions exist, use case-owned state symbols, reference declared
 species, conserve atoms and mass, have non-negative rates in the physical
-domain, and stop when a reactant or catalyst is depleted. It also analyzes rate
-regularity on physical and augmented domains and applies a symbolic check to
-declared small negative concentration excursions.
+domain, and stop when a reactant or catalyst is depleted. It also certifies
+rate regularity on physical and augmented domains when the required domain
+guards can be proved.
 
 ## Running a case
 
@@ -153,9 +153,21 @@ concentration to zero and requires the resulting symbolic rate to be exactly
 zero. Product-only species are not depletion boundaries. A disproven identity
 is a `FAIL`, while an identity SymPy cannot decide is `UNKNOWN`.
 
-Lipschitz certification remains an explicit `UNKNOWN` placeholder until Phase
-5 can return the required compositional constant. Negative-side non-repulsion
-likewise remains a placeholder until its sparse Phase 7 theorem is implemented.
+Lipschitz certification uses the concentration-space infinity norm, treating
+temperature and pressure as uniformly bounded parameters rather than state
+coordinates. It assembles exact constants from elementary sum, product,
+reciprocal, power, and supported-function inequalities. Every denominator or
+noninteger power that needs separation from a singular boundary records its
+strict guard margin. A bounded partial-derivative fallback handles small smooth
+expressions outside the explicit rules.
+
+When every rate passes, the checker derives component and source-vector bounds
+directly from the stoichiometric matrix: it does not differentiate the expanded
+network source. Text reports show the exact constant when compact and a numeric
+approximation otherwise, while JSON retains exact and approximate per-rate
+constants, active concentration
+variables, uniform parameters, and guard margins. Negative-side non-repulsion
+remains a placeholder until its sparse Phase 7 theorem is implemented.
 
 The runner produces one renderer-independent `RunResult`. Each `CheckResult`
 contains `Finding` objects with one of these verdicts:

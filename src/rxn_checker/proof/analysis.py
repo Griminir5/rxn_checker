@@ -3,11 +3,15 @@
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from enum import StrEnum
+from typing import TYPE_CHECKING
 
 import sympy as sp
 
 from ..domain import ConcentrationDomain
 from ..model import parse_rational
+
+if TYPE_CHECKING:
+    from .lipschitz import LipschitzResult
 
 
 Point = Mapping[sp.Symbol, sp.Expr]
@@ -185,6 +189,7 @@ class ExpressionAnalyzer:
         self._signs: dict[tuple, SignResult] = {}
         self._proofs: dict[tuple, SignProof] = {}
         self._definedness: dict[tuple, DefinednessResult] = {}
+        self._lipschitz_results: dict[tuple, LipschitzResult] = {}
         self._domains: dict[int, ConcentrationDomain] = {}
 
     def _key(
@@ -578,7 +583,7 @@ class ExpressionAnalyzer:
                     expression,
                     reason="Atom is not finite and real.",
                 )
-            if expression.is_Number:
+            if expression.is_number:
                 verdict = (
                     ProofVerdict.PASS
                     if expression.is_real is True and expression.is_finite is True
@@ -649,6 +654,25 @@ class ExpressionAnalyzer:
         else:
             reason = f"Function {expression.func.__name__} is unsupported."
         return DefinednessResult(ProofVerdict.UNKNOWN, expression, reason=reason)
+
+    def lipschitz(
+        self,
+        expression: object,
+        domain: ConcentrationDomain,
+        active_variables: Iterable[sp.Symbol] | None = None,
+    ) -> "LipschitzResult":
+        """Certify a uniform concentration-space Lipschitz bound."""
+
+        key = self._key(expression, domain, active_variables)
+        if not set(key[2]) <= set(domain.intervals):
+            raise ValueError("Lipschitz variables must be concentration coordinates.")
+        if key not in self._lipschitz_results:
+            from .lipschitz import compute_lipschitz
+
+            self._lipschitz_results[key] = compute_lipschitz(
+                self, key[0], domain, key[2]
+            )
+        return self._lipschitz_results[key]
 
 
 __all__ = (

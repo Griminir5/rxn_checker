@@ -224,3 +224,7 @@ def test_cli_checks_selects_only_requested_check_and_prerequisites(capsys) -> No
     assert payload["results"]["physical_lipschitz"]["prerequisites"] == {
         "physical_rate_definedness": "PASS"
     }
+    certificate = payload["results"]["physical_lipschitz"]["findings"][0]["evidence"]
+    assert certificate["kind"] == "lipschitz_certificate"
+    assert certificate["data"]["domain"] == "physical"
+    assert "constant_bound" in certificate["data"]
