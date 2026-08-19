@@ -1,6 +1,6 @@
 rxn-checker report
 Case: example_case
-Source: C:\MyRepos\rxn_checker\example_case\case.yaml
+Source: /home/w96380vz/Repos/rxn_checker/example_case/case.yaml
 Reactions: 2
 Case loading: PASS
 
@@ -18,11 +18,45 @@ Physical checks
       Rate is symbolically non-negative under its physical lower-bound assumptions.
     aye_plus_bee_to_cee.half_order: PASS
       Rate is symbolically non-negative under its physical lower-bound assumptions.
+
+Numerical robustness
+  Lipschitz continuity [lipschitz_continuity; reaction]
+    aye_to_bee.autocatalytic: PASS
+      Rate is Lipschitz continuous on an open neighbourhood of the augmented domain.
+    aye_plus_bee_to_cee.half_order: FAIL
+      Rate is not real and finite on the closure of the augmented domain.
+      Exact augmented-domain closure witness: temperature=200, pressure=10000, Aye=1/10, Bee=-1/10, Cee=0.
+
+Physical checks
   Zero rate at depletion [zero_at_depletion; reaction]
     aye_to_bee.autocatalytic: PASS
       Rate is exactly zero at every reactant and catalyst depletion boundary.
     aye_plus_bee_to_cee.half_order: PASS
       Rate is exactly zero at every reactant and catalyst depletion boundary.
+  Recovery from nonphysical concentrations [nonphysical_recovery; case]
+    Case: FAIL
+      Assumptions: declared bounds, each sign-region, and non-negative conservation rays.
+      Restoring verdicts do not assert finite-time re-entry.
+      Negative species Aye: NON_WORSENING.
+        Restoration score: -100*Aye*(-2.0*Aye*Bee**0.5*exp(-6013.95236949723/temperature) - 2.0*Aye*Bee*exp(-6013.95236949723/temperature)).
+        Componentwise inward source: Aye=unresolved.
+        Lower excursion faces: Aye=proved.
+      Negative species Bee: UNDEFINED_IN_EXTENSION.
+        Decisive expression: 2.0*Aye*Bee**0.5*exp(-6013.95236949723/temperature).
+        Exact counterexample: Aye=1/10, Bee=-1/10, Cee=0.
+      Stopped after an exact failure certificate was found.
+      Regions checked: 2
+  Negative-side recovery [negative_side_recovery; case]
+    Case: INDETERMINATE
+      Required condition: x_i <= 0 implies f_i(x) >= 0 throughout the augmented domain.
+      Strict attraction (x_i < 0 implies f_i(x) > 0) is an optional stronger conclusion.
+      Other states retain their augmented bounds; no conservation constraints are assumed.
+      Aye: negative-side non-repulsion unresolved; strict attraction unresolved.
+      Bee: negative-side non-repulsion unresolved; strict attraction unresolved.
+      Cee: negative-side non-repulsion unresolved; strict attraction disproved.
+        Strict attraction fails for source 2.0*Aye*Bee**0.5*exp(-6013.95236949723/temperature).
+        Exact augmented-domain counterexample: temperature=200, pressure=10000, Aye=1/5, Bee=0, Cee=-1/10.
+      Species checked: 3
 
 Network analysis
   Conserved stoichiometric quantities [stoichiometric_conservation; case]
@@ -62,6 +96,6 @@ Network analysis
       Invariant faces: 2
 
 Summary
-  Overall: PASS
-  Statuses: PASS=10, SAMPLED_PASS=0, FAIL=0, INDETERMINATE=0, UNAVAILABLE=0
-  Numerical values: 4
+  Overall: FAIL
+  Statuses: PASS=11, SAMPLED_PASS=0, FAIL=2, INDETERMINATE=1, UNAVAILABLE=0
+  Numerical values: 6

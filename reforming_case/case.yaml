@@ -20,6 +20,8 @@ inerts:
 reactions:
   - medrano
   - xu_froment
+gas_closure:
+  minimum_total: ideal_gas
 bounds:
   temperature: [573.15, 1473.15]
   pressure: [100000.0, 3000000.0]

@@ -5,7 +5,7 @@ from types import MappingProxyType
 from sympy import Symbol
 
 from .reaction import Reaction
-from .state import StateVariables, VariableBounds
+from .state import IdealGasClosure, StateVariables, VariableBounds
 
 
 @dataclass(frozen=True)
@@ -17,6 +17,7 @@ class Case:
     reactions: tuple[Reaction, ...]
     state_bounds: Mapping[Symbol, VariableBounds]
     inert_species: tuple[str, ...] = ()
+    gas_closure: IdealGasClosure | None = None
 
     def __post_init__(self) -> None:
         if not self.reactions:
@@ -43,6 +44,30 @@ class Case:
         if unknown_bounds:
             names = ", ".join(sorted(str(symbol) for symbol in unknown_bounds))
             raise ValueError(f"Case has bounds for unknown state variables: {names}.")
+
+        if self.gas_closure is not None:
+            closure = self.gas_closure
+            unknown_gases = set(closure.gas_concentrations) - set(
+                self.states.concentrations.values()
+            )
+            if unknown_gases:
+                names = ", ".join(sorted(map(str, unknown_gases)))
+                raise ValueError(
+                    "Ideal-gas closure references unknown concentrations: "
+                    f"{names}."
+                )
+            if closure.temperature != self.states.temperature:
+                raise ValueError("Ideal-gas closure uses the wrong temperature symbol.")
+            if closure.pressure != self.states.pressure:
+                raise ValueError("Ideal-gas closure uses the wrong pressure symbol.")
+            if state_bounds[closure.temperature].physical_lower <= 0:
+                raise ValueError(
+                    "Ideal-gas closure requires a positive temperature lower bound."
+                )
+            if state_bounds[closure.pressure].physical_lower <= 0:
+                raise ValueError(
+                    "Ideal-gas closure requires a positive pressure lower bound."
+                )
         available_species = set(self.states.species_ids)
         for reaction in self.reactions:
             missing = set(reaction.species_ids) - available_species

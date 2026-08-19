@@ -36,6 +36,10 @@ analysis unless `stop_on_failure=True` is supplied.
   and real, so the removed source traversal was logically redundant.
 - Registered recovery stops after an exact failure or boundary-violation
   witness. It never stops early on a possible pass.
+- The independent negative-side check constructs only two restricted domains
+  per eligible species (`x_i <= 0` and `x_i < 0`). It therefore scales
+  linearly in the number of species rather than enumerating negative-species
+  subsets, and returns `INDETERMINATE` above its source-operation limit.
 - Terminal faces use dependency-directed search, cached one-symbol
   restrictions, cached zero proofs, and verified reactant/catalyst zero
   boundaries. Cancellation between reactions is still checked on the exact

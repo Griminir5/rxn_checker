@@ -4,9 +4,10 @@
 that selected reactions exist, use case-owned state symbols, reference declared
 species, conserve atoms and mass, have non-negative rates in the physical
 domain, stop when a reactant or catalyst is depleted, and form a positive
-reaction network. It also checks symbolic recovery from declared small negative
-concentration excursions and reports the conserved stoichiometric quantities,
-symbolic equilibrium families, and terminal or invariant concentration faces.
+reaction network. It also applies two independent symbolic checks to declared
+small negative concentration excursions and reports the conserved
+stoichiometric quantities, symbolic equilibrium families, and terminal or
+invariant concentration faces.
 
 ## Running a case
 
@@ -31,6 +32,8 @@ bounds:
     overrides:
       Aye:
         upper: 100.0
+gas_closure:
+  minimum_total: ideal_gas
 ```
 
 A selector is either `family.reaction` for one implementation or `family` for
@@ -67,6 +70,16 @@ assert temperature_bounds.interval() == (200.0, 1500.0)
 assert aye_bounds.interval() == (0.0, 100.0)
 assert aye_bounds.interval(include_excursion=True) == (-0.1, 100.0)
 ```
+
+Gas species also receive the ideal-gas closure
+`pressure = total_gas_concentration * R * temperature`. The Lipschitz check's
+augmented domain uses the selected lower-total policy. `minimum_total:
+positive` assumes only that the gas total is strictly positive, leaving zero as
+a limiting boundary. `minimum_total: ideal_gas` derives the uniform lower bound
+`pressure_min / (R * temperature_max)`. Individual gas concentrations retain
+their independent bounds and negative excursions. Solid concentrations receive
+no corresponding total constraint. Omitting `gas_closure` defaults to
+`minimum_total: positive`.
 
 Concentrations are real but not assumed non-negative, allowing later checks to
 inspect expressions just outside the physical domain. Their physical lower
@@ -122,6 +135,18 @@ bound makes a symbol non-negative, while a positive lower bound makes it
 strictly positive. A symbolic proof is a `PASS`, and a rate proven negative in
 the physical interior is a `FAIL`. Upper bounds are reserved for a later
 interval branch-and-bound check that can resolve otherwise indeterminate rates.
+
+The Lipschitz-continuity check examines each reaction rate separately on the
+domain formed by the declared upper bounds and excursion lower bounds,
+intersected with strictly positive total gas concentration. It tests strict
+domain conditions on the closure of that chamfer, including the zero-total
+boundary, so a pass certifies a uniform Lipschitz margin on an open
+neighbourhood. Expressions such as the inverse or square root of total gas
+concentration therefore fail when their behavior becomes unbounded at the
+excluded boundary. Checking rates rather than `S r` prevents singularities in
+different reactions from being hidden by source-term cancellation. Polynomial,
+rational, exponential, logarithmic, absolute-value, minimum, and maximum
+expressions are supported; other functions are reported as `INDETERMINATE`.
 
 The zero-at-depletion check independently sets every reactant and catalyst
 concentration to zero and requires the resulting symbolic rate to be exactly
@@ -213,6 +238,25 @@ by default. The registered report check may stop earlier after an exact failure
 certificate, because later regions cannot change the case-level `FAIL` result.
 A restoring verdict does not claim finite-time re-entry into the physical
 domain.
+
+The separate negative-side-recovery check is componentwise and does not use
+conservation rays or restrict the state to a stoichiometric compatibility
+class. For every concentration with a declared negative excursion, it asks on
+the complete augmented state domain whether
+`x_i <= 0` implies `f_i(x) >= 0`, where `F = S r`. Every other concentration
+retains its own possible negative excursion, so simultaneous solver errors are
+included. A `PASS` certifies this non-repulsion implication for every checked
+species. The check also attempts the stronger implication `x_i < 0` implies
+`f_i(x) > 0`; strict attraction is reported per species but is not required for
+a non-worsening pass. Neither conclusion claims finite-time return to zero.
+
+This check deliberately leaves rate definedness and physical-boundary
+invariance to the independent checks. In conjunction with Lipschitz continuity
+on the augmented domain, zero rate at every reactant or catalyst depletion
+boundary, and non-negative rates on the physical domain, its `PASS` certifies
+that the reaction source cannot drive a small negative concentration farther
+from the physical domain. Where strict attraction is also proved, that
+component improves while it remains negative.
 
 Checks return `CheckOutcome` objects with an optional qualitative status,
 details, and numerical values. Supported statuses, from least to most

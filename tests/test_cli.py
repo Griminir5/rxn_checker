@@ -21,7 +21,10 @@ class CliTests(unittest.TestCase):
             "  concentrations:\n"
             "    default:\n"
             "      upper: 1000.0\n"
-            "      excursion_lower: -0.1\n",
+            "      excursion_lower: -0.1\n"
+            "    overrides:\n"
+            "      Bee:\n"
+            "        excursion_lower: 0.0\n",
             encoding="utf-8",
         )
         return path
@@ -58,9 +61,17 @@ class CliTests(unittest.TestCase):
                 "Rate non-negativity [rate_nonnegativity; reaction]", report_text
             )
             self.assertIn(
+                "Lipschitz continuity [lipschitz_continuity; reaction]",
+                report_text,
+            )
+            self.assertIn(
                 "Zero rate at depletion [zero_at_depletion; reaction]", report_text
             )
-            self.assertEqual(report_text.count("aye_to_bee.simple: PASS"), 4)
+            self.assertIn(
+                "Negative-side recovery [negative_side_recovery; case]",
+                report_text,
+            )
+            self.assertEqual(report_text.count("aye_to_bee.simple: PASS"), 5)
             self.assertIn("Case loading: PASS", report_text)
             self.assertIn("Overall: PASS", report_text)
             self.assertIn(f"Report written to {report_path}", stdout)

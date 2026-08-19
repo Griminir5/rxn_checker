@@ -414,7 +414,13 @@ class Proof:
             return expression.args[0], POSITIVE
         return None
 
-    def _violating_point(self, expression: sp.Expr, requirement: str) -> Point | None:
+    def violating_point(
+        self,
+        expression: sp.Expr,
+        requirement: str,
+    ) -> Point | None:
+        """Return an exact affine witness that a strict requirement can fail."""
+
         if not self._affine(expression):
             return None
         expression = _exact(expression)
@@ -438,12 +444,12 @@ class Proof:
         for argument, needed in _domain_requirements(expression):
             conclusion = self._meets(self.sign(argument), needed)
             if conclusion is False:
-                witness = self._violating_point(argument, needed)
+                witness = self.violating_point(argument, needed)
                 result = False, witness if witness is not None else self.point
                 self._defined_cache[expression] = result
                 return result
             if conclusion is None:
-                witness = self._violating_point(argument, needed)
+                witness = self.violating_point(argument, needed)
                 if witness is not None:
                     result = False, witness
                     self._defined_cache[expression] = result

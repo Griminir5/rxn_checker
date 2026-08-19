@@ -1,6 +1,6 @@
 import unittest
 
-from rxn_checker import Case, Reaction, StateVariables
+from rxn_checker import Case, Reaction, StateVariables, VariableBounds
 from rxn_checker.checks import CheckContext, CheckStatus
 from rxn_checker.checks.equilibria import CHECK as EQUILIBRIA_CHECK
 from rxn_checker.reporting import build_check_report
@@ -50,11 +50,13 @@ class CheckReportTests(unittest.TestCase):
             products={"CO2": 1},
             rate=states.concentration("CH4"),
         )
+        bounds = make_state_bounds(states)
+        bounds[states.concentration("CO2")] = VariableBounds(0, 1000, 0)
         case = Case(
             name="bad-case",
             states=states,
             reactions=(reaction,),
-            state_bounds=make_state_bounds(states),
+            state_bounds=bounds,
         )
 
         report = build_check_report(case, source="bad-case/case.yaml")
@@ -84,11 +86,13 @@ class CheckReportTests(unittest.TestCase):
             products={"B": 1},
             rate=states.concentration("A"),
         )
+        bounds = make_state_bounds(states)
+        bounds[states.concentration("B")] = VariableBounds(0, 1000, 0)
         case = Case(
             name="missing-data",
             states=states,
             reactions=(reaction,),
-            state_bounds=make_state_bounds(states),
+            state_bounds=bounds,
         )
 
         report = build_check_report(
@@ -98,7 +102,7 @@ class CheckReportTests(unittest.TestCase):
 
         self.assertFalse(report.passed)
         self.assertEqual(report.overall_status, CheckStatus.UNAVAILABLE)
-        self.assertEqual(report.status_counts[CheckStatus.PASS], 6)
+        self.assertEqual(report.status_counts[CheckStatus.PASS], 8)
         self.assertEqual(report.status_counts[CheckStatus.UNAVAILABLE], 1)
         self.assertIn("example.conversion: PASS", report.text)
         self.assertIn("example.conversion: UNAVAILABLE", report.text)

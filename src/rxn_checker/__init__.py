@@ -15,7 +15,10 @@ from .checks import (
     EquilibriumBranch,
     EquilibriumHelper,
     EquilibriumRelation,
+    LipschitzContinuityResult,
     MassConservationResult,
+    NegativeSideRecoveryResult,
+    NegativeSideSpeciesResult,
     NonphysicalRecoveryResult,
     RecoveryRegionResult,
     RecoveryVerdict,
@@ -23,7 +26,9 @@ from .checks import (
     TerminalFaceSearchResult,
     check_atom_conservation,
     check_equilibria,
+    check_lipschitz_continuity,
     check_mass_conservation,
+    check_negative_side_recovery,
     check_nonphysical_recovery,
     check_terminal_faces,
     find_conserved_quantities,
@@ -32,7 +37,7 @@ from .checks import (
 from .loading import load_case
 from .reaction import Reaction
 from .reporting import CheckReport, build_check_report
-from .state import StateVariables, VariableBounds
+from .state import IdealGasClosure, StateVariables, VariableBounds
 
 __all__ = (
     "CHECK_REGISTRY",
@@ -50,7 +55,11 @@ __all__ = (
     "EquilibriumBranch",
     "EquilibriumHelper",
     "EquilibriumRelation",
+    "IdealGasClosure",
+    "LipschitzContinuityResult",
     "MassConservationResult",
+    "NegativeSideRecoveryResult",
+    "NegativeSideSpeciesResult",
     "NonphysicalRecoveryResult",
     "Reaction",
     "RecoveryRegionResult",
@@ -62,7 +71,9 @@ __all__ = (
     "build_check_report",
     "check_atom_conservation",
     "check_equilibria",
+    "check_lipschitz_continuity",
     "check_mass_conservation",
+    "check_negative_side_recovery",
     "check_nonphysical_recovery",
     "check_terminal_faces",
     "find_conserved_quantities",

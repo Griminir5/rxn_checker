@@ -7,7 +7,7 @@ from .case import Case
 from .reaction import Reaction
 from .reactions import FAMILY_REGISTRY, REACTION_REGISTRY, ReactionBuilder
 from .species import PROPERTY_REGISTRY, PropertyRegistry
-from .state import StateVariables, VariableBounds
+from .state import IdealGasClosure, StateVariables, VariableBounds
 
 
 def _string_list(
@@ -125,8 +125,8 @@ def _load_state_bounds(
     pressure = VariableBounds(*_bounds_pair(config, "pressure"))
     if temperature.physical_lower <= 0:
         raise ValueError("Temperature lower bound must be positive.")
-    if pressure.physical_lower < 0:
-        raise ValueError("Pressure lower bound must be non-negative.")
+    if pressure.physical_lower <= 0:
+        raise ValueError("Pressure lower bound must be positive.")
 
     concentrations = config.get("concentrations")
     if not isinstance(concentrations, dict):
@@ -193,10 +193,42 @@ def load_case(
     states = StateVariables(species_ids)
     reactions = _load_reactions(reaction_selectors, states)
     state_bounds = _load_state_bounds(config.get("bounds"), states)
+    closure_config = config.get("gas_closure", {})
+    if not isinstance(closure_config, dict):
+        raise ValueError("Case 'gas_closure' must be a YAML mapping.")
+    unknown_closure_keys = set(closure_config) - {"minimum_total"}
+    if unknown_closure_keys:
+        raise ValueError(
+            "Unknown gas closure options: "
+            + ", ".join(sorted(unknown_closure_keys))
+            + "."
+        )
+    minimum_total = closure_config.get("minimum_total", "positive")
+    if minimum_total not in {"positive", "ideal_gas"}:
+        raise ValueError(
+            "Case gas closure 'minimum_total' must be 'positive' or "
+            "'ideal_gas'."
+        )
+    gas_concentrations = tuple(
+        states.concentration(species_id)
+        for species_id in species_ids
+        if property_registry.get_record(species_id).phase == "gas"
+    )
+    gas_closure = (
+        IdealGasClosure(
+            gas_concentrations=gas_concentrations,
+            temperature=states.temperature,
+            pressure=states.pressure,
+            minimum_total=minimum_total,
+        )
+        if gas_concentrations
+        else None
+    )
     return Case(
         name=path.parent.name,
         states=states,
         reactions=reactions,
         state_bounds=state_bounds,
         inert_species=inert_species,
+        gas_closure=gas_closure,
     )

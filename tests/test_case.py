@@ -2,7 +2,10 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
 
+import sympy as sp
+
 from rxn_checker import StateVariables, load_case
+from rxn_checker.state import GAS_CONSTANT_J_PER_MOL_K
 
 
 BOUNDS_YAML = """\
@@ -51,6 +54,23 @@ class CaseLoadingTests(unittest.TestCase):
         self.assertEqual(aye_bounds.interval(), (0.0, 100.0))
         self.assertEqual(aye_bounds.interval(include_excursion=True), (-0.1, 100.0))
         self.assertEqual(bee_bounds.interval(), (0.0, 1000.0))
+        self.assertIsNotNone(case.gas_closure)
+        closure = case.gas_closure
+        self.assertEqual(closure.minimum_total, "positive")
+        self.assertEqual(
+            closure.gas_concentrations,
+            tuple(case.states.concentrations.values()),
+        )
+        self.assertEqual(closure.equation.lhs, case.states.pressure)
+        self.assertEqual(
+            sp.simplify(
+                closure.equation.rhs
+                - GAS_CONSTANT_J_PER_MOL_K
+                * case.states.temperature
+                * sp.Add(*case.states.concentrations.values())
+            ),
+            0,
+        )
 
     def test_temperature_must_have_a_positive_lower_bound(self) -> None:
         with TemporaryDirectory() as directory:
@@ -65,6 +85,59 @@ class CaseLoadingTests(unittest.TestCase):
                 encoding="utf-8",
             )
             with self.assertRaisesRegex(ValueError, "must be positive"):
+                load_case(path)
+
+    def test_pressure_must_have_a_positive_lower_bound(self) -> None:
+        with TemporaryDirectory() as directory:
+            path = Path(directory) / "case.yaml"
+            path.write_text(
+                "species:\n  - Aye\n  - Bee\n"
+                "reactions:\n  - aye_to_bee.simple\n"
+                + BOUNDS_YAML.replace(
+                    "pressure: [10000.0, 10000000.0]",
+                    "pressure: [0.0, 10000000.0]",
+                ),
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(ValueError, "must be positive"):
+                load_case(path)
+
+    def test_ideal_gas_minimum_is_derived_from_pressure_and_temperature(
+        self,
+    ) -> None:
+        with TemporaryDirectory() as directory:
+            path = Path(directory) / "case.yaml"
+            path.write_text(
+                "species:\n  - Aye\n  - Bee\n"
+                "reactions:\n  - aye_to_bee.simple\n"
+                "gas_closure:\n  minimum_total: ideal_gas\n"
+                + BOUNDS_YAML,
+                encoding="utf-8",
+            )
+
+            case = load_case(path)
+
+        expected = sp.Rational(10_000) / (
+            sp.Rational(str(GAS_CONSTANT_J_PER_MOL_K)) * 1500
+        )
+        self.assertEqual(case.gas_closure.minimum_total, "ideal_gas")
+        self.assertEqual(
+            case.gas_closure.derived_minimum_total(case.state_bounds),
+            expected,
+        )
+
+    def test_unknown_gas_closure_minimum_is_rejected(self) -> None:
+        with TemporaryDirectory() as directory:
+            path = Path(directory) / "case.yaml"
+            path.write_text(
+                "species:\n  - Aye\n  - Bee\n"
+                "reactions:\n  - aye_to_bee.simple\n"
+                "gas_closure:\n  minimum_total: guessed\n"
+                + BOUNDS_YAML,
+                encoding="utf-8",
+            )
+
+            with self.assertRaisesRegex(ValueError, "'positive' or 'ideal_gas'"):
                 load_case(path)
 
     def test_bounds_are_required(self) -> None:
@@ -118,6 +191,26 @@ class CaseLoadingTests(unittest.TestCase):
         self.assertEqual(case.inert_species, ("Cee",))
         self.assertTrue(case.state_bounds[cee].strict_lower)
         self.assertEqual(case.state_bounds[cee].physical_lower, 0.0)
+
+    def test_ideal_gas_closure_excludes_solid_concentrations(self) -> None:
+        with TemporaryDirectory() as directory:
+            path = Path(directory) / "case.yaml"
+            path.write_text(
+                "species:\n  - Aye\n  - Bee\n  - Ni\n"
+                "reactions:\n  - aye_to_bee.simple\n"
+                + BOUNDS_YAML,
+                encoding="utf-8",
+            )
+
+            case = load_case(path)
+
+        self.assertEqual(
+            case.gas_closure.gas_concentrations,
+            (
+                case.states.concentration("Aye"),
+                case.states.concentration("Bee"),
+            ),
+        )
 
     def test_inert_species_must_be_known_and_nonparticipating(self) -> None:
         for inert, message in (

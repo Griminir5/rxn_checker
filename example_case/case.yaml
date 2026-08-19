@@ -5,6 +5,8 @@ species:
 reactions:
   - aye_to_bee.autocatalytic
   - aye_plus_bee_to_cee.half_order
+gas_closure:
+  minimum_total: positive
 bounds:
   temperature: [200.0, 1500.0]
   pressure: [10000.0, 10000000.0]

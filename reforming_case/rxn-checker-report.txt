@@ -46,6 +46,35 @@ Physical checks
       Rate is symbolically non-negative under its physical lower-bound assumptions.
     xu_froment.overall_bw: PASS
       Rate is symbolically non-negative under its physical lower-bound assumptions.
+
+Numerical robustness
+  Lipschitz continuity [lipschitz_continuity; reaction]
+    medrano.reduction_h2: PASS
+      Rate is Lipschitz continuous on an open neighbourhood of the augmented domain.
+    medrano.reduction_co: PASS
+      Rate is Lipschitz continuous on an open neighbourhood of the augmented domain.
+    medrano.oxidation_o2: PASS
+      Rate is Lipschitz continuous on an open neighbourhood of the augmented domain.
+    xu_froment.wgs_fw: INDETERMINATE
+      Could not prove that the rate is real and finite throughout the augmented domain.
+      Unresolved strict domain conditions: Ne(H2/(2*(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)) + sqrt(H2**2/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)**2 + 0.0001)/2 + 0.001, 0), H2**2/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)**2 + 0.0001 > 0, Ne(6.65e-9*CH4*pressure*exp(4604.02575103555/temperature)/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2) + 8.23e-10*CO*pressure*exp(8497.24188376859/temperature)/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2) + 6.12e-14*H2*pressure*exp(9970.57823304199/temperature)/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2) + 177000.0*H2O*exp(-10665.7524451889/temperature)/((H2/(2*(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)) + sqrt(H2**2/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)**2 + 0.0001)/2 + 0.001)*(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)) + 1, 0).
+    xu_froment.smr_fw: INDETERMINATE
+      Could not prove that the rate is real and finite throughout the augmented domain.
+      Unresolved strict domain conditions: 1/(pressure*(H2/(2*(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)) + sqrt(H2**2/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)**2 + 0.0001)/2 + 0.001)) > 0, Ne(H2/(2*(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)) + sqrt(H2**2/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)**2 + 0.0001)/2 + 0.001, 0), H2**2/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)**2 + 0.0001 > 0, Ne(6.65e-9*CH4*pressure*exp(4604.02575103555/temperature)/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2) + 8.23e-10*CO*pressure*exp(8497.24188376859/temperature)/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2) + 6.12e-14*H2*pressure*exp(9970.57823304199/temperature)/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2) + 177000.0*H2O*exp(-10665.7524451889/temperature)/((H2/(2*(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)) + sqrt(H2**2/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)**2 + 0.0001)/2 + 0.001)*(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)) + 1, 0).
+    xu_froment.overall_fw: INDETERMINATE
+      Could not prove that the rate is real and finite throughout the augmented domain.
+      Unresolved strict domain conditions: 1/(pressure*(H2/(2*(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)) + sqrt(H2**2/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)**2 + 0.0001)/2 + 0.001)) > 0, Ne(H2/(2*(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)) + sqrt(H2**2/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)**2 + 0.0001)/2 + 0.001, 0), H2**2/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)**2 + 0.0001 > 0, Ne(6.65e-9*CH4*pressure*exp(4604.02575103555/temperature)/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2) + 8.23e-10*CO*pressure*exp(8497.24188376859/temperature)/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2) + 6.12e-14*H2*pressure*exp(9970.57823304199/temperature)/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2) + 177000.0*H2O*exp(-10665.7524451889/temperature)/((H2/(2*(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)) + sqrt(H2**2/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)**2 + 0.0001)/2 + 0.001)*(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)) + 1, 0).
+    xu_froment.wgs_bw: INDETERMINATE
+      Could not prove that the rate is real and finite throughout the augmented domain.
+      Unresolved strict domain conditions: Ne(H2/(2*(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)) + sqrt(H2**2/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)**2 + 0.0001)/2 + 0.001, 0), H2**2/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)**2 + 0.0001 > 0, Ne(6.65e-9*CH4*pressure*exp(4604.02575103555/temperature)/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2) + 8.23e-10*CO*pressure*exp(8497.24188376859/temperature)/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2) + 6.12e-14*H2*pressure*exp(9970.57823304199/temperature)/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2) + 177000.0*H2O*exp(-10665.7524451889/temperature)/((H2/(2*(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)) + sqrt(H2**2/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)**2 + 0.0001)/2 + 0.001)*(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)) + 1, 0).
+    xu_froment.smr_bw: INDETERMINATE
+      Could not prove that the rate is real and finite throughout the augmented domain.
+      Unresolved strict domain conditions: 1/(pressure*(H2/(2*(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)) + sqrt(H2**2/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)**2 + 0.0001)/2 + 0.001)) > 0, Ne(H2/(2*(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)) + sqrt(H2**2/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)**2 + 0.0001)/2 + 0.001, 0), H2**2/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)**2 + 0.0001 > 0, Ne(6.65e-9*CH4*pressure*exp(4604.02575103555/temperature)/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2) + 8.23e-10*CO*pressure*exp(8497.24188376859/temperature)/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2) + 6.12e-14*H2*pressure*exp(9970.57823304199/temperature)/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2) + 177000.0*H2O*exp(-10665.7524451889/temperature)/((H2/(2*(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)) + sqrt(H2**2/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)**2 + 0.0001)/2 + 0.001)*(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)) + 1, 0).
+    xu_froment.overall_bw: INDETERMINATE
+      Could not prove that the rate is real and finite throughout the augmented domain.
+      Unresolved strict domain conditions: 1/(pressure*(H2/(2*(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)) + sqrt(H2**2/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)**2 + 0.0001)/2 + 0.001)) > 0, Ne(H2/(2*(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)) + sqrt(H2**2/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)**2 + 0.0001)/2 + 0.001, 0), H2**2/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)**2 + 0.0001 > 0, Ne(6.65e-9*CH4*pressure*exp(4604.02575103555/temperature)/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2) + 8.23e-10*CO*pressure*exp(8497.24188376859/temperature)/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2) + 6.12e-14*H2*pressure*exp(9970.57823304199/temperature)/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2) + 177000.0*H2O*exp(-10665.7524451889/temperature)/((H2/(2*(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)) + sqrt(H2**2/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)**2 + 0.0001)/2 + 0.001)*(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)) + 1, 0).
+
+Physical checks
   Zero rate at depletion [zero_at_depletion; reaction]
     medrano.reduction_h2: PASS
       Rate is exactly zero at every reactant and catalyst depletion boundary.
@@ -86,6 +115,48 @@ Physical checks
         Exact counterexample: Ar=1/120, CH4=1/40, CO=0, CO2=0, H2=-1/20, H2O=0, He=1/120, N2=1/120, O2=0, Ni=0, NiO=1/40, CaAl2O4=1/120.
       Stopped after an exact failure certificate was found.
       Regions checked: 4
+  Negative-side recovery [negative_side_recovery; case]
+    Case: INDETERMINATE
+      Required condition: x_i <= 0 implies f_i(x) >= 0 throughout the augmented domain.
+      Strict attraction (x_i < 0 implies f_i(x) > 0) is an optional stronger conclusion.
+      Other states retain their augmented bounds; no conservation constraints are assumed.
+      Ar: negative-side non-repulsion proved; strict attraction disproved.
+        Strict attraction fails for source 0.
+        Exact augmented-domain counterexample: temperature=11463/20, pressure=100000, Ar=-1/20, CH4=1006124225302966222753/122484506059324455060, CO=0, CO2=0, H2=0, H2O=0, He=0, N2=0, O2=0, Ni=0, NiO=0, CaAl2O4=0.
+      CH4: negative-side non-repulsion unresolved; strict attraction disproved.
+        Strict attraction fails for source -5.21549565610308e+15*CH4*H2O**2*pressure**3*(1/(pressure*(H2/(2*(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)) + sqrt(H2**2/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)**2 + 0.0001)/2 + 0.001)))**(7/2)*exp(-29334.4273949209/temperature)*Max(0, Ni)/((6.65e-9*CH4*pressure*exp(4604.02575103555....
+        Exact augmented-domain counterexample: temperature=11463/20, pressure=100000, Ar=1006124225302966222753/122484506059324455060, CH4=-1/20, CO=0, CO2=0, H2=0, H2O=0, He=0, N2=0, O2=0, Ni=0, NiO=0, CaAl2O4=0.
+      CO: negative-side non-repulsion unresolved; strict attraction disproved.
+        Strict attraction fails for source 2.17157648314612e+16*CH4*H2O*pressure**2*(1/(pressure*(H2/(2*(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)) + sqrt(H2**2/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)**2 + 0.0001)/2 + 0.001)))**(5/2)*exp(-28877.3924457585/temperature)*Max(0, Ni)/((6.65e-9*CH4*pressure*exp(4604.02575103555/tem....
+        Exact augmented-domain counterexample: temperature=11463/20, pressure=100000, Ar=1006124225302966222753/122484506059324455060, CH4=0, CO=-1/20, CO2=0, H2=0, H2O=0, He=0, N2=0, O2=0, Ni=0, NiO=0, CaAl2O4=0.
+      CO2: negative-side non-repulsion unresolved; strict attraction disproved.
+        Strict attraction fails for source 5.21549565610308e+15*CH4*H2O**2*pressure**3*(1/(pressure*(H2/(2*(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)) + sqrt(H2**2/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)**2 + 0.0001)/2 + 0.001)))**(7/2)*exp(-29334.4273949209/temperature)*Max(0, Ni)/((6.65e-9*CH4*pressure*exp(4604.02575103555/....
+        Exact augmented-domain counterexample: temperature=11463/20, pressure=100000, Ar=1006124225302966222753/122484506059324455060, CH4=0, CO=0, CO2=-1/20, H2=0, H2O=0, He=0, N2=0, O2=0, Ni=0, NiO=0, CaAl2O4=0.
+      H2: negative-side non-repulsion unresolved; strict attraction disproved.
+        Strict attraction fails for source 2.08619826244123e+16*CH4*H2O**2*pressure**3*(1/(pressure*(H2/(2*(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)) + sqrt(H2**2/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)**2 + 0.0001)/2 + 0.001)))**(7/2)*exp(-29334.4273949209/temperature)*Max(0, Ni)/((6.65e-9*CH4*pressure*exp(4604.02575103555/....
+        Exact augmented-domain counterexample: temperature=11463/20, pressure=100000, Ar=1006124225302966222753/122484506059324455060, CH4=0, CO=0, CO2=0, H2=-1/20, H2O=0, He=0, N2=0, O2=0, Ni=0, NiO=0, CaAl2O4=0.
+      H2O: negative-side non-repulsion unresolved; strict attraction disproved.
+        Strict attraction fails for source -1.04309913122062e+16*CH4*H2O**2*pressure**3*(1/(pressure*(H2/(2*(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)) + sqrt(H2**2/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)**2 + 0.0001)/2 + 0.001)))**(7/2)*exp(-29334.4273949209/temperature)*Max(0, Ni)/((6.65e-9*CH4*pressure*exp(4604.02575103555....
+        Exact augmented-domain counterexample: temperature=11463/20, pressure=100000, Ar=1006124225302966222753/122484506059324455060, CH4=0, CO=0, CO2=0, H2=0, H2O=-1/20, He=0, N2=0, O2=0, Ni=0, NiO=0, CaAl2O4=0.
+      He: negative-side non-repulsion proved; strict attraction disproved.
+        Strict attraction fails for source 0.
+        Exact augmented-domain counterexample: temperature=11463/20, pressure=100000, Ar=1006124225302966222753/122484506059324455060, CH4=0, CO=0, CO2=0, H2=0, H2O=0, He=-1/20, N2=0, O2=0, Ni=0, NiO=0, CaAl2O4=0.
+      N2: negative-side non-repulsion proved; strict attraction disproved.
+        Strict attraction fails for source 0.
+        Exact augmented-domain counterexample: temperature=11463/20, pressure=100000, Ar=1006124225302966222753/122484506059324455060, CH4=0, CO=0, CO2=0, H2=0, H2O=0, He=0, N2=-1/20, O2=0, Ni=0, NiO=0, CaAl2O4=0.
+      O2: negative-side non-repulsion unresolved; strict attraction disproved.
+        Strict attraction fails for source -0.000151171503534948*(pressure/temperature)**1.8*(0.468448915046507*Max(0, O2/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2))/(8.53678409*Max(0, O2/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)) + 1.0) + 1.01723766910183*Max(0, O2/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2))/(0.06978578*M....
+        Exact augmented-domain counterexample: temperature=11463/20, pressure=100000, Ar=1006124225302966222753/122484506059324455060, CH4=0, CO=0, CO2=0, H2=0, H2O=0, He=0, N2=0, O2=-1/20, Ni=0, NiO=0, CaAl2O4=0.
+      Ni: negative-side non-repulsion proved; strict attraction disproved.
+        Strict attraction fails for source 4.27855012633343e-5*(pressure/temperature)**1.2*(4.96458623104962*Max(0, H2/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2))/(24.11159535*Max(0, H2/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)) + 1.0) + 1.14167632328348*Max(0, H2/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2))/(0.42300595*Max....
+        Exact augmented-domain counterexample: temperature=11463/20, pressure=100000, Ar=50000000000000000000/6124225302966222753, CH4=0, CO=0, CO2=0, H2=0, H2O=0, He=0, N2=0, O2=0, Ni=-1/20, NiO=0, CaAl2O4=0.
+      NiO: negative-side non-repulsion proved; strict attraction disproved.
+        Strict attraction fails for source -4.27855012633343e-5*(pressure/temperature)**1.2*(4.96458623104962*Max(0, H2/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2))/(24.11159535*Max(0, H2/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)) + 1.0) + 1.14167632328348*Max(0, H2/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2))/(0.42300595*Ma....
+        Exact augmented-domain counterexample: temperature=11463/20, pressure=100000, Ar=50000000000000000000/6124225302966222753, CH4=0, CO=0, CO2=0, H2=0, H2O=0, He=0, N2=0, O2=0, Ni=0, NiO=-1/20, CaAl2O4=0.
+      CaAl2O4: negative-side non-repulsion proved; strict attraction disproved.
+        Strict attraction fails for source 0.
+        Exact augmented-domain counterexample: temperature=11463/20, pressure=100000, Ar=50000000000000000000/6124225302966222753, CH4=0, CO=0, CO2=0, H2=0, H2O=0, He=0, N2=0, O2=0, Ni=0, NiO=0, CaAl2O4=-1/20.
+      Species checked: 12
 
 Network analysis
   Conserved stoichiometric quantities [stoichiometric_conservation; case]
@@ -250,5 +321,5 @@ Network analysis
 
 Summary
   Overall: FAIL
-  Statuses: PASS=38, SAMPLED_PASS=0, FAIL=1, INDETERMINATE=0, UNAVAILABLE=0
-  Numerical values: 5
+  Statuses: PASS=41, SAMPLED_PASS=0, FAIL=1, INDETERMINATE=7, UNAVAILABLE=0
+  Numerical values: 6

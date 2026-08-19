@@ -23,9 +23,18 @@ from .equilibria import (
     EquilibriumRelation,
     check_equilibria,
 )
+from .lipschitz_continuity import (
+    LipschitzContinuityResult,
+    check_lipschitz_continuity,
+)
 from .mass_conservation import (
     MassConservationResult,
     check_mass_conservation,
+)
+from .negative_side_recovery import (
+    NegativeSideRecoveryResult,
+    NegativeSideSpeciesResult,
+    check_negative_side_recovery,
 )
 from .nonphysical_recovery import (
     NonphysicalRecoveryResult,
@@ -69,7 +78,10 @@ __all__ = (
     "EquilibriumBranch",
     "EquilibriumHelper",
     "EquilibriumRelation",
+    "LipschitzContinuityResult",
     "MassConservationResult",
+    "NegativeSideRecoveryResult",
+    "NegativeSideSpeciesResult",
     "NonphysicalRecoveryResult",
     "RateNonnegativityResult",
     "RecoveryRegionResult",
@@ -80,7 +92,9 @@ __all__ = (
     "aggregate_status",
     "check_atom_conservation",
     "check_equilibria",
+    "check_lipschitz_continuity",
     "check_mass_conservation",
+    "check_negative_side_recovery",
     "check_nonphysical_recovery",
     "check_rate_nonnegativity",
     "check_terminal_faces",
