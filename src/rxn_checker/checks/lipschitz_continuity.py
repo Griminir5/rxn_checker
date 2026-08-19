@@ -1,24 +1,17 @@
-"""Certify rate continuity on a neighbourhood of the augmented domain."""
+"""Temporary regularity adapter used until the Phase 5 engine."""
 
 from collections.abc import Mapping
 from dataclasses import dataclass
 from functools import cache
-from types import MappingProxyType
 
 import sympy as sp
 from sympy.core.relational import Relational
 
-from ..case import Case
-from ..reaction import Reaction
-from ..state import IdealGasClosure, VariableBounds
-from .models import (
-    CheckContext,
-    CheckDefinition,
-    CheckOutcome,
-    CheckScope,
-    CheckStatus,
-)
-from .symbolic_domain import POSITIVE, LinearDomain, Point, Proof, number
+from ..context import AnalysisContext
+from ..domain import ConcentrationDomain
+from ..model import Reaction
+from ..results import Evidence, Finding, Verdict
+from .symbolic_domain import POSITIVE, Point, proof_for_domain
 
 _NONZERO = "nonzero"
 _SAFE_FUNCTIONS = frozenset(
@@ -93,85 +86,6 @@ def _structure(
     return tuple(dict.fromkeys(requirements)), tuple(sorted(unsupported))
 
 
-@cache
-def _cached_augmented_domain(
-    items: tuple[tuple[sp.Symbol, VariableBounds], ...],
-    closure_constraints: tuple[Relational, ...],
-    open_constraints: tuple[sp.Expr, ...],
-) -> tuple[LinearDomain, Mapping[sp.Symbol, sp.Symbol], Point]:
-    variables = tuple(symbol for symbol, _ in items)
-    weak: list[Relational] = []
-    bounds: list[tuple[sp.Expr, sp.Expr]] = []
-    assumptions: dict[sp.Symbol, sp.Symbol] = {}
-
-    for symbol, state_bound in items:
-        raw_lower, raw_upper = state_bound.interval(include_excursion=True)
-        lower, upper = number(raw_lower), number(raw_upper)
-        weak.extend(
-            (
-                sp.Ge(symbol - lower, 0, evaluate=False),
-                sp.Ge(upper - symbol, 0, evaluate=False),
-            )
-        )
-        bounds.append((lower, upper))
-
-        if lower > 0:
-            kind = "positive"
-        elif upper < 0:
-            kind = "negative"
-        elif lower == 0:
-            kind = "nonnegative"
-        elif upper == 0:
-            kind = "nonpositive"
-        else:
-            kind = "real"
-        assumptions[symbol] = sp.Dummy(symbol.name, **{kind: True})
-
-    # Uniform Lipschitz continuity on an open domain requires a finite margin
-    # as its excluded boundary is approached.  Analyze the closure of the
-    # chamfer by weakening its strict constraints here.
-    weak.extend(closure_constraints)
-    weak.extend(
-        sp.Ge(expression, 0, evaluate=False) for expression in open_constraints
-    )
-
-    domain = LinearDomain(
-        variables,
-        tuple(weak),
-        (),
-        tuple(bounds),
-    )
-    feasible, feasible_point = domain.feasible()
-    if not feasible or feasible_point is None:
-        raise ValueError("Augmented state domain is empty.")
-    return domain, MappingProxyType(assumptions), feasible_point
-
-
-def _augmented_domain(
-    state_bounds: Mapping[sp.Symbol, VariableBounds],
-    gas_closure: IdealGasClosure | None,
-) -> tuple[LinearDomain, Mapping[sp.Symbol, sp.Symbol], Point]:
-    closure_constraints: tuple[Relational, ...] = ()
-    open_constraints: tuple[sp.Expr, ...] = ()
-    if gas_closure is not None:
-        minimum = gas_closure.derived_minimum_total(state_bounds)
-        if minimum is None:
-            open_constraints = gas_closure.augmented_strict_constraints
-        else:
-            closure_constraints = (
-                sp.Ge(
-                    gas_closure.total_concentration - minimum,
-                    0,
-                    evaluate=False,
-                ),
-            )
-    return _cached_augmented_domain(
-        tuple(state_bounds.items()),
-        closure_constraints,
-        open_constraints,
-    )
-
-
 def _condition(expression: sp.Expr, requirement: str) -> Relational:
     if requirement == POSITIVE:
         return sp.Gt(expression, 0, evaluate=False)
@@ -180,8 +94,7 @@ def _condition(expression: sp.Expr, requirement: str) -> Relational:
 
 def check_lipschitz_continuity(
     reaction: Reaction,
-    state_bounds: Mapping[sp.Symbol, VariableBounds],
-    gas_closure: IdealGasClosure | None = None,
+    domain: ConcentrationDomain,
 ) -> LipschitzContinuityResult:
     """Certify a rate on an open neighbourhood of its augmented domain.
 
@@ -193,26 +106,12 @@ def check_lipschitz_continuity(
     or values become unbounded as an excluded boundary is approached.
     """
 
-    missing_bounds = reaction.rate.free_symbols - set(state_bounds)
+    missing_bounds = reaction.rate.free_symbols - set(domain.all_intervals)
     if missing_bounds:
         names = ", ".join(sorted(map(str, missing_bounds)))
         raise ValueError(f"Reaction rate has no bounds for symbols: {names}.")
-    domain_symbols = set(reaction.rate.free_symbols)
-    active_closure = None
-    if gas_closure is not None and domain_symbols.intersection(
-        gas_closure.gas_concentrations
-    ):
-        active_closure = gas_closure
-        domain_symbols.update(gas_closure.gas_concentrations)
-        domain_symbols.update((gas_closure.temperature, gas_closure.pressure))
-    rate_bounds = {
-        symbol: state_bound
-        for symbol, state_bound in state_bounds.items()
-        if symbol in domain_symbols
-    }
-    domain, assumptions, point = _augmented_domain(rate_bounds, active_closure)
     requirements, unsupported = _structure(reaction.rate)
-    proof = Proof(domain, assumptions, point)
+    proof = proof_for_domain(domain)
     conditions = tuple(_condition(*requirement) for requirement in requirements)
     invalid_atom = any(
         atom is sp.nan or atom.is_real is False or atom.is_finite is False
@@ -259,42 +158,39 @@ def check_lipschitz_continuity(
     )
 
 
-def _point_detail(point: Point) -> str:
-    values = ", ".join(f"{symbol}={value}" for symbol, value in point.items())
-    return f"Exact augmented-domain closure witness: {values}."
+def _evidence(result: LipschitzContinuityResult) -> Evidence | None:
+    if result.counterexample is None:
+        return None
+    return Evidence(
+        "exact_counterexample",
+        {str(symbol): str(value) for symbol, value in result.counterexample.items()},
+    )
 
 
-def _outcome(result: LipschitzContinuityResult) -> CheckOutcome:
+def _lipschitz_finding(
+    result: LipschitzContinuityResult,
+    domain_name: str,
+) -> Finding:
     if result.passed is False:
         if result.defined is False:
-            details = [
-                "Rate is not real and finite on the closure of the augmented "
-                "domain."
-            ]
+            summary = f"Rate is not real and finite on the {domain_name} domain."
         else:
-            details = [
-                "A strict domain condition loses its margin on the boundary "
-                "of the augmented domain."
-            ]
-        if result.counterexample is not None:
-            details.append(_point_detail(result.counterexample))
-        return CheckOutcome(
-            status=CheckStatus.FAIL,
-            subject=result.reaction_id,
-            details=tuple(details),
+            summary = (
+                "A strict domain condition loses its margin on the "
+                f"{domain_name} boundary."
+            )
+        return Finding(
+            result.reaction_id, Verdict.FAIL, summary, _evidence(result)
         )
 
     if result.passed:
-        return CheckOutcome(
-            status=CheckStatus.PASS,
-            subject=result.reaction_id,
-            details=(
-                "Rate is Lipschitz continuous on an open neighbourhood of "
-                "the augmented domain.",
-            ),
+        return Finding(
+            result.reaction_id,
+            Verdict.PASS,
+            f"Rate is Lipschitz on a neighbourhood of the {domain_name} domain.",
         )
 
-    details = []
+    details: list[str] = []
     if result.defined is None:
         details.append(
             "Could not prove that the rate is real and finite throughout the "
@@ -309,32 +205,74 @@ def _outcome(result: LipschitzContinuityResult) -> CheckOutcome:
             + ", ".join(result.unsupported_functions)
             + "."
         )
-    return CheckOutcome(
-        status=CheckStatus.INDETERMINATE,
-        subject=result.reaction_id,
-        details=tuple(details),
+    return Finding(
+        result.reaction_id,
+        Verdict.UNKNOWN,
+        " ".join(details) or "Regularity analysis was inconclusive.",
     )
 
 
-def run(case: Case, context: CheckContext) -> tuple[CheckOutcome, ...]:
-    """Check every rate separately so singularities cannot cancel in ``S r``."""
-
-    return tuple(
-        _outcome(
-            check_lipschitz_continuity(
-                reaction,
-                case.state_bounds,
-                case.gas_closure,
-            )
+def _definedness_finding(
+    result: LipschitzContinuityResult,
+    domain_name: str,
+) -> Finding:
+    if result.defined is False:
+        return Finding(
+            result.reaction_id,
+            Verdict.FAIL,
+            f"Rate is not real and finite on the {domain_name} domain.",
+            _evidence(result),
         )
-        for reaction in case.reactions
+    if result.defined is True:
+        return Finding(
+            result.reaction_id,
+            Verdict.PASS,
+            f"Rate is real and finite on the {domain_name} domain.",
+        )
+    return Finding(
+        result.reaction_id,
+        Verdict.UNKNOWN,
+        f"Rate definedness on the {domain_name} domain was inconclusive.",
     )
 
 
-CHECK = CheckDefinition(
-    id="lipschitz_continuity",
-    name="Lipschitz continuity",
-    group="Numerical robustness",
-    scope=CheckScope.REACTION,
-    run=run,
-)
+def _run(
+    context: AnalysisContext,
+    domain: ConcentrationDomain,
+    domain_name: str,
+    *,
+    definedness_only: bool,
+) -> tuple[Finding, ...]:
+    results = tuple(
+        context.rate_facts(reaction, domain) for reaction in context.case.reactions
+    )
+    convert = _definedness_finding if definedness_only else _lipschitz_finding
+    return tuple(convert(result, domain_name) for result in results)
+
+
+def run_physical_definedness(
+    context: AnalysisContext,
+    _dependencies: Mapping,
+) -> tuple[Finding, ...]:
+    return _run(context, context.physical_domain, "physical", definedness_only=True)
+
+
+def run_physical_lipschitz(
+    context: AnalysisContext,
+    _dependencies: Mapping,
+) -> tuple[Finding, ...]:
+    return _run(context, context.physical_domain, "physical", definedness_only=False)
+
+
+def run_augmented_definedness(
+    context: AnalysisContext,
+    _dependencies: Mapping,
+) -> tuple[Finding, ...]:
+    return _run(context, context.augmented_domain, "augmented", definedness_only=True)
+
+
+def run_augmented_lipschitz(
+    context: AnalysisContext,
+    _dependencies: Mapping,
+) -> tuple[Finding, ...]:
+    return _run(context, context.augmented_domain, "augmented", definedness_only=False)

@@ -4,17 +4,10 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 import math
 
-from ..case import Case
-from ..reaction import Reaction
+from ..context import AnalysisContext
+from ..model import Reaction
+from ..results import Evidence, Finding, Verdict
 from ..species import PROPERTY_REGISTRY, PropertyRegistry
-from .models import (
-    CheckContext,
-    CheckDefinition,
-    CheckOutcome,
-    CheckScope,
-    CheckStatus,
-    CheckValue,
-)
 
 MASS_RELATIVE_TOLERANCE = 1.0e-9
 MASS_ABSOLUTE_TOLERANCE = 1.0e-12
@@ -96,45 +89,37 @@ def check_mass_conservation(
     )
 
 
-def run(case: Case, context: CheckContext) -> tuple[CheckOutcome, ...]:
+def run(context: AnalysisContext, _dependencies: Mapping) -> tuple[Finding, ...]:
     """Run mass conservation for every reaction in a case."""
 
-    outcomes: list[CheckOutcome] = []
-    for reaction in case.reactions:
+    findings: list[Finding] = []
+    for reaction in context.case.reactions:
         try:
             result = check_mass_conservation(reaction, context.property_registry)
         except (KeyError, ValueError) as error:
-            outcomes.append(
-                CheckOutcome(
-                    status=CheckStatus.UNAVAILABLE,
-                    subject=reaction.id,
-                    details=(str(error.args[0]),),
-                )
+            findings.append(
+                Finding(reaction.id, Verdict.SKIPPED, str(error.args[0]))
             )
             continue
 
-        values = ()
+        evidence = None
         if not result.passed:
-            values = (
-                CheckValue("Reactant mass", result.reactant_mass, "kg/mol"),
-                CheckValue("Product mass", result.product_mass, "kg/mol"),
-                CheckValue("Mass imbalance", result.imbalance, "kg/mol"),
+            evidence = Evidence(
+                "mass_imbalance",
+                {
+                    "reactant_mass_kg_per_mol": result.reactant_mass,
+                    "product_mass_kg_per_mol": result.product_mass,
+                    "imbalance_kg_per_mol": result.imbalance,
+                },
             )
-        outcomes.append(
-            CheckOutcome(
-                status=(CheckStatus.PASS if result.passed else CheckStatus.FAIL),
-                subject=reaction.id,
-                details=("Products minus reactants.",) if values else (),
-                values=values,
+        findings.append(
+            Finding(
+                reaction.id,
+                Verdict.PASS if result.passed else Verdict.FAIL,
+                "Stoichiometric masses balance."
+                if result.passed
+                else "Products and reactants have different masses.",
+                evidence,
             )
         )
-    return tuple(outcomes)
-
-
-CHECK = CheckDefinition(
-    id="mass_conservation",
-    name="Mass conservation",
-    group="Basic checks",
-    scope=CheckScope.REACTION,
-    run=run,
-)
+    return tuple(findings)

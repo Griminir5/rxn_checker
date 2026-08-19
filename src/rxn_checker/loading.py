@@ -9,21 +9,17 @@ from types import ModuleType
 
 import yaml
 
-from .case import (
-    Case,
-    CheckConfig,
+from .case import Case
+from .domain import (
+    GAS_CONSTANT,
     ConcentrationModel,
-    DomainConfig,
-    ParameterBox,
-    ParameterRange,
-    ReportConfig,
-    TotalMinimumConfig,
-    TotalMinimumMode,
+    DomainSpec,
+    Interval,
+    TotalConstraint,
 )
 from .model import CaseSymbols, Phase, Reaction, Species, parse_rational
 from .reactions import BUILTIN_FAMILIES
 from .species import PROPERTY_REGISTRY, PropertyRegistry
-from .state import GAS_CONSTANT_J_PER_MOL_K
 
 
 _TOP_LEVEL_KEYS = {
@@ -76,22 +72,28 @@ def _string_list(
     return result
 
 
-def _pair(config: Mapping, key: str) -> ParameterRange:
+def _pair(config: Mapping, key: str) -> Interval:
     values = config.get(key)
     if not isinstance(values, list) or len(values) != 2:
         raise ValueError(f"Case parameter '{key}' must contain [lower, upper].")
-    return ParameterRange(values[0], values[1])
+    interval = Interval(values[0], values[1])
+    if interval.lower >= interval.upper:
+        raise ValueError(f"Case parameter '{key}' bounds are not ordered.")
+    return interval
 
 
-def _load_parameters(value: object) -> ParameterBox:
+def _load_parameters(
+    value: object,
+    symbols: CaseSymbols,
+) -> dict:
     config = _mapping(value, "Case 'parameters'")
     _reject_unknown(config, {"temperature", "pressure"}, "parameter")
     if set(config) != {"temperature", "pressure"}:
         raise ValueError("Case parameters must define temperature and pressure.")
-    return ParameterBox(
-        temperature=_pair(config, "temperature"),
-        pressure=_pair(config, "pressure"),
-    )
+    return {
+        symbols.temperature: _pair(config, "temperature"),
+        symbols.pressure: _pair(config, "pressure"),
+    }
 
 
 def _resolved_bounds(
@@ -126,21 +128,24 @@ def _load_total(
     *,
     phase: Phase,
     species: tuple[Species, ...],
-) -> TotalMinimumConfig:
+    symbols: CaseSymbols,
+    parameters: Mapping,
+) -> TotalConstraint | None:
     label = phase.value
     if value is None:
-        return TotalMinimumConfig(TotalMinimumMode.NONE)
+        return None
     config = _mapping(value, f"Domain total '{label}'")
     _reject_unknown(config, {"mode", "species", "value"}, f"{label} total")
-    try:
-        mode = TotalMinimumMode(config.get("mode", "none"))
-    except ValueError as error:
-        allowed = "none, explicit"
-        if phase is Phase.GAS:
-            allowed += ", ideal_gas_minimum"
-        raise ValueError(f"{label.title()} total mode must be one of: {allowed}.") from error
-    if phase is Phase.SOLID and mode is TotalMinimumMode.IDEAL_GAS_MINIMUM:
-        raise ValueError("Solid totals do not support ideal_gas_minimum mode.")
+    mode = config.get("mode", "none")
+    allowed = {"none", "explicit"}
+    if phase is Phase.GAS:
+        allowed.add("ideal_gas_minimum")
+    if mode not in allowed:
+        raise ValueError(
+            f"{label.title()} total mode must be one of: "
+            + ", ".join(sorted(allowed))
+            + "."
+        )
 
     selected_ids = tuple(item.id for item in species if item.phase is phase)
     if "species" in config:
@@ -172,23 +177,37 @@ def _load_total(
             + ", ".join(sorted(wrong_phase))
             + "."
         )
-    if mode is not TotalMinimumMode.NONE and not selected_ids:
+    if mode != "none" and not selected_ids:
         raise ValueError(f"Domain {label} total requires at least one species.")
-    if mode is TotalMinimumMode.NONE and ("species" in config or "value" in config):
+    if mode == "none" and ("species" in config or "value" in config):
         raise ValueError(f"Domain {label} total options require a non-none mode.")
-
-    return TotalMinimumConfig(
-        mode=mode,
-        species=selected_ids if mode is not TotalMinimumMode.NONE else (),
-        value=config.get("value"),
+    if mode == "none":
+        return None
+    if mode == "explicit":
+        if "value" not in config:
+            raise ValueError(f"Explicit {label} total requires a value.")
+        minimum = parse_rational(config["value"], label=f"Explicit {label} total")
+    else:
+        if "value" in config:
+            raise ValueError("ideal_gas_minimum does not accept an explicit value.")
+        pressure = parameters[symbols.pressure]
+        temperature = parameters[symbols.temperature]
+        if pressure.lower <= 0:
+            raise ValueError("Ideal-gas minimum requires positive pressure.")
+        minimum = pressure.lower / (GAS_CONSTANT * temperature.upper)
+    return TotalConstraint(
+        label,
+        tuple(symbols.concentration(item) for item in selected_ids),
+        minimum,
     )
 
 
 def _load_domain(
     value: object,
     species: tuple[Species, ...],
-    parameters: ParameterBox,
-) -> DomainConfig:
+    symbols: CaseSymbols,
+    parameters: Mapping,
+) -> DomainSpec:
     config = _mapping(value, "Case 'domain'")
     _reject_unknown(
         config,
@@ -203,42 +222,48 @@ def _load_domain(
         ) from error
 
     species_ids = tuple(item.id for item in species)
-    upper = _resolved_bounds(config.get("upper"), species_ids, "upper")
-    excursion = _resolved_bounds(
+    upper_by_id = _resolved_bounds(config.get("upper"), species_ids, "upper")
+    excursion_by_id = _resolved_bounds(
         config.get("excursion_lower"), species_ids, "excursion_lower"
     )
     totals = _mapping(config.get("totals", {}), "Domain 'totals'")
     _reject_unknown(totals, {"gas", "solid"}, "domain totals")
-    gas_total = _load_total(totals.get("gas"), phase=Phase.GAS, species=species)
-    solid_total = _load_total(totals.get("solid"), phase=Phase.SOLID, species=species)
-    domain = DomainConfig(model, upper, excursion, gas_total, solid_total)
-
-    for total, label in ((gas_total, "gas"), (solid_total, "solid")):
-        if total.mode is TotalMinimumMode.EXPLICIT:
-            available = sum(domain.upper[species_id] for species_id in total.species)
-            if available < total.value:
-                raise ValueError(
-                    f"Domain {label} total minimum exceeds the selected upper bounds."
-                )
-    if gas_total.mode is TotalMinimumMode.IDEAL_GAS_MINIMUM:
-        if parameters.pressure.lower <= 0:
-            raise ValueError(
-                "Ideal-gas minimum requires a positive pressure lower bound."
-            )
-        minimum = parameters.pressure.lower / (
-            GAS_CONSTANT_J_PER_MOL_K * parameters.temperature.upper
+    constraints = tuple(
+        constraint
+        for constraint in (
+            _load_total(
+                totals.get("gas"),
+                phase=Phase.GAS,
+                species=species,
+                symbols=symbols,
+                parameters=parameters,
+            ),
+            _load_total(
+                totals.get("solid"),
+                phase=Phase.SOLID,
+                species=species,
+                symbols=symbols,
+                parameters=parameters,
+            ),
         )
-        available = sum(domain.upper[species_id] for species_id in gas_total.species)
-        if available < minimum:
-            raise ValueError(
-                "Domain gas total minimum exceeds the selected upper bounds."
-            )
-    return domain
+        if constraint is not None
+    )
+    return DomainSpec(
+        symbols,
+        model,
+        {symbols.concentration(item): upper_by_id[item] for item in species_ids},
+        {
+            symbols.concentration(item): excursion_by_id[item]
+            for item in species_ids
+        },
+        parameters,
+        constraints,
+    )
 
 
-def _load_checks(value: object | None) -> CheckConfig:
+def _load_checks(value: object | None) -> dict[str, object]:
     if value is None:
-        return CheckConfig()
+        return {"profile": "physical", "include": (), "exclude": (), "fail_fast": "stage"}
     config = _mapping(value, "Case 'checks'")
     _reject_unknown(config, {"profile", "include", "exclude", "fail_fast"}, "checks")
     profile = config.get("profile", "physical")
@@ -249,12 +274,24 @@ def _load_checks(value: object | None) -> CheckConfig:
     fail_fast = config.get("fail_fast", "stage")
     if fail_fast not in {"stage", "none"}:
         raise ValueError("Check fail_fast must be 'stage' or 'none'.")
-    return CheckConfig(profile, include, exclude, fail_fast)
+    from .checks.registry import plan_checks
+
+    plan_checks(
+        profile=profile,
+        include=include,
+        exclude=exclude,
+    )
+    return {
+        "profile": profile,
+        "include": include,
+        "exclude": exclude,
+        "fail_fast": fail_fast,
+    }
 
 
-def _load_report(value: object | None) -> ReportConfig:
+def _load_report(value: object | None) -> dict[str, object]:
     if value is None:
-        return ReportConfig()
+        return {"verbosity": "failures", "format": "text", "output": None}
     config = _mapping(value, "Case 'report'")
     _reject_unknown(config, {"verbosity", "format", "output"}, "report")
     verbosity = config.get("verbosity", "failures")
@@ -266,7 +303,7 @@ def _load_report(value: object | None) -> ReportConfig:
     output = config.get("output")
     if output is not None and (not isinstance(output, str) or not output):
         raise ValueError("Report output must be a non-empty path string.")
-    return ReportConfig(verbosity, output_format, output)
+    return {"verbosity": verbosity, "format": output_format, "output": output}
 
 
 def _selector(selector: str) -> tuple[str, str | None]:
@@ -417,8 +454,10 @@ def load_case(
         raise ValueError("Unknown case species: " + ", ".join(missing_species) + ".")
     species = tuple(property_registry.get_record(item) for item in species_ids)
     symbols = CaseSymbols.for_species(species_ids)
-    parameters = _load_parameters(config.get("parameters"))
-    domain = _load_domain(config.get("domain"), species, parameters)
+    parameters = _load_parameters(config.get("parameters"), symbols)
+    domain_spec = _load_domain(
+        config.get("domain"), species, symbols, parameters
+    )
     reactions = _load_reactions(selectors, symbols, path.parent)
 
     return Case(
@@ -426,11 +465,10 @@ def load_case(
         species=species,
         symbols=symbols,
         reactions=reactions,
-        parameters=parameters,
-        domain=domain,
+        domain_spec=domain_spec,
         inert_species=inert_species,
-        checks=_load_checks(config.get("checks")),
-        report=_load_report(config.get("report")),
+        check_config=_load_checks(config.get("checks")),
+        report_config=_load_report(config.get("report")),
     )
 
 

@@ -1,120 +1,149 @@
-"""Generic plain-text reporting for registered checks."""
+"""Text and JSON renderers for structured run results."""
 
 from collections.abc import Iterable, Mapping
-from dataclasses import dataclass
-from numbers import Real
+from enum import Enum
+import json
 from pathlib import Path
-from types import MappingProxyType
 
-from .case import Case
-from .checks import (
-    CheckContext,
-    CheckDefinition,
-    CheckExecution,
-    CheckOutcome,
-    CheckStatus,
-    aggregate_status,
-    run_checks,
-)
+import sympy as sp
+
+from .checks.definitions import CheckSpec, Stage
+from .checks.registry import CHECK_REGISTRY
+from .results import Finding, RunResult, Verdict
 
 
-@dataclass(frozen=True)
-class CheckReport:
-    """Rendered report plus structured executions and summary data."""
-
-    text: str
-    overall_status: CheckStatus | None
-    status_counts: Mapping[CheckStatus, int]
-    value_count: int
-    executions: tuple[CheckExecution, ...]
-
-    @property
-    def passed(self) -> bool:
-        """Whether the report is suitable for a successful CLI exit."""
-
-        return self.overall_status is None or self.overall_status.successful
+_STAGE_NAMES = {
+    Stage.CHEMISTRY: "Chemistry",
+    Stage.PHYSICAL: "Physical domain",
+    Stage.AUGMENTED: "Augmented domain",
+    Stage.ANALYSIS: "Analyses",
+}
 
 
-def _number(value: Real) -> str:
-    try:
-        return format(value, ".12g")
-    except TypeError:
-        return format(float(value), ".12g")
+def _specs(registry: Iterable[CheckSpec]) -> dict[str, CheckSpec]:
+    return {spec.id: spec for spec in registry}
 
 
-def _render_outcome(outcome: CheckOutcome) -> list[str]:
-    subject = outcome.subject or "Case"
-    status = "" if outcome.status is None else f": {outcome.status.value}"
-    lines = [f"    {subject}{status}"]
-    lines.extend(f"      {detail}" for detail in outcome.details)
-    for value in outcome.values:
-        rendered = f"      {value.name}: {_number(value.value)}"
-        if value.unit is not None:
-            rendered += f" {value.unit}"
-        lines.append(rendered)
-    return lines
-
-
-def _status_counts(outcomes: Iterable[CheckOutcome]) -> Mapping[CheckStatus, int]:
-    counts = {status: 0 for status in CheckStatus}
-    for outcome in outcomes:
-        if outcome.status is not None:
-            counts[outcome.status] += 1
-    return MappingProxyType(counts)
-
-
-def build_check_report(
-    case: Case,
+def render_text(
+    run: RunResult,
     *,
+    profile: str | None = None,
     source: str | Path | None = None,
-    checks: Iterable[CheckDefinition] | None = None,
-    context: CheckContext | None = None,
-) -> CheckReport:
-    """Execute any collection of check definitions and render their outcomes."""
+    verbosity: str = "failures",
+    registry: Iterable[CheckSpec] = CHECK_REGISTRY,
+) -> str:
+    """Render concise human output without changing result semantics."""
 
-    executions = run_checks(case, checks, context=context)
-    outcomes = tuple(
-        outcome for execution in executions for outcome in execution.outcomes
-    )
-    overall_status = aggregate_status(outcomes)
-    status_counts = _status_counts(outcomes)
-    value_count = sum(len(outcome.values) for outcome in outcomes)
-
-    lines = ["rxn-checker report", f"Case: {case.name}"]
+    if verbosity not in {"summary", "failures", "full"}:
+        raise ValueError("Unknown report verbosity.")
+    by_id = _specs(registry)
+    lines = [f"rxn-checker: {run.overall.value}", f"Case: {run.case_name}"]
+    if profile is not None:
+        lines.append(f"Profile: {profile}")
     if source is not None:
         lines.append(f"Source: {Path(source)}")
-    lines.extend((f"Reactions: {len(case.reactions)}", "Case loading: PASS", ""))
 
-    current_group: str | None = None
-    for execution in executions:
-        definition = execution.definition
-        if definition.group != current_group:
-            if current_group is not None:
-                lines.append("")
-            lines.append(definition.group)
-            current_group = definition.group
-        lines.append(f"  {definition.name} [{definition.id}; {definition.scope.value}]")
-        for outcome in execution.outcomes:
-            lines.extend(_render_outcome(outcome))
+    if verbosity != "summary":
+        current_stage: Stage | None = None
+        for check_id in run.selected_checks:
+            spec = by_id[check_id]
+            result = run.results[check_id]
+            if spec.stage is not current_stage:
+                lines.extend(("", _STAGE_NAMES[spec.stage]))
+                current_stage = spec.stage
 
-    if executions:
-        lines.append("")
-    overall_label = overall_status.value if overall_status is not None else "NO_STATUS"
-    rendered_counts = ", ".join(
-        f"{status.value}={status_counts[status]}" for status in CheckStatus
-    )
-    lines.extend(
-        (
-            "Summary",
-            f"  Overall: {overall_label}",
-            f"  Statuses: {rendered_counts}",
-            f"  Numerical values: {value_count}",
-        )
-    )
-    return CheckReport(
-        text="\n".join(lines) + "\n",
-        overall_status=overall_status,
-        status_counts=status_counts,
-        value_count=value_count,
-        executions=executions,
-    )
+            findings = result.findings
+            passed = sum(item.verdict is Verdict.PASS for item in findings)
+            if len(findings) > 1 and passed == len(findings):
+                lines.append(
+                    f"  PASS     {spec.name:<34} {passed}/{len(findings)} reactions"
+                )
+                if verbosity != "full":
+                    continue
+            else:
+                lines.append(f"  {result.verdict.value:<8} {spec.name}")
+
+            visible = findings
+            if verbosity == "failures" and result.verdict is not Verdict.PASS:
+                visible = tuple(item for item in findings if item.verdict is not Verdict.PASS)
+            elif verbosity == "failures":
+                visible = ()
+            for finding in visible:
+                subject = "" if finding.subject == run.case_name else f"{finding.subject}: "
+                lines.append(
+                    f"           {finding.verdict.value:<8} {subject}{finding.summary}"
+                )
+
+    lines.extend(("", f"Overall: {run.overall.value}"))
+    return "\n".join(lines) + "\n"
+
+
+def _json_value(value: object) -> object:
+    if isinstance(value, Mapping):
+        return {str(key): _json_value(item) for key, item in value.items()}
+    if isinstance(value, (tuple, list)):
+        return [_json_value(item) for item in value]
+    if isinstance(value, Enum):
+        return value.value
+    if isinstance(value, sp.Basic):
+        return str(value)
+    if value is None or isinstance(value, (str, int, float, bool)):
+        return value
+    return str(value)
+
+
+def _finding_json(finding: Finding) -> dict[str, object]:
+    rendered: dict[str, object] = {
+        "subject": finding.subject,
+        "verdict": finding.verdict.value,
+        "summary": finding.summary,
+    }
+    if finding.evidence is not None:
+        rendered["evidence"] = {
+            "kind": finding.evidence.kind,
+            "data": _json_value(finding.evidence.data),
+        }
+    return rendered
+
+
+def render_json(
+    run: RunResult,
+    *,
+    registry: Iterable[CheckSpec] = CHECK_REGISTRY,
+) -> str:
+    """Serialize every structured result, including evidence and timing."""
+
+    by_id = _specs(registry)
+    results = {}
+    for check_id in run.selected_checks:
+        spec = by_id[check_id]
+        result = run.results[check_id]
+        results[check_id] = {
+            "name": spec.name,
+            "stage": spec.stage.value,
+            "domain": (
+                spec.stage.value
+                if spec.stage in {Stage.PHYSICAL, Stage.AUGMENTED}
+                else None
+            ),
+            "scope": spec.scope.value,
+            "role": result.role.value,
+            "verdict": result.verdict.value,
+            "requires": list(spec.requires),
+            "prerequisites": {
+                required: run.results[required].verdict.value
+                for required in spec.requires
+            },
+            "duration_seconds": result.duration_seconds,
+            "findings": [_finding_json(item) for item in result.findings],
+        }
+    payload = {
+        "case_name": run.case_name,
+        "selected_checks": list(run.selected_checks),
+        "overall": run.overall.value,
+        "results": results,
+    }
+    return json.dumps(payload, indent=2, sort_keys=False) + "\n"
+
+
+__all__ = ("render_json", "render_text")

@@ -6,15 +6,9 @@ from types import MappingProxyType
 
 import sympy as sp
 
-from ..case import Case
-from ..reaction import Reaction
-from .models import (
-    CheckContext,
-    CheckDefinition,
-    CheckOutcome,
-    CheckScope,
-    CheckStatus,
-)
+from ..context import AnalysisContext
+from ..model import Reaction
+from ..results import Evidence, Finding, Verdict
 
 
 @dataclass(frozen=True)
@@ -72,7 +66,7 @@ def check_zero_at_depletion(reaction: Reaction) -> ZeroAtDepletionResult:
     )
 
 
-def _outcome(result: ZeroAtDepletionResult) -> CheckOutcome:
+def _finding(result: ZeroAtDepletionResult) -> Finding:
     failed = tuple(
         (species_id, rate)
         for species_id, rate in result.rates_at_depletion.items()
@@ -93,48 +87,39 @@ def _outcome(result: ZeroAtDepletionResult) -> CheckOutcome:
             f"Could not prove that the rate at {species_id}=0 is zero: {rate}."
             for species_id, rate in indeterminate
         )
-        return CheckOutcome(
-            status=CheckStatus.FAIL,
-            subject=result.reaction_id,
-            details=details,
+        return Finding(
+            result.reaction_id,
+            Verdict.FAIL,
+            " ".join(details),
+            Evidence(
+                "depletion_rates",
+                {species_id: str(rate) for species_id, rate in failed},
+            ),
         )
 
     if indeterminate:
-        return CheckOutcome(
-            status=CheckStatus.INDETERMINATE,
-            subject=result.reaction_id,
-            details=tuple(
+        return Finding(
+            result.reaction_id,
+            Verdict.UNKNOWN,
+            " ".join(
                 f"Could not prove that the rate at {species_id}=0 is zero: {rate}."
                 for species_id, rate in indeterminate
             ),
         )
 
     if not result.rates_at_depletion:
-        details = ("Reaction has no reactants or catalysts.",)
+        summary = "Reaction has no reactants or catalysts."
     else:
-        details = (
-            "Rate is exactly zero at every reactant and catalyst depletion "
-            "boundary.",
+        summary = (
+            "Rate is exactly zero at every required depletion boundary."
         )
-    return CheckOutcome(
-        status=CheckStatus.PASS,
-        subject=result.reaction_id,
-        details=details,
-    )
+    return Finding(result.reaction_id, Verdict.PASS, summary)
 
 
-def run(case: Case, context: CheckContext) -> tuple[CheckOutcome, ...]:
+def run(context: AnalysisContext, _dependencies: Mapping) -> tuple[Finding, ...]:
     """Run the zero-at-depletion check for every reaction in a case."""
 
     return tuple(
-        _outcome(check_zero_at_depletion(reaction)) for reaction in case.reactions
+        _finding(check_zero_at_depletion(reaction))
+        for reaction in context.case.reactions
     )
-
-
-CHECK = CheckDefinition(
-    id="zero_at_depletion",
-    name="Zero rate at depletion",
-    group="Physical checks",
-    scope=CheckScope.REACTION,
-    run=run,
-)

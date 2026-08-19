@@ -14,11 +14,11 @@ from rxn_checker import (
     Phase,
     Reaction,
     Species,
-    check_atom_conservation,
-    check_mass_conservation,
     load_case,
     parse_rational,
 )
+from rxn_checker.checks.atom_conservation import check_atom_conservation
+from rxn_checker.checks.mass_conservation import check_mass_conservation
 from rxn_checker.species import PROPERTY_REGISTRY
 
 
@@ -71,8 +71,12 @@ def test_bundled_cases_load(case_directory: str, reaction_count: int) -> None:
     assert case.symbols.concentration_symbols.isdisjoint(
         case.symbols.parameter_symbols
     )
-    assert case.parameters.temperature.lower.is_Rational
-    assert case.parameters.pressure.upper.is_Rational
+    assert case.domain_spec.parameter_intervals[
+        case.symbols.temperature
+    ].lower.is_Rational
+    assert case.domain_spec.parameter_intervals[
+        case.symbols.pressure
+    ].upper.is_Rational
 
 
 def test_built_in_wustite_composition_is_fractional_and_exact() -> None:

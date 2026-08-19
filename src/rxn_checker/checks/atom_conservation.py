@@ -5,17 +5,10 @@ from dataclasses import dataclass
 import math
 from types import MappingProxyType
 
-from ..case import Case
-from ..reaction import Reaction
+from ..context import AnalysisContext
+from ..model import Reaction
+from ..results import Evidence, Finding, Verdict
 from ..species import PROPERTY_REGISTRY, PropertyRegistry
-from .models import (
-    CheckContext,
-    CheckDefinition,
-    CheckOutcome,
-    CheckScope,
-    CheckStatus,
-    CheckValue,
-)
 
 ATOM_RELATIVE_TOLERANCE = 1.0e-9
 ATOM_ABSOLUTE_TOLERANCE = 1.0e-12
@@ -88,43 +81,32 @@ def check_atom_conservation(
     )
 
 
-def run(case: Case, context: CheckContext) -> tuple[CheckOutcome, ...]:
+def run(context: AnalysisContext, _dependencies: Mapping) -> tuple[Finding, ...]:
     """Run atom conservation for every reaction in a case."""
 
-    outcomes: list[CheckOutcome] = []
-    for reaction in case.reactions:
+    findings: list[Finding] = []
+    for reaction in context.case.reactions:
         try:
             result = check_atom_conservation(reaction, context.property_registry)
         except (KeyError, ValueError) as error:
-            outcomes.append(
-                CheckOutcome(
-                    status=CheckStatus.UNAVAILABLE,
-                    subject=reaction.id,
-                    details=(str(error.args[0]),),
-                )
+            findings.append(
+                Finding(reaction.id, Verdict.SKIPPED, str(error.args[0]))
             )
             continue
 
-        values = tuple(
-            CheckValue(f"{element} imbalance", imbalance)
+        imbalances = {
+            element: imbalance
             for element, imbalance in result.imbalances.items()
             if imbalance != 0
-        )
-        outcomes.append(
-            CheckOutcome(
-                status=(CheckStatus.PASS if result.passed else CheckStatus.FAIL),
-                subject=reaction.id,
-                details=("Products minus reactants.",) if values else (),
-                values=values,
+        }
+        findings.append(
+            Finding(
+                reaction.id,
+                Verdict.PASS if result.passed else Verdict.FAIL,
+                "All element totals balance."
+                if result.passed
+                else "Products and reactants have different element totals.",
+                Evidence("atom_imbalance", imbalances) if imbalances else None,
             )
         )
-    return tuple(outcomes)
-
-
-CHECK = CheckDefinition(
-    id="atom_conservation",
-    name="Atom conservation",
-    group="Basic checks",
-    scope=CheckScope.REACTION,
-    run=run,
-)
+    return tuple(findings)

@@ -5,16 +5,10 @@ from dataclasses import dataclass
 
 import sympy as sp
 
-from ..case import Case
-from ..reaction import Reaction
-from ..state import VariableBounds
-from .models import (
-    CheckContext,
-    CheckDefinition,
-    CheckOutcome,
-    CheckScope,
-    CheckStatus,
-)
+from ..context import AnalysisContext
+from ..domain import ConcentrationDomain
+from ..model import Reaction
+from ..results import Finding, Verdict
 
 
 @dataclass(frozen=True)
@@ -28,7 +22,7 @@ class RateNonnegativityResult:
 
 def _rate_with_bound_assumptions(
     rate: sp.Expr,
-    state_bounds: Mapping[sp.Symbol, VariableBounds],
+    domain: ConcentrationDomain,
     *,
     interior: bool = False,
 ) -> sp.Expr:
@@ -36,9 +30,9 @@ def _rate_with_bound_assumptions(
 
     replacements = {}
     for symbol in rate.free_symbols:
-        bounds = state_bounds[symbol]
-        lower = bounds.physical_lower
-        if lower > 0 or bounds.strict_lower or (interior and lower == 0):
+        interval = domain.interval(symbol)
+        lower = interval.lower
+        if lower > 0 or not interval.lower_closed or (interior and lower == 0):
             assumptions = {"positive": True}
         elif lower == 0:
             assumptions = {"nonnegative": True}
@@ -58,7 +52,7 @@ def _sign_candidates(rate: sp.Expr) -> Iterator[sp.Expr]:
 
 def check_rate_nonnegativity(
     reaction: Reaction,
-    state_bounds: Mapping[sp.Symbol, VariableBounds],
+    domain: ConcentrationDomain,
 ) -> RateNonnegativityResult:
     """Symbolically check a rate using signs implied by its physical bounds.
 
@@ -67,7 +61,7 @@ def check_rate_nonnegativity(
     expressions remain indeterminate until bounded interval analysis is added.
     """
 
-    physical_rate = _rate_with_bound_assumptions(reaction.rate, state_bounds)
+    physical_rate = _rate_with_bound_assumptions(reaction.rate, domain)
     if any(
         candidate.is_nonnegative is True
         for candidate in _sign_candidates(physical_rate)
@@ -80,7 +74,7 @@ def check_rate_nonnegativity(
 
     interior_rate = _rate_with_bound_assumptions(
         reaction.rate,
-        state_bounds,
+        domain,
         interior=True,
     )
     if any(
@@ -99,56 +93,38 @@ def check_rate_nonnegativity(
     )
 
 
-def _outcome(result: RateNonnegativityResult) -> CheckOutcome:
+def _finding(result: RateNonnegativityResult) -> Finding:
     if result.passed is False:
-        return CheckOutcome(
-            status=CheckStatus.FAIL,
-            subject=result.reaction_id,
-            details=("Rate is symbolically negative in the physical interior.",),
+        return Finding(
+            result.reaction_id,
+            Verdict.FAIL,
+            "Rate is symbolically negative in the physical interior.",
         )
     if result.passed:
-        return CheckOutcome(
-            status=CheckStatus.PASS,
-            subject=result.reaction_id,
-            details=(
-                "Rate is symbolically non-negative under its physical "
-                "lower-bound assumptions.",
-            ),
+        return Finding(
+            result.reaction_id,
+            Verdict.PASS,
+            "Rate is symbolically non-negative under physical bounds.",
         )
-    return CheckOutcome(
-        status=CheckStatus.INDETERMINATE,
-        subject=result.reaction_id,
-        details=(
-            "Symbolic sign analysis was inconclusive; bounded interval analysis "
-            "is not yet available.",
-        ),
+    return Finding(
+        result.reaction_id,
+        Verdict.UNKNOWN,
+        "Symbolic sign analysis was inconclusive.",
     )
 
 
-def run(case: Case, context: CheckContext) -> tuple[CheckOutcome, ...]:
+def run(context: AnalysisContext, _dependencies: Mapping) -> tuple[Finding, ...]:
     """Run rate non-negativity for every reaction in a case."""
 
-    outcomes: list[CheckOutcome] = []
-    for reaction in case.reactions:
+    findings: list[Finding] = []
+    domain = context.physical_domain
+    for reaction in context.case.reactions:
         try:
-            result = check_rate_nonnegativity(reaction, case.state_bounds)
+            result = check_rate_nonnegativity(reaction, domain)
         except ValueError as error:
-            outcomes.append(
-                CheckOutcome(
-                    status=CheckStatus.UNAVAILABLE,
-                    subject=reaction.id,
-                    details=(str(error.args[0]),),
-                )
+            findings.append(
+                Finding(reaction.id, Verdict.SKIPPED, str(error.args[0]))
             )
             continue
-        outcomes.append(_outcome(result))
-    return tuple(outcomes)
-
-
-CHECK = CheckDefinition(
-    id="rate_nonnegativity",
-    name="Rate non-negativity",
-    group="Physical checks",
-    scope=CheckScope.REACTION,
-    run=run,
-)
+        findings.append(_finding(result))
+    return tuple(findings)

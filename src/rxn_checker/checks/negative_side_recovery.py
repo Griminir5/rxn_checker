@@ -2,31 +2,23 @@
 
 from collections.abc import Mapping
 from dataclasses import dataclass
-from types import MappingProxyType
 
 import sympy as sp
-from sympy.core.relational import Relational
 
 from ..case import Case
-from .models import (
-    CheckContext,
-    CheckDefinition,
-    CheckOutcome,
-    CheckScope,
-    CheckStatus,
-    CheckValue,
-)
-from .network import NetworkExpressions, network_expressions
+from ..context import AnalysisContext
+from ..domain import ConcentrationDomain
+from ..network import ReactionNetwork, build_network
+from ..results import Evidence, Finding, Verdict
 from .symbolic_domain import (
     NEGATIVE,
     NONNEGATIVE,
     NONPOSITIVE,
     POSITIVE,
     ZERO,
-    LinearDomain,
     Point,
     Proof,
-    number,
+    proof_for_domain,
 )
 
 MAX_SOURCE_OPERATIONS = 5000
@@ -79,94 +71,6 @@ class NegativeSideRecoveryResult:
         )
 
 
-def _augmented_domain(case: Case) -> LinearDomain:
-    weak: list[Relational] = []
-    strict: list[sp.Expr] = []
-    box: list[tuple[sp.Expr, sp.Expr]] = []
-
-    for symbol, state_bound in case.state_bounds.items():
-        raw_lower, raw_upper = state_bound.interval(include_excursion=True)
-        lower, upper = number(raw_lower), number(raw_upper)
-        weak.extend(
-            (
-                sp.Ge(symbol - lower, 0, evaluate=False),
-                sp.Ge(upper - symbol, 0, evaluate=False),
-            )
-        )
-        box.append((lower, upper))
-
-    if case.gas_closure is not None:
-        minimum = case.gas_closure.derived_minimum_total(case.state_bounds)
-        if minimum is None:
-            strict.extend(case.gas_closure.augmented_strict_constraints)
-        else:
-            weak.append(
-                sp.Ge(
-                    case.gas_closure.total_concentration - minimum,
-                    0,
-                    evaluate=False,
-                )
-            )
-
-    domain = LinearDomain(
-        tuple(case.state_bounds),
-        tuple(weak),
-        tuple(strict),
-        tuple(box),
-    )
-    if not domain.feasible()[0]:
-        raise ValueError("Augmented state domain is empty.")
-    return domain
-
-
-def _restricted_domain(
-    domain: LinearDomain,
-    symbol: sp.Symbol,
-    *,
-    strict: bool,
-) -> LinearDomain:
-    if strict:
-        return LinearDomain(
-            domain.variables,
-            domain.weak,
-            domain.strict + (-symbol,),
-            domain.bounds,
-        )
-    return LinearDomain(
-        domain.variables,
-        domain.weak + (sp.Le(symbol, 0, evaluate=False),),
-        domain.strict,
-        domain.bounds,
-    )
-
-
-def _assumptions(
-    case: Case,
-    subject: sp.Symbol,
-    *,
-    strict: bool,
-) -> Mapping[sp.Symbol, sp.Symbol]:
-    replacements: dict[sp.Symbol, sp.Symbol] = {}
-    for symbol, state_bound in case.state_bounds.items():
-        if symbol == subject:
-            kind = "negative" if strict else "nonpositive"
-        else:
-            raw_lower, raw_upper = state_bound.interval(include_excursion=True)
-            lower, upper = number(raw_lower), number(raw_upper)
-            if lower > 0:
-                kind = "positive"
-            elif upper < 0:
-                kind = "negative"
-            elif lower == 0:
-                kind = "nonnegative"
-            elif upper == 0:
-                kind = "nonpositive"
-            else:
-                kind = "real"
-        replacements[symbol] = sp.Dummy(symbol.name, **{kind: True})
-    return MappingProxyType(replacements)
-
-
 def _violates_at_point(
     proof: Proof,
     expression: sp.Expr,
@@ -203,15 +107,17 @@ def _prove_universal_sign(
 
 def _analyse_species(
     case: Case,
-    domain: LinearDomain,
+    domain: ConcentrationDomain,
     species_id: str,
     source: sp.Expr,
 ) -> NegativeSideSpeciesResult:
-    symbol = case.states.concentration(species_id)
-    nonpositive_domain = _restricted_domain(domain, symbol, strict=False)
-    nonpositive_feasible, nonpositive_point = nonpositive_domain.feasible()
-    negative_domain = _restricted_domain(domain, symbol, strict=True)
-    negative_feasible, negative_point = negative_domain.feasible()
+    symbol = case.symbols.concentration(species_id)
+    nonpositive_domain = domain.restrict(symbol, upper=0)
+    nonpositive_feasible = nonpositive_domain.is_feasible()
+    nonpositive_point = nonpositive_domain.exact_witness()
+    negative_domain = domain.restrict(symbol, upper=0, strict_upper=True)
+    negative_feasible = negative_domain.is_feasible()
+    negative_point = negative_domain.exact_witness()
 
     operations = sp.count_ops(source)
     if operations > MAX_SOURCE_OPERATIONS:
@@ -232,11 +138,7 @@ def _analyse_species(
     if not nonpositive_feasible or nonpositive_point is None:
         nonrepelling, nonrepulsion_counterexample = True, None
     else:
-        nonpositive_proof = Proof(
-            nonpositive_domain,
-            _assumptions(case, symbol, strict=False),
-            nonpositive_point,
-        )
+        nonpositive_proof = proof_for_domain(nonpositive_domain)
         nonrepelling, nonrepulsion_counterexample = _prove_universal_sign(
             nonpositive_proof,
             source,
@@ -246,11 +148,7 @@ def _analyse_species(
     if not negative_feasible or negative_point is None:
         attracting, attraction_counterexample = True, None
     else:
-        negative_proof = Proof(
-            negative_domain,
-            _assumptions(case, symbol, strict=True),
-            negative_point,
-        )
+        negative_proof = proof_for_domain(negative_domain)
         attracting, attraction_counterexample = _prove_universal_sign(
             negative_proof,
             source,
@@ -271,8 +169,9 @@ def _analyse_species(
 
 def check_negative_side_recovery(
     case: Case,
+    domain: ConcentrationDomain,
     *,
-    network: NetworkExpressions | None = None,
+    network: ReactionNetwork | None = None,
 ) -> NegativeSideRecoveryResult:
     """Prove ``x_i <= 0 => f_i(x) >= 0`` on the augmented domain.
 
@@ -283,17 +182,11 @@ def check_negative_side_recovery(
     intentionally not assumed.
     """
 
-    network = network or network_expressions(case)
-    domain = _augmented_domain(case)
+    network = network or build_network(case)
     eligible = tuple(
         species_id
-        for species_id, symbol in case.states.concentrations.items()
-        if (
-            lower := case.state_bounds[symbol].interval(
-                include_excursion=True
-            )[0]
-        )
-        < 0
+        for species_id, symbol in case.symbols.concentrations.items()
+        if domain.interval(symbol).lower < 0
     )
     results = tuple(
         _analyse_species(
@@ -354,25 +247,24 @@ def _species_details(result: NegativeSideSpeciesResult) -> tuple[str, ...]:
     return tuple(details)
 
 
-def run(case: Case, context: CheckContext) -> CheckOutcome:
-    network = context.cached(
-        case,
-        "network",
-        lambda: network_expressions(case),
+def run(context: AnalysisContext, _dependencies: Mapping) -> Finding:
+    domain = context.augmented_domain
+    result = check_negative_side_recovery(
+        context.case, domain, network=context.network
     )
-    result = check_negative_side_recovery(case, network=network)
     if not result.species:
-        return CheckOutcome(
-            status=CheckStatus.UNAVAILABLE,
-            details=("No concentration has a negative excursion.",),
+        return Finding(
+            context.case.name,
+            Verdict.SKIPPED,
+            "No concentration has a negative excursion.",
         )
 
     if result.nonrepelling is False:
-        status = CheckStatus.FAIL
+        verdict = Verdict.FAIL
     elif result.nonrepelling is None:
-        status = CheckStatus.INDETERMINATE
+        verdict = Verdict.UNKNOWN
     else:
-        status = CheckStatus.PASS
+        verdict = Verdict.PASS
 
     details = [
         "Required condition: x_i <= 0 implies f_i(x) >= 0 throughout "
@@ -384,17 +276,23 @@ def run(case: Case, context: CheckContext) -> CheckOutcome:
     ]
     for species_result in result.species:
         details.extend(_species_details(species_result))
-    return CheckOutcome(
-        status=status,
-        details=tuple(details),
-        values=(CheckValue("Species checked", len(result.species)),),
+    counterexamples = {
+        item.species_id: {
+            str(symbol): str(value)
+            for symbol, value in item.nonrepulsion_counterexample.items()
+        }
+        for item in result.species
+        if item.nonrepulsion_counterexample is not None
+    }
+    return Finding(
+        context.case.name,
+        verdict,
+        " ".join(details),
+        Evidence(
+            "negative_side",
+            {
+                "species_checked": len(result.species),
+                "counterexamples": counterexamples,
+            },
+        ),
     )
-
-
-CHECK = CheckDefinition(
-    id="negative_side_recovery",
-    name="Negative-side recovery",
-    group="Physical checks",
-    scope=CheckScope.CASE,
-    run=run,
-)

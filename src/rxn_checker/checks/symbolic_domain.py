@@ -1,14 +1,14 @@
-"""Exact sign and definedness proofs on a bounded linear domain."""
+"""Temporary sign/definedness adapter over the unified domain model."""
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from functools import cache
-from types import MappingProxyType
 
 import sympy as sp
-from sympy.core.relational import Relational
-from sympy.polys.polyerrors import PolynomialError
-from sympy.solvers.simplex import InfeasibleLPError, linprog, lpmax
+
+from ..domain import ConcentrationDomain, affine_form
+from ..model import parse_rational
+
 
 POSITIVE = "positive"
 NONNEGATIVE = "nonnegative"
@@ -18,7 +18,7 @@ NEGATIVE = "negative"
 UNKNOWN = "unknown"
 _FACTOR_LIMIT = 80
 _POLYNOMIAL_LIMIT = 30
-_SIGN_PROPERTIES = (
+_SIGNS = (
     ("is_zero", ZERO),
     ("is_positive", POSITIVE),
     ("is_negative", NEGATIVE),
@@ -37,11 +37,10 @@ _REJECTS = {
 }
 
 Point = Mapping[sp.Symbol, sp.Expr]
-Feasibility = tuple[bool, Point | None]
 
 
 def number(value: object) -> sp.Rational:
-    return sp.Rational(str(value))
+    return parse_rational(value)
 
 
 @cache
@@ -52,11 +51,7 @@ def _exact(expression: sp.Expr) -> sp.Expr:
 
 
 @cache
-def _domain_requirements(
-    expression: sp.Expr,
-) -> tuple[tuple[sp.Expr, str], ...]:
-    """Extract real-domain requirements once for a shared expression DAG."""
-
+def _domain_requirements(expression: sp.Expr) -> tuple[tuple[sp.Expr, str], ...]:
     requirements = []
     for item in sp.preorder_traversal(expression):
         requirement = Proof._requirement(item)
@@ -65,291 +60,47 @@ def _domain_requirements(
     return tuple(dict.fromkeys(requirements))
 
 
-def _linear_expression(constraint: Relational) -> sp.Expr:
-    """Return a linear expression which is constrained to be non-negative."""
-
-    if isinstance(constraint, sp.Equality):
-        return constraint.lhs - constraint.rhs
-    if isinstance(constraint, (sp.GreaterThan, sp.StrictGreaterThan)):
-        return constraint.lhs - constraint.rhs
-    if isinstance(constraint, (sp.LessThan, sp.StrictLessThan)):
-        return constraint.rhs - constraint.lhs
-    raise TypeError(f"Unsupported linear constraint: {constraint}.")
-
-
-@dataclass
-class LinearDomain:
-    """Bounded linear constraints, including strict inequalities."""
-
-    variables: tuple[sp.Symbol, ...]
-    weak: tuple[Relational, ...]
-    strict: tuple[sp.Expr, ...]
-    bounds: tuple[tuple[sp.Expr, sp.Expr], ...] | None = None
-    cache: dict[tuple[object, ...], Feasibility] = field(default_factory=dict)
-
-    @property
-    def constraints(self) -> tuple[Relational, ...]:
-        strict = tuple(sp.Gt(item, 0, evaluate=False) for item in self.strict)
-        return self.weak + strict
-
-    def feasible(
-        self,
-        weak: Sequence[Relational] = (),
-        strict: Sequence[sp.Expr] = (),
-    ) -> Feasibility:
-        key = (*weak, None, *strict)
-        if key in self.cache:
-            return self.cache[key]
-
-        margin = sp.Dummy("strict_margin")
-        weak_expressions: list[sp.Expr] = []
-        equality_expressions: list[sp.Expr] = []
-        for constraint in (*self.weak, *weak):
-            if constraint.free_symbols:
-                expression = _linear_expression(constraint)
-                if isinstance(constraint, sp.Equality):
-                    equality_expressions.append(expression)
-                else:
-                    weak_expressions.append(expression)
-            elif constraint.doit() is sp.false:
-                self.cache[key] = (False, None)
-                return self.cache[key]
-
-        strict_expressions = [
-            sp.sympify(item) - margin for item in (*self.strict, *strict)
-        ]
-        variables = (*self.variables, margin)
-
-        # ``lpmax`` first converts relationals through expensive univariate-set
-        # machinery.  These constraints are already known to be affine, so
-        # construct the simplex matrices directly instead.
-        inequalities = weak_expressions + strict_expressions + [1 - margin]
-        if inequalities:
-            matrix, vector = sp.linear_eq_to_matrix(inequalities, variables)
-            matrix, vector = -matrix, -vector
+def _assumptions(domain: ConcentrationDomain) -> dict[sp.Symbol, sp.Symbol]:
+    replacements = {}
+    for symbol, interval in domain.all_intervals.items():
+        if interval.lower > 0:
+            kind = "positive"
+        elif interval.upper < 0:
+            kind = "negative"
+        elif interval.lower == 0:
+            kind = "nonnegative" if interval.lower_closed else "positive"
+        elif interval.upper == 0:
+            kind = "nonpositive" if interval.upper_closed else "negative"
         else:
-            matrix = vector = None
-        if equality_expressions:
-            equality_matrix, equality_vector = sp.linear_eq_to_matrix(
-                equality_expressions,
-                variables,
-            )
-        else:
-            equality_matrix = equality_vector = None
+            kind = "real"
+        replacements[symbol] = sp.Dummy(symbol.name, **{kind: True})
+    return replacements
 
-        variable_count = len(self.variables)
-        if self.bounds is not None:
-            # A free-variable split is a very fast feasible-point probe. The
-            # SymPy simplex may miss feasible optima with dependent +/-
-            # columns, so negative probe results are ignored; a validated
-            # positive point is nevertheless an exact certificate.
-            def split_probe(
-                candidate: sp.MatrixBase | None,
-            ) -> sp.MatrixBase | None:
-                if candidate is None:
-                    return None
-                state = candidate[:, :variable_count]
-                return state.row_join(-state).row_join(
-                    candidate[:, variable_count:]
-                )
 
-            try:
-                probe_optimum, probe_solution = linprog(
-                    [*[sp.S.Zero] * (2 * variable_count), -sp.S.One],
-                    split_probe(matrix),
-                    vector,
-                    split_probe(equality_matrix),
-                    equality_vector,
-                )
-            except InfeasibleLPError:
-                pass
-            else:
-                probe_point = MappingProxyType(
-                    {
-                        symbol: probe_solution[index]
-                        - probe_solution[variable_count + index]
-                        for index, symbol in enumerate(self.variables)
-                    }
-                )
-                if (
-                    -probe_optimum > 0
-                    and all(
-                        bool(constraint.subs(probe_point))
-                        for constraint in (*self.weak, *weak)
-                    )
-                    and all(
-                        sp.sympify(item).subs(probe_point) > 0
-                        for item in (*self.strict, *strict)
-                    )
-                ):
-                    result = True, probe_point
-                    self.cache[key] = result
-                    return result
-
-        if self.bounds is None:
-            # Preserve the general unbounded-domain API by splitting free
-            # variables. Recovery domains supply their finite box directly,
-            # avoiding these dependent columns in the common path.
-            def split_free(matrix: sp.MatrixBase | None) -> sp.MatrixBase | None:
-                if matrix is None:
-                    return None
-                state = matrix[:, :variable_count]
-                return state.row_join(-state).row_join(
-                    matrix[:, variable_count:]
-                )
-
-            matrix = split_free(matrix)
-            equality_matrix = split_free(equality_matrix)
-            objective = [*[sp.S.Zero] * (2 * variable_count), -sp.S.One]
-            simplex_bounds = None
-        else:
-            lower = sp.Matrix([item[0] for item in self.bounds])
-            upper_width = sp.Matrix(
-                [item[1] - item[0] for item in self.bounds]
-            )
-            if matrix is not None:
-                state_matrix = matrix[:, :variable_count]
-                vector = vector - state_matrix * lower
-                upper_matrix = sp.eye(variable_count).row_join(
-                    sp.zeros(variable_count, 1)
-                )
-                matrix = matrix.col_join(upper_matrix)
-                vector = vector.col_join(upper_width)
-            if equality_matrix is not None:
-                equality_vector = (
-                    equality_vector
-                    - equality_matrix[:, :variable_count] * lower
-                )
-            objective = [*[sp.S.Zero] * variable_count, -sp.S.One]
-            simplex_bounds = None
-
-        def fallback() -> Feasibility:
-            fallback_margin = sp.Dummy(
-                "strict_margin_fallback",
-                nonnegative=True,
-            )
-            constraints = [
-                *self.weak,
-                *weak,
-                sp.Ge(fallback_margin, 0),
-                sp.Le(fallback_margin, 1),
-                *(
-                    sp.Ge(item, fallback_margin, evaluate=False)
-                    for item in (*self.strict, *strict)
-                ),
-            ]
-            usable = [
-                constraint for constraint in constraints if constraint.free_symbols
-            ]
-            try:
-                fallback_optimum, fallback_solution = lpmax(
-                    fallback_margin,
-                    usable,
-                )
-            except InfeasibleLPError:
-                return False, None
-            fallback_point = MappingProxyType(
-                {
-                    symbol: fallback_solution[symbol]
-                    for symbol in self.variables
-                }
-            )
-            return (
-                (True, fallback_point)
-                if fallback_optimum > 0
-                else (False, None)
-            )
-
-        try:
-            optimum, solution = linprog(
-                objective,
-                matrix,
-                vector,
-                equality_matrix,
-                equality_vector,
-                bounds=simplex_bounds,
-            )
-        except InfeasibleLPError:
-            result = (False, None) if self.bounds is not None else fallback()
-        else:
-            if self.bounds is None:
-                point = MappingProxyType(
-                    {
-                        symbol: solution[index]
-                        - solution[variable_count + index]
-                        for index, symbol in enumerate(self.variables)
-                    }
-                )
-            else:
-                point = MappingProxyType(
-                    {
-                        symbol: solution[index] + self.bounds[index][0]
-                        for index, symbol in enumerate(self.variables)
-                    }
-                )
-            candidate_is_valid = (
-                -optimum > 0
-                and all(bool(constraint.subs(point)) for constraint in (*self.weak, *weak))
-                and all(
-                    sp.sympify(item).subs(point) > 0
-                    for item in (*self.strict, *strict)
-                )
-            )
-            if candidate_is_valid:
-                result = True, point
-            elif self.bounds is not None and -optimum <= 0:
-                result = False, None
-            else:
-                # SymPy 1.14's matrix simplex can occasionally return an
-                # invalid point or a false zero optimum when free variables
-                # were split into dependent positive/negative columns.
-                # Preserve exact semantics with the slower relational frontend
-                # only for that exceptional case.
-                result = fallback()
-        self.cache[key] = result
-        return result
-
-    def equality(self, expression: sp.Expr) -> "LinearDomain":
-        equation = sp.Eq(expression, 0, evaluate=False)
-        return LinearDomain(
-            self.variables,
-            self.weak + (equation,),
-            self.strict,
-            self.bounds,
-        )
+def proof_for_domain(domain: ConcentrationDomain) -> "Proof":
+    point = domain.exact_witness()
+    if point is None:
+        raise ValueError(f"{domain.kind.value.title()} domain is empty.")
+    return Proof(domain, _assumptions(domain), point)
 
 
 @dataclass(frozen=True)
 class Proof:
-    """Sign and real-domain prover tied to one region and exact point."""
+    """Legacy proof surface backed by exact specialized affine bounds."""
 
-    domain: LinearDomain
+    domain: ConcentrationDomain
     assumptions: Mapping[sp.Symbol, sp.Symbol]
     point: Point
     _sign_cache: dict[sp.Expr, str] = field(
-        default_factory=dict,
-        init=False,
-        compare=False,
-        repr=False,
+        default_factory=dict, init=False, compare=False, repr=False
     )
     _defined_cache: dict[sp.Expr, tuple[bool | None, Point | None]] = field(
-        default_factory=dict,
-        init=False,
-        compare=False,
-        repr=False,
+        default_factory=dict, init=False, compare=False, repr=False
     )
-
-    def _affine(self, expression: sp.Expr) -> bool:
-        if sp.count_ops(expression) > _FACTOR_LIMIT:
-            return False
-        try:
-            return sp.Poly(expression, *self.domain.variables).total_degree() <= 1
-        except PolynomialError:
-            return False
 
     @staticmethod
     def _known_sign(expression: sp.Expr) -> str:
-        for property_name, result in _SIGN_PROPERTIES:
+        for property_name, result in _SIGNS:
             if getattr(expression, property_name) is True:
                 return result
         return UNKNOWN
@@ -361,36 +112,31 @@ class Proof:
         operations = sp.count_ops(expression)
         if operations <= _FACTOR_LIMIT:
             result = self._known_sign(sp.factor_terms(expression))
-            if result != UNKNOWN:
-                return result
         if (
-            operations <= _POLYNOMIAL_LIMIT
+            result == UNKNOWN
+            and operations <= _POLYNOMIAL_LIMIT
             and expression.is_polynomial(*expression.free_symbols)
         ):
-            return self._known_sign(sp.factor(expression))
-        return UNKNOWN
+            result = self._known_sign(sp.factor(expression))
+        return result
 
     def sign(self, expression: sp.Expr) -> str:
         expression = sp.sympify(expression)
         if expression in self._sign_cache:
             return self._sign_cache[expression]
         result = self._assumed_sign(expression.xreplace(self.assumptions))
-        if result in (POSITIVE, ZERO, NEGATIVE) or not self._affine(expression):
-            self._sign_cache[expression] = result
-            return result
-        expression = _exact(expression)
-        if not self.domain.feasible(
-            weak=(sp.Le(expression, 0, evaluate=False),)
-        )[0]:
-            result = POSITIVE
-        elif not self.domain.feasible(
-            weak=(sp.Ge(expression, 0, evaluate=False),)
-        )[0]:
-            result = NEGATIVE
-        elif not self.domain.feasible(strict=(-expression,))[0]:
-            result = NONNEGATIVE
-        elif not self.domain.feasible(strict=(expression,))[0]:
-            result = NONPOSITIVE
+        bounds = None if result != UNKNOWN else self.domain.affine_bounds(_exact(expression))
+        if bounds is not None:
+            if bounds.lower == bounds.upper == 0:
+                result = ZERO
+            elif bounds.lower > 0:
+                result = POSITIVE
+            elif bounds.upper < 0:
+                result = NEGATIVE
+            elif bounds.lower >= 0:
+                result = NONNEGATIVE
+            elif bounds.upper <= 0:
+                result = NONPOSITIVE
         self._sign_cache[expression] = result
         return result
 
@@ -419,24 +165,32 @@ class Proof:
         expression: sp.Expr,
         requirement: str,
     ) -> Point | None:
-        """Return an exact affine witness that a strict requirement can fail."""
-
-        if not self._affine(expression):
+        bounds = self.domain.affine_bounds(_exact(expression))
+        if bounds is None:
             return None
-        expression = _exact(expression)
         if requirement == POSITIVE:
-            feasible, point = self.domain.feasible(
-                weak=(sp.Le(expression, 0, evaluate=False),)
-            )
-        elif requirement == NONNEGATIVE:
-            feasible, point = self.domain.feasible(strict=(-expression,))
-        else:
-            feasible, point = self.domain.equality(expression).feasible()
-        return point if feasible else None
+            return bounds.lower_witness if bounds.lower <= 0 else None
+        if requirement == NONNEGATIVE:
+            return bounds.lower_witness if bounds.lower < 0 else None
+
+        for point in (bounds.lower_witness, bounds.upper_witness):
+            if point is not None and _exact(expression).subs(point) == 0:
+                return point
+        if (
+            bounds.lower < 0 < bounds.upper
+            and bounds.lower_witness is not None
+            and bounds.upper_witness is not None
+        ):
+            weight = -bounds.lower / (bounds.upper - bounds.lower)
+            return {
+                symbol: bounds.lower_witness[symbol]
+                + weight
+                * (bounds.upper_witness[symbol] - bounds.lower_witness[symbol])
+                for symbol in self.domain.all_intervals
+            }
+        return None
 
     def defined(self, expression: sp.Expr) -> tuple[bool | None, Point | None]:
-        """Prove real, finite evaluation and return an exact bad point."""
-
         expression = sp.sympify(expression)
         if expression in self._defined_cache:
             return self._defined_cache[expression]
@@ -444,8 +198,7 @@ class Proof:
         for argument, needed in _domain_requirements(expression):
             conclusion = self._meets(self.sign(argument), needed)
             if conclusion is False:
-                witness = self.violating_point(argument, needed)
-                result = False, witness if witness is not None else self.point
+                result = False, self.violating_point(argument, needed) or self.point
                 self._defined_cache[expression] = result
                 return result
             if conclusion is None:
@@ -459,10 +212,9 @@ class Proof:
         assumed = expression.xreplace(self.assumptions)
         if assumed.is_real is False or assumed.is_finite is False:
             result = False, self.point
-            self._defined_cache[expression] = result
-            return result
-        unresolved |= assumed.is_real is not True or assumed.is_finite is not True
-        result = (None if unresolved else True), None
+        else:
+            unresolved |= assumed.is_real is not True or assumed.is_finite is not True
+            result = (None if unresolved else True), None
         self._defined_cache[expression] = result
         return result
 
@@ -477,3 +229,17 @@ class Proof:
         if requirement == POSITIVE:
             return False if witness_sign in (ZERO, NEGATIVE, NONPOSITIVE) else None
         return False if witness_sign == NEGATIVE else None
+
+
+__all__ = (
+    "NEGATIVE",
+    "NONNEGATIVE",
+    "NONPOSITIVE",
+    "POSITIVE",
+    "Point",
+    "Proof",
+    "UNKNOWN",
+    "ZERO",
+    "number",
+    "proof_for_domain",
+)
