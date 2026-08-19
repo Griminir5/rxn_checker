@@ -1,6 +1,6 @@
-"""Symbolic rate non-negativity check."""
+"""Physical rate non-negativity check."""
 
-from collections.abc import Iterator, Mapping
+from collections.abc import Mapping
 from dataclasses import dataclass
 
 import sympy as sp
@@ -8,7 +8,9 @@ import sympy as sp
 from ..context import AnalysisContext
 from ..domain import ConcentrationDomain
 from ..model import Reaction
-from ..results import Finding, Verdict
+from ..proof import ExpressionAnalyzer, ProofVerdict, SignRequirement
+from ..proof.analysis import Point
+from ..results import Evidence, Finding, Verdict
 
 
 @dataclass(frozen=True)
@@ -18,93 +20,56 @@ class RateNonnegativityResult:
     reaction_id: str
     passed: bool | None
     rate: sp.Expr
-
-
-def _rate_with_bound_assumptions(
-    rate: sp.Expr,
-    domain: ConcentrationDomain,
-    *,
-    interior: bool = False,
-) -> sp.Expr:
-    """Apply sign assumptions implied by each state's physical lower bound."""
-
-    replacements = {}
-    for symbol in rate.free_symbols:
-        interval = domain.interval(symbol)
-        lower = interval.lower
-        if lower > 0 or not interval.lower_closed or (interior and lower == 0):
-            assumptions = {"positive": True}
-        elif lower == 0:
-            assumptions = {"nonnegative": True}
-        else:
-            assumptions = {"real": True}
-        replacements[symbol] = sp.Dummy(symbol.name, **assumptions)
-    return rate.xreplace(replacements)
-
-
-def _sign_candidates(rate: sp.Expr) -> Iterator[sp.Expr]:
-    """Yield increasingly expensive rewrites only when the caller needs them."""
-
-    yield rate
-    yield sp.factor_terms(rate)
-    yield sp.factor(rate)
+    counterexample: Point | None = None
 
 
 def check_rate_nonnegativity(
     reaction: Reaction,
     domain: ConcentrationDomain,
+    *,
+    analyzer: ExpressionAnalyzer | None = None,
 ) -> RateNonnegativityResult:
-    """Symbolically check a rate using signs implied by its physical bounds.
+    """Prove non-negativity or return an exact violating point."""
 
-    A negative conclusion is made only when SymPy proves the rate is negative
-    in the physical interior. Upper bounds are not yet used, so other unresolved
-    expressions remain indeterminate until bounded interval analysis is added.
-    """
-
-    physical_rate = _rate_with_bound_assumptions(reaction.rate, domain)
-    if any(
-        candidate.is_nonnegative is True
-        for candidate in _sign_candidates(physical_rate)
-    ):
-        return RateNonnegativityResult(
-            reaction_id=reaction.id,
-            passed=True,
-            rate=reaction.rate,
-        )
-
-    interior_rate = _rate_with_bound_assumptions(
+    proof = (analyzer or ExpressionAnalyzer()).prove_sign(
         reaction.rate,
         domain,
-        interior=True,
+        SignRequirement.NONNEGATIVE,
     )
-    if any(
-        candidate.is_negative is True for candidate in _sign_candidates(interior_rate)
-    ):
-        return RateNonnegativityResult(
-            reaction_id=reaction.id,
-            passed=False,
-            rate=reaction.rate,
-        )
-
     return RateNonnegativityResult(
-        reaction_id=reaction.id,
-        passed=None,
-        rate=reaction.rate,
+        reaction.id,
+        True
+        if proof.verdict is ProofVerdict.PASS
+        else False
+        if proof.verdict is ProofVerdict.FAIL
+        else None,
+        reaction.rate,
+        proof.witness,
     )
 
 
 def _finding(result: RateNonnegativityResult) -> Finding:
     if result.passed is False:
+        evidence = None
+        if result.counterexample is not None:
+            evidence = Evidence(
+                "exact_counterexample",
+                {
+                    str(symbol): str(value)
+                    for symbol, value in result.counterexample.items()
+                },
+            )
         return Finding(
             result.reaction_id,
             Verdict.FAIL,
-            "Rate is symbolically negative in the physical interior.",
+            "Rate is negative at an exact physical-domain point.",
+            evidence,
         )
     if result.passed:
         return Finding(
             result.reaction_id,
             Verdict.PASS,
-            "Rate is symbolically non-negative under physical bounds.",
+            "Rate is non-negative throughout the physical domain.",
         )
     return Finding(
         result.reaction_id,
@@ -120,7 +85,11 @@ def run(context: AnalysisContext, _dependencies: Mapping) -> tuple[Finding, ...]
     domain = context.physical_domain
     for reaction in context.case.reactions:
         try:
-            result = check_rate_nonnegativity(reaction, domain)
+            result = check_rate_nonnegativity(
+                reaction,
+                domain,
+                analyzer=context.expression_analyzer,
+            )
         except ValueError as error:
             findings.append(
                 Finding(reaction.id, Verdict.SKIPPED, str(error.args[0]))

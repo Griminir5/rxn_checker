@@ -1,30 +1,21 @@
 """Typed, lazily constructed objects shared by one analysis run."""
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from functools import cached_property
-from typing import TYPE_CHECKING
 
 import sympy as sp
 
 from .case import Case
 from .domain import ConcentrationDomain, DomainKind
-from .model import Reaction
 from .network import ReactionNetwork, build_network
+from .proof import ExpressionAnalyzer
 from .species import PROPERTY_REGISTRY, PropertyRegistry
-
-if TYPE_CHECKING:
-    from .checks.lipschitz_continuity import LipschitzContinuityResult
 
 
 @dataclass
 class AnalysisContext:
     case: Case
     property_registry: PropertyRegistry = PROPERTY_REGISTRY
-    _rate_facts: dict[tuple[int, str], "LipschitzContinuityResult"] = field(
-        default_factory=dict,
-        init=False,
-        repr=False,
-    )
 
     @cached_property
     def physical_domain(self) -> ConcentrationDomain:
@@ -45,6 +36,10 @@ class AnalysisContext:
     def network(self) -> ReactionNetwork:
         return build_network(self.case)
 
+    @cached_property
+    def expression_analyzer(self) -> ExpressionAnalyzer:
+        return ExpressionAnalyzer()
+
     @property
     def stoichiometry(self) -> sp.ImmutableMatrix:
         return self.network.stoichiometry
@@ -63,20 +58,5 @@ class AnalysisContext:
             )
             if coefficient != 0
         )
-
-    def rate_facts(
-        self,
-        reaction: Reaction,
-        domain: ConcentrationDomain,
-    ) -> "LipschitzContinuityResult":
-        """Return one cached legacy rate analysis for a rate/domain pair."""
-
-        key = id(domain), reaction.id
-        if key not in self._rate_facts:
-            from .checks.lipschitz_continuity import check_lipschitz_continuity
-
-            self._rate_facts[key] = check_lipschitz_continuity(reaction, domain)
-        return self._rate_facts[key]
-
 
 __all__ = ("AnalysisContext",)

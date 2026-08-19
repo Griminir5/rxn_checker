@@ -157,39 +157,25 @@ def test_unknown_prerequisite_skips_dependent_but_error_is_distinct() -> None:
     assert result.overall is Verdict.ERROR
 
 
-def test_context_constructs_network_and_rate_facts_once(monkeypatch) -> None:
+def test_context_constructs_shared_analysis_objects_once(monkeypatch) -> None:
     case = load_case(ROOT / "example_case")
     context = AnalysisContext(case)
     network_calls = 0
-    fact_calls = 0
 
     import rxn_checker.context as context_module
-    import rxn_checker.checks.lipschitz_continuity as regularity
 
     real_network = context_module.build_network
-    real_facts = regularity.check_lipschitz_continuity
 
     def counted_network(value):
         nonlocal network_calls
         network_calls += 1
         return real_network(value)
 
-    def counted_facts(reaction, domain):
-        nonlocal fact_calls
-        fact_calls += 1
-        return real_facts(reaction, domain)
-
     monkeypatch.setattr(context_module, "build_network", counted_network)
-    monkeypatch.setattr(regularity, "check_lipschitz_continuity", counted_facts)
 
     assert context.network is context.network
-    reaction = case.reactions[0]
-    first = context.rate_facts(reaction, context.physical_domain)
-    second = context.rate_facts(reaction, context.physical_domain)
-
-    assert first is second
+    assert context.expression_analyzer is context.expression_analyzer
     assert network_calls == 1
-    assert fact_calls == 1
 
 
 def test_text_and_json_render_the_same_structured_result() -> None:

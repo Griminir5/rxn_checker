@@ -5,15 +5,10 @@ from collections.abc import Iterable, Mapping
 from ..context import AnalysisContext
 from ..results import CheckResult, Finding, Verdict
 from .atom_conservation import run as run_atom_conservation
+from .definedness import run_augmented as run_augmented_definedness
+from .definedness import run_physical as run_physical_definedness
 from .definitions import CheckScope, CheckSpec, Stage
-from .lipschitz_continuity import (
-    run_augmented_definedness,
-    run_augmented_lipschitz,
-    run_physical_definedness,
-    run_physical_lipschitz,
-)
 from .mass_conservation import run as run_mass_conservation
-from .negative_side_recovery import run as run_negative_side_nonrepulsion
 from .nonnegative_rate import run as run_rate_nonnegativity
 from .zero_at_depletion import run as run_zero_at_depletion
 
@@ -85,7 +80,7 @@ CHECK_REGISTRY = (
         ("physical_rate_definedness",),
         True,
         _PHYSICAL,
-        run_physical_lipschitz,
+        _placeholder("Lipschitz certification is scheduled for Phase 5."),
     ),
     CheckSpec(
         "zero_at_depletion",
@@ -135,7 +130,7 @@ CHECK_REGISTRY = (
         ("augmented_rate_definedness",),
         True,
         _ROBUST,
-        run_augmented_lipschitz,
+        _placeholder("Augmented Lipschitz certification is scheduled for Phase 5."),
     ),
     CheckSpec(
         "negative_side_nonrepulsion",
@@ -145,7 +140,7 @@ CHECK_REGISTRY = (
         ("augmented_lipschitz",),
         True,
         _ROBUST,
-        run_negative_side_nonrepulsion,
+        _placeholder("Negative-side non-repulsion is scheduled for Phase 7."),
     ),
     CheckSpec(
         "conserved_quantities",

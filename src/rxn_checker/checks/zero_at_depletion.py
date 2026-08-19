@@ -30,13 +30,11 @@ def _rate_at_depletion(rate: sp.Expr, species_id: str) -> sp.Expr:
     replacements = {
         symbol: sp.S.Zero for symbol in rate.free_symbols if symbol.name == species_id
     }
-    return sp.simplify(rate.xreplace(replacements))
+    return rate.xreplace(replacements)
 
 
 def _is_exactly_zero(expression: sp.Expr) -> bool | None:
-    if expression.is_zero is not None:
-        return expression.is_zero
-    return expression.equals(sp.S.Zero)
+    return expression.is_zero
 
 
 def check_zero_at_depletion(reaction: Reaction) -> ZeroAtDepletionResult:
