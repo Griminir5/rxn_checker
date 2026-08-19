@@ -78,7 +78,13 @@ def render_text(
                 elif verbosity != "full":
                     continue
             else:
-                lines.append(f"  {result.verdict.value:<8} {spec.name}")
+                progress = (
+                    f" {passed}/{len(reaction_findings)} reactions"
+                    if len(reaction_findings) > 1
+                    else ""
+                )
+                name = f"{spec.name:<34}" if progress else spec.name
+                lines.append(f"  {result.verdict.value:<8} {name}{progress}")
 
             visible = findings
             if verbosity == "failures" and result.verdict is not Verdict.PASS:

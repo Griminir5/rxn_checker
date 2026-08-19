@@ -13,6 +13,7 @@ from ..proof import (
     derive_network_lipschitz,
 )
 from ..results import Evidence, Finding, Verdict
+from .prerequisites import reaction_skip
 
 
 def _short(expression: sp.Expr, limit: int = 64) -> str:
@@ -135,34 +136,50 @@ def _network_finding(
 def _run(
     context: AnalysisContext,
     domain: ConcentrationDomain,
+    dependencies: Mapping,
+    definedness_check: str,
 ) -> tuple[Finding, ...]:
     active = tuple(context.case.symbols.concentrations.values())
-    results = tuple(
-        context.expression_analyzer.lipschitz(reaction.rate, domain, active)
-        for reaction in context.case.reactions
-    )
-    findings = tuple(
-        _rate_finding(reaction.id, result)
-        for reaction, result in zip(context.case.reactions, results)
-    )
-    if any(result.verdict is not ProofVerdict.PASS for result in results):
-        return findings
-    certificates = tuple(result.certificate for result in results)
-    return (*findings, _network_finding(context, domain, certificates))
+    findings = []
+    certificates = []
+    for reaction in context.case.reactions:
+        skipped = reaction_skip(dependencies, definedness_check, reaction.id)
+        if skipped is not None:
+            findings.append(skipped)
+            continue
+        result = context.expression_analyzer.lipschitz(
+            reaction.rate, domain, active
+        )
+        findings.append(_rate_finding(reaction.id, result))
+        if result.certificate is not None:
+            certificates.append(result.certificate)
+    if len(certificates) != len(context.case.reactions):
+        return tuple(findings)
+    return (*findings, _network_finding(context, domain, tuple(certificates)))
 
 
 def run_physical(
     context: AnalysisContext,
-    _dependencies: Mapping,
+    dependencies: Mapping,
 ) -> tuple[Finding, ...]:
-    return _run(context, context.physical_domain)
+    return _run(
+        context,
+        context.physical_domain,
+        dependencies,
+        "physical_rate_definedness",
+    )
 
 
 def run_augmented(
     context: AnalysisContext,
-    _dependencies: Mapping,
+    dependencies: Mapping,
 ) -> tuple[Finding, ...]:
-    return _run(context, context.augmented_domain)
+    return _run(
+        context,
+        context.augmented_domain,
+        dependencies,
+        "augmented_rate_definedness",
+    )
 
 
 __all__ = ("run_augmented", "run_physical")

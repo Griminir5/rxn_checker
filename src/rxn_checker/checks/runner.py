@@ -6,7 +6,7 @@ from time import perf_counter
 from ..case import Case
 from ..context import AnalysisContext
 from ..results import CheckResult, Finding, RunResult, Verdict, overall_verdict
-from .definitions import CheckSpec, Stage
+from .definitions import CheckScope, CheckSpec, Stage
 from .registry import CHECK_REGISTRY, plan_checks, validate_registry
 
 
@@ -44,6 +44,8 @@ def execute_plan(
     if fail_fast not in {"stage", "none"}:
         raise ValueError("fail_fast must be 'stage' or 'none'.")
     specs = validate_registry(plan)
+    by_id = {spec.id: spec for spec in specs}
+    reaction_ids = frozenset(reaction.id for reaction in case.reactions)
     ids = tuple(spec.id for spec in specs)
     if len(ids) != len(set(ids)):
         raise ValueError("A check plan cannot contain duplicate ids.")
@@ -84,7 +86,19 @@ def execute_plan(
                 for required in spec.requires
                 if results[required].verdict is not Verdict.PASS
             )
-            if failed_dependencies:
+            reaction_wise = (
+                spec.scope is CheckScope.REACTION
+                and all(
+                    by_id[required].scope is CheckScope.REACTION
+                    and by_id[required].stage is spec.stage
+                    and reaction_ids.issubset(
+                        finding.subject
+                        for finding in results[required].findings
+                    )
+                    for required, _verdict in failed_dependencies
+                )
+            )
+            if failed_dependencies and not reaction_wise:
                 reason = ", ".join(
                     f"{check_id}={verdict.value}"
                     for check_id, verdict in failed_dependencies

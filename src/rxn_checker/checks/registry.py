@@ -8,9 +8,10 @@ from .atom_conservation import run as run_atom_conservation
 from .definedness import run_augmented as run_augmented_definedness
 from .definedness import run_physical as run_physical_definedness
 from .definitions import CheckScope, CheckSpec, Stage
-from .mass_conservation import run as run_mass_conservation
+from .invariance import run_boundary_inward, run_forward_invariance
 from .lipschitz import run_augmented as run_augmented_lipschitz
 from .lipschitz import run_physical as run_physical_lipschitz
+from .mass_conservation import run as run_mass_conservation
 from .nonnegative_rate import run as run_rate_nonnegativity
 from .zero_at_depletion import run as run_zero_at_depletion
 
@@ -102,7 +103,7 @@ CHECK_REGISTRY = (
         ("rate_nonnegativity", "zero_at_depletion"),
         True,
         _PHYSICAL,
-        _placeholder("Boundary-inward certification is scheduled for Phase 6."),
+        run_boundary_inward,
     ),
     CheckSpec(
         "forward_invariance",
@@ -112,7 +113,7 @@ CHECK_REGISTRY = (
         ("physical_boundary_inward", "physical_lipschitz"),
         True,
         _PHYSICAL,
-        _placeholder("Forward-invariance certification is scheduled for Phase 6."),
+        run_forward_invariance,
     ),
     CheckSpec(
         "augmented_rate_definedness",

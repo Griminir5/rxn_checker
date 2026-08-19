@@ -126,9 +126,10 @@ supplied symbols. Reactant and product mappings remain separate, while exact
 
 Atom conservation reports per-element totals and product-minus-reactant
 imbalances. Mass conservation reports reactant mass, product mass, and their
-signed difference in kg/mol. Both checks accept `rel_tol` and `abs_tol`
-overrides. Missing molecular weights make the registered mass check `SKIPPED`
-rather than failed.
+signed difference in kg/mol. Atom totals are exact rationals and use no
+tolerance. Mass comparison retains configurable `rel_tol` and `abs_tol`
+arguments because declared molar masses may be rounded. A missing molecular
+weight fails the chemistry gate.
 
 One context-owned expression analyzer supplies exact affine bounds, composed
 interval bounds, sign proofs, and recursive definedness guards. It supports
@@ -149,9 +150,10 @@ is not strictly positive. Unsupported discontinuous functions return `UNKNOWN`
 instead of triggering unrestricted symbolic search.
 
 The zero-at-depletion check independently sets every reactant and catalyst
-concentration to zero and requires the resulting symbolic rate to be exactly
-zero. Product-only species are not depletion boundaries. A disproven identity
-is a `FAIL`, while an identity SymPy cannot decide is `UNKNOWN`.
+case-owned concentration coordinate to zero and requires the resulting rate to
+be exactly zero. Product-only species are not depletion boundaries. Undefined
+forms such as `0/0` and disproven identities are `FAIL`; an identity the bounded
+symbolic rules cannot decide is `UNKNOWN`.
 
 Lipschitz certification uses the concentration-space infinity norm, treating
 temperature and pressure as uniformly bounded parameters rather than state
@@ -165,9 +167,17 @@ When every rate passes, the checker derives component and source-vector bounds
 directly from the stoichiometric matrix: it does not differentiate the expanded
 network source. Text reports show the exact constant when compact and a numeric
 approximation otherwise, while JSON retains exact and approximate per-rate
-constants, active concentration
-variables, uniform parameters, and guard margins. Negative-side non-repulsion
-remains a placeholder until its sparse Phase 7 theorem is implemented.
+constants, active concentration variables, uniform parameters, and guard
+margins. Negative-side non-repulsion remains a placeholder until its sparse
+Phase 7 theorem is implemented.
+
+Physical boundary inwardness is derived without expanding or reanalysing the
+network source. On each zero-concentration face, consuming contributions vanish
+by the depletion results and every remaining stoichiometric contribution is
+non-negative by the rate results. Combining that certificate with the
+source-vector Lipschitz certificate proves forward invariance of the
+nonnegative orthant throughout the declared physical domain. This is not a
+claim of persistence.
 
 The runner produces one renderer-independent `RunResult`. Each `CheckResult`
 contains `Finding` objects with one of these verdicts:
@@ -184,6 +194,8 @@ overall mathematical result; internal errors always produce an overall
 
 Checks form a validated static DAG. Dependencies are expanded in deterministic
 topological order and execute once even when selected through multiple paths.
+Reaction-scoped checks reuse prerequisite findings per reaction, so one
+undefined rate does not suppress conclusions for unrelated reactions.
 The default `fail_fast: stage` completes the current stage, then skips later
 stages after a blocking failure. In particular, atom and mass failures complete
 the chemistry gate before symbolic work stops.
