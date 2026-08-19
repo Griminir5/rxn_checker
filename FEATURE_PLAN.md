@@ -3,10 +3,6 @@
 The implemented case, reaction, registry, and conservation-check foundations
 are documented in the README. Remaining work is grouped below.
 
-## Case configuration
-
-- Optional physical-domain overrides
-- Lower-bound perturbation magnitude
 
 ## Physical checks
 
