@@ -86,19 +86,18 @@ def execute_plan(
                 for required in spec.requires
                 if results[required].verdict is not Verdict.PASS
             )
-            reaction_wise = (
-                spec.scope is CheckScope.REACTION
-                and all(
-                    by_id[required].scope is CheckScope.REACTION
-                    and by_id[required].stage is spec.stage
-                    and reaction_ids.issubset(
-                        finding.subject
-                        for finding in results[required].findings
-                    )
-                    for required, _verdict in failed_dependencies
+            accepts_partial = (
+                (spec.scope is CheckScope.REACTION)
+                or spec.accepts_partial_dependencies
+            ) and all(
+                by_id[required].scope is CheckScope.REACTION
+                and by_id[required].stage is spec.stage
+                and reaction_ids.issubset(
+                    finding.subject for finding in results[required].findings
                 )
+                for required, _verdict in failed_dependencies
             )
-            if failed_dependencies and not reaction_wise:
+            if failed_dependencies and not accepts_partial:
                 reason = ", ".join(
                     f"{check_id}={verdict.value}"
                     for check_id, verdict in failed_dependencies

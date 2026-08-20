@@ -168,8 +168,7 @@ directly from the stoichiometric matrix: it does not differentiate the expanded
 network source. Text reports show the exact constant when compact and a numeric
 approximation otherwise, while JSON retains exact and approximate per-rate
 constants, active concentration variables, uniform parameters, and guard
-margins. Negative-side non-repulsion remains a placeholder until its sparse
-Phase 7 theorem is implemented.
+margins.
 
 Physical boundary inwardness is derived without expanding or reanalysing the
 network source. On each zero-concentration face, consuming contributions vanish
@@ -178,6 +177,16 @@ non-negative by the rate results. Combining that certificate with the
 source-vector Lipschitz certificate proves forward invariance of the
 nonnegative orthant throughout the declared physical domain. This is not a
 claim of persistence.
+
+Negative-side non-repulsion is checked one concentration coordinate at a time
+on the augmented domain. The selected coordinate is restricted to `c <= 0`,
+while every other coordinate keeps its complete augmented interval, so exact
+simultaneous-negative counterexamples are included without enumerating subsets.
+The proof sums lower bounds of sparse stoichiometric rate contributions and
+constructs only a bounded unresolved residual. Reactions irrelevant to a source
+coordinate do not block its result. Strict attraction on `c < 0` is reported as
+a separate diagnostic, including coordinates that are non-repelling but stuck;
+it does not imply finite-time re-entry.
 
 The runner produces one renderer-independent `RunResult`. Each `CheckResult`
 contains `Finding` objects with one of these verdicts:

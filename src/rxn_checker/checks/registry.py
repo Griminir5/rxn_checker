@@ -12,6 +12,7 @@ from .invariance import run_boundary_inward, run_forward_invariance
 from .lipschitz import run_augmented as run_augmented_lipschitz
 from .lipschitz import run_physical as run_physical_lipschitz
 from .mass_conservation import run as run_mass_conservation
+from .negative_side import run as run_negative_side_nonrepulsion
 from .nonnegative_rate import run as run_rate_nonnegativity
 from .zero_at_depletion import run as run_zero_at_depletion
 
@@ -143,7 +144,8 @@ CHECK_REGISTRY = (
         ("augmented_lipschitz",),
         True,
         _ROBUST,
-        _placeholder("Negative-side non-repulsion is scheduled for Phase 7."),
+        run_negative_side_nonrepulsion,
+        accepts_partial_dependencies=True,
     ),
     CheckSpec(
         "conserved_quantities",

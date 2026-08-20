@@ -35,6 +35,7 @@ class CheckSpec:
     profiles: frozenset[str]
     run: CheckRunner
     role: Role | None = None
+    accepts_partial_dependencies: bool = False
 
     def __post_init__(self) -> None:
         if not self.id.isidentifier():
@@ -56,6 +57,8 @@ class CheckSpec:
         role = Role(role)
         if self.blocking != (role is Role.BLOCKING):
             raise ValueError("Check role and blocking metadata disagree.")
+        if not isinstance(self.accepts_partial_dependencies, bool):
+            raise TypeError("Partial-dependency metadata must be boolean.")
         object.__setattr__(self, "role", role)
         object.__setattr__(self, "profiles", frozenset(self.profiles))
 

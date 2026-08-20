@@ -7,7 +7,7 @@ from pathlib import Path
 
 import sympy as sp
 
-from .checks.definitions import CheckSpec, Stage
+from .checks.definitions import CheckScope, CheckSpec, Stage
 from .checks.registry import CHECK_REGISTRY
 from .results import Finding, RunResult, Verdict
 
@@ -53,12 +53,16 @@ def render_text(
                 current_stage = spec.stage
 
             findings = result.findings
-            reaction_findings = tuple(
-                item for item in findings if item.subject != run.case_name
-            )
-            case_findings = tuple(
-                item for item in findings if item.subject == run.case_name
-            )
+            if spec.scope is CheckScope.REACTION:
+                reaction_findings = tuple(
+                    item for item in findings if item.subject != run.case_name
+                )
+                case_findings = tuple(
+                    item for item in findings if item.subject == run.case_name
+                )
+            else:
+                reaction_findings = ()
+                case_findings = findings
             passed = sum(item.verdict is Verdict.PASS for item in reaction_findings)
             show_passing_case_detail = False
             aggregate = (
@@ -88,11 +92,28 @@ def render_text(
 
             visible = findings
             if verbosity == "failures" and result.verdict is not Verdict.PASS:
-                visible = tuple(item for item in findings if item.verdict is not Verdict.PASS)
+                visible = tuple(
+                    item
+                    for item in findings
+                    if item.verdict is not Verdict.PASS
+                    or (
+                        item.evidence is not None
+                        and item.evidence.kind == "negative_side_summary"
+                    )
+                )
             elif verbosity == "failures" and not show_passing_case_detail:
-                visible = ()
+                visible = tuple(
+                    item
+                    for item in findings
+                    if item.evidence is not None
+                    and item.evidence.kind == "negative_side_summary"
+                )
             for finding in visible:
-                subject = "" if finding.subject == run.case_name else f"{finding.subject}: "
+                subject = (
+                    ""
+                    if finding.subject == run.case_name
+                    else f"{finding.subject}: "
+                )
                 lines.append(
                     f"           {finding.verdict.value:<8} {subject}{finding.summary}"
                 )
