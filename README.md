@@ -182,11 +182,11 @@ Negative-side non-repulsion is checked one concentration coordinate at a time
 on the augmented domain. The selected coordinate is restricted to `c <= 0`,
 while every other coordinate keeps its complete augmented interval, so exact
 simultaneous-negative counterexamples are included without enumerating subsets.
-The proof sums lower bounds of sparse stoichiometric rate contributions and
-constructs only a bounded unresolved residual. Reactions irrelevant to a source
-coordinate do not block its result. Strict attraction on `c < 0` is reported as
-a separate diagnostic, including coordinates that are non-repelling but stuck;
-it does not imply finite-time re-entry.
+The analyzer combines bounds for sparse stoichiometric contributions and uses a
+bounded symbolic sign proof only when their sum remains inconclusive. Reactions
+irrelevant to a source coordinate do not block its result. Strict attraction on
+`c < 0` is reported separately, including coordinates that are non-repelling
+but stuck; it does not imply finite-time re-entry.
 
 Three optional analyses remain separate from physical validity. Conserved
 quantities are a primitive-integer basis of the exact stoichiometric left
@@ -218,7 +218,10 @@ The default `fail_fast: stage` completes the current stage, then skips later
 stages after a blocking failure. In particular, atom and mass failures complete
 the chemistry gate before symbolic work stops.
 
-To add a check, define a runner and its metadata in a module:
+The built-in graph, profile terminals, dependency closure, and execution live
+together in `checks/core.py`. Compatibility imports remain in `definitions.py`,
+`registry.py`, and `runner.py` for existing Python callers. To add a check,
+define a runner and register its specification in `checks/core.py`:
 
 ```python
 from rxn_checker.checks import CheckScope, CheckSpec, Stage
@@ -247,9 +250,9 @@ CHECK = CheckSpec(
 )
 ```
 
-Add the explicit specification to `checks/registry.py`. The registry is checked
-for duplicate ids, missing dependencies, later-stage dependencies, and cycles
-at import time. Text and JSON renderers consume the same structured findings.
+The planner checks custom graphs for duplicate ids, missing dependencies, and
+cycles before execution. Text and JSON renderers consume the same structured
+findings.
 
 ## Development
 

@@ -1,6 +1,6 @@
 """Exact affine and compositional interval analysis for SymPy expressions."""
 
-from collections.abc import Iterable, Mapping
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from enum import StrEnum
 from typing import TYPE_CHECKING
@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 import sympy as sp
 
 from ..domain import ConcentrationDomain
-from ..model import parse_rational
+from ..model import exact_expr
 
 if TYPE_CHECKING:
     from .lipschitz import LipschitzResult
@@ -111,10 +111,37 @@ class DefinednessResult:
     reason: str | None = None
 
 
+@dataclass(frozen=True)
+class ZeroProof:
+    verdict: ProofVerdict
+    expression: sp.Expr
+    witness: Point | None = None
+    witness_value: sp.Expr | None = None
+    reason: str | None = None
+
+
+@dataclass(frozen=True)
+class ContributionBound:
+    coefficient: sp.Expr
+    lower: sp.Expr | None
+    upper: sp.Expr | None
+    source_lower: sp.Expr | None
+    source_upper: sp.Expr | None
+
+
+@dataclass(frozen=True)
+class SumProof:
+    verdict: ProofVerdict
+    lower: sp.Expr | None
+    upper: sp.Expr | None
+    contributions: tuple[ContributionBound, ...]
+    witness: Point | None = None
+    witness_value: sp.Expr | None = None
+    reason: str | None = None
+
+
 def _exact(expression: object) -> sp.Expr:
-    expression = sp.sympify(expression)
-    replacements = {value: parse_rational(value) for value in expression.atoms(sp.Float)}
-    return expression.xreplace(replacements)
+    return exact_expr(expression)
 
 
 def _minimum(values: Iterable[sp.Expr]) -> sp.Expr:
@@ -190,24 +217,21 @@ class ExpressionAnalyzer:
         self._proofs: dict[tuple, SignProof] = {}
         self._definedness: dict[tuple, DefinednessResult] = {}
         self._lipschitz_results: dict[tuple, LipschitzResult] = {}
-        self._domains: dict[int, ConcentrationDomain] = {}
 
     def _key(
         self,
         expression: object,
         domain: ConcentrationDomain,
         active_variables: Iterable[sp.Symbol] | None,
-    ) -> tuple[sp.Expr, int, tuple[sp.Symbol, ...]]:
+    ) -> tuple[sp.Expr, ConcentrationDomain, tuple[sp.Symbol, ...]]:
         expression = _exact(expression)
-        domain_id = id(domain)
-        self._domains[domain_id] = domain
         active = tuple(
             sorted(
                 active_variables if active_variables is not None else domain.intervals,
                 key=lambda symbol: symbol.name,
             )
         )
-        return expression, domain_id, active
+        return expression, domain, active
 
     def bounds(
         self,
@@ -539,6 +563,80 @@ class ExpressionAnalyzer:
                 return candidate, value
         return None, None
 
+    def prove_zero(
+        self, expression: object, domain: ConcentrationDomain
+    ) -> ZeroProof:
+        """Prove an identity is zero, or find an exact nonzero value."""
+        expression = _exact(expression)
+        if expression.has(sp.nan, sp.zoo, sp.oo, -sp.oo):
+            return ZeroProof(ProofVerdict.FAIL, expression, reason="Expression is undefined.")
+        numerator, denominator = expression.as_numer_denom()
+        zero = expression.is_zero
+        if zero is None and denominator.is_zero is not True:
+            zero = numerator.is_zero
+        if zero is None and sp.count_ops(expression) <= _FACTOR_TERMS_LIMIT:
+            zero = sp.factor_terms(expression).is_zero
+        if zero is True:
+            return ZeroProof(ProofVerdict.PASS, expression)
+        for point in self._candidate_points(expression, domain):
+            value = _exact(expression.subs(point, simultaneous=True))
+            if value.is_real is True and value.is_finite is True and value.is_zero is False:
+                return ZeroProof(ProofVerdict.FAIL, expression, point, value)
+        if zero is False:
+            return ZeroProof(ProofVerdict.FAIL, expression)
+        return ZeroProof(ProofVerdict.UNKNOWN, expression, reason="Zero identity is inconclusive.")
+
+    @staticmethod
+    def _candidate_points(expression: sp.Expr, domain: ConcentrationDomain) -> tuple[Point, ...]:
+        points = [domain.exact_witness()]
+        for symbol in sorted(expression.free_symbols & set(domain.all_intervals), key=str):
+            interval = domain.interval(symbol)
+            for value in (interval.upper, (interval.lower + interval.upper) / 2):
+                points.append(domain.exact_witness({symbol: value}))
+        return tuple(point for point in points[:_WITNESS_LIMIT] if point is not None)
+
+    def prove_sum(
+        self,
+        terms: Sequence[tuple[sp.Expr, sp.Expr]],
+        domain: ConcentrationDomain,
+        requirement: SignRequirement,
+    ) -> SumProof:
+        """Prove the sign of a sparse weighted sum without eagerly expanding it."""
+        requirement = SignRequirement(requirement)
+        contributions, known = [], True
+        for coefficient, expression in terms:
+            bound = self.bounds(expression, domain)
+            if bound.known:
+                values = (coefficient * bound.lower, coefficient * bound.upper)
+                lower, upper = _minimum(values), _maximum(values)
+            else:
+                lower = upper = None
+                known = False
+            contributions.append(ContributionBound(
+                coefficient, bound.lower, bound.upper, lower, upper
+            ))
+        lower = sum((item.source_lower for item in contributions), sp.S.Zero) if known else None
+        upper = sum((item.source_upper for item in contributions), sp.S.Zero) if known else None
+        proves = lower is not None and _true(
+            lower > 0 if requirement is SignRequirement.POSITIVE else lower >= 0
+        )
+        if proves:
+            return SumProof(ProofVerdict.PASS, lower, upper, tuple(contributions))
+        expression = sum((coefficient * value for coefficient, value in terms), sp.S.Zero)
+        if sp.count_ops(expression) <= 96:
+            proof = self.prove_sign(expression, domain, requirement)
+            if proof.verdict is not ProofVerdict.UNKNOWN:
+                return SumProof(proof.verdict, lower, upper, tuple(contributions),
+                                proof.witness, proof.witness_value, proof.reason)
+        disproves = upper is not None and _true(
+            upper <= 0 if requirement is SignRequirement.POSITIVE else upper < 0
+        )
+        if disproves:
+            return SumProof(ProofVerdict.FAIL, lower, upper, tuple(contributions),
+                            reason="The source upper bound violates the sign requirement.")
+        return SumProof(ProofVerdict.UNKNOWN, lower, upper, tuple(contributions),
+                        reason="Sparse interval and bounded symbolic analysis are inconclusive.")
+
     @staticmethod
     def _violates(value: sp.Expr, requirement: SignRequirement) -> bool:
         if value.is_real is not True or value.is_finite is not True:
@@ -677,6 +775,7 @@ class ExpressionAnalyzer:
 
 __all__ = (
     "BoundResult",
+    "ContributionBound",
     "DefinednessResult",
     "ExpressionAnalyzer",
     "Point",
@@ -685,4 +784,6 @@ __all__ = (
     "SignProof",
     "SignRequirement",
     "SignResult",
+    "SumProof",
+    "ZeroProof",
 )

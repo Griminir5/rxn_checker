@@ -2,6 +2,7 @@
 
 from .analysis import (
     BoundResult,
+    ContributionBound,
     DefinednessResult,
     ExpressionAnalyzer,
     ProofVerdict,
@@ -9,6 +10,8 @@ from .analysis import (
     SignProof,
     SignRequirement,
     SignResult,
+    SumProof,
+    ZeroProof,
 )
 from .lipschitz import (
     GuardMargin,
@@ -20,6 +23,7 @@ from .lipschitz import (
 
 __all__ = (
     "BoundResult",
+    "ContributionBound",
     "DefinednessResult",
     "ExpressionAnalyzer",
     "GuardMargin",
@@ -31,5 +35,7 @@ __all__ = (
     "SignProof",
     "SignRequirement",
     "SignResult",
+    "SumProof",
+    "ZeroProof",
     "derive_network_lipschitz",
 )

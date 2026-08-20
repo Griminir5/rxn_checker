@@ -1,185 +1,85 @@
-"""Uniform Lipschitz certificates for rates and the network source vector."""
-
-from collections.abc import Mapping
+"""Uniform rate and source-vector Lipschitz certificates."""
 
 import sympy as sp
 
-from ..context import AnalysisContext
-from ..domain import ConcentrationDomain
-from ..proof import (
-    LipschitzCertificate,
-    LipschitzResult,
-    ProofVerdict,
-    derive_network_lipschitz,
-)
+from ..proof import ProofVerdict, derive_network_lipschitz
 from ..results import Evidence, Finding, Verdict
 from .prerequisites import reaction_skip
 
-
-def _short(expression: sp.Expr, limit: int = 64) -> str:
-    rendered = str(expression)
-    return rendered if len(rendered) <= limit else rendered[: limit - 3] + "..."
+_VERDICT = {ProofVerdict.PASS: Verdict.PASS, ProofVerdict.FAIL: Verdict.FAIL,
+            ProofVerdict.UNKNOWN: Verdict.UNKNOWN}
 
 
-def _approximate(expression: sp.Expr) -> str:
-    numerical = sp.N(expression, 8)
-    return str(numerical)
+def _approx(value): return str(sp.N(value, 8))
 
 
-def _display_constant(expression: sp.Expr) -> str:
-    exact = str(expression)
-    if len(exact) <= 64:
-        return exact
-    return f"≈ {_approximate(expression)} (exact bound in structured evidence)"
+def _display(value):
+    exact = str(value)
+    return exact if len(exact) <= 64 else f"≈ {_approx(value)} (exact bound in structured evidence)"
 
 
-def _rate_finding(reaction_id: str, result: LipschitzResult) -> Finding:
-    verdict = {
-        ProofVerdict.PASS: Verdict.PASS,
-        ProofVerdict.FAIL: Verdict.FAIL,
-        ProofVerdict.UNKNOWN: Verdict.UNKNOWN,
-    }[result.verdict]
-    if result.certificate is not None:
+def _rate_finding(reaction_id, result):
+    verdict = _VERDICT[result.verdict]
+    if result.certificate:
         certificate = result.certificate
-        constant = certificate.constant_bound
-        guards = tuple(
-            {
-                "expression": str(guard.expression),
-                "requirement": guard.requirement.value,
-                "margin": str(guard.margin),
-            }
-            for guard in certificate.guard_margins
-        )
-        return Finding(
-            reaction_id,
-            Verdict.PASS,
-            "Certified Lipschitz constant (concentration L∞): "
-            f"{_display_constant(constant)}.",
-            Evidence(
-                "lipschitz_certificate",
-                {
-                    "domain": certificate.domain.value,
-                    "norm": certificate.norm,
-                    "constant_bound": constant,
-                    "constant_approximate": _approximate(constant),
-                    "active_variables": tuple(map(str, certificate.active_variables)),
-                    "uniform_parameters": tuple(
-                        map(str, certificate.uniform_parameters)
-                    ),
-                    "guard_margins": guards,
-                },
-            ),
-        )
-
-    decisive = result.decisive_subexpression
-    expression_text = (
-        f" Decisive expression: {_short(decisive)}."
-        if decisive is not None
-        else ""
-    )
-    summary = (
-        "No open-neighbourhood Lipschitz certificate exists."
-        if verdict is Verdict.FAIL
-        else "Lipschitz certification is inconclusive."
-    )
-    data: dict[str, object] = {}
-    if decisive is not None:
-        data["decisive_subexpression"] = str(decisive)
-    if result.reason is not None:
-        data["diagnostic"] = result.reason
-    if result.witness is not None:
-        data["point"] = {
-            str(symbol): str(value) for symbol, value in result.witness.items()
-        }
-    return Finding(
-        reaction_id,
-        verdict,
-        summary + expression_text,
-        Evidence("lipschitz_obstruction", data) if data else None,
-    )
-
-
-def _network_finding(
-    context: AnalysisContext,
-    domain: ConcentrationDomain,
-    certificates: tuple[LipschitzCertificate, ...],
-) -> Finding:
-    certificate = derive_network_lipschitz(
-        domain,
-        context.case.symbols.species_ids,
-        context.stoichiometry,
-        certificates,
-    )
-    return Finding(
-        context.case.name,
-        Verdict.PASS,
-        "Certified source-vector Lipschitz constant (L∞ to L∞): "
-        f"{_display_constant(certificate.constant_bound)}.",
-        Evidence(
-            "network_lipschitz_certificate",
-            {
-                "domain": certificate.domain.value,
-                "input_norm": certificate.norm,
-                "output_norm": certificate.norm,
+        guards = tuple({"expression": str(item.expression),
+                        "requirement": item.requirement.value, "margin": str(item.margin)}
+                       for item in certificate.guard_margins)
+        return Finding(reaction_id, Verdict.PASS,
+            f"Certified Lipschitz constant (concentration L∞): {_display(certificate.constant_bound)}.",
+            Evidence("lipschitz_certificate", {
+                "domain": certificate.domain.value, "norm": certificate.norm,
                 "constant_bound": certificate.constant_bound,
-                "constant_approximate": _approximate(certificate.constant_bound),
-                "component_bounds": dict(certificate.component_bounds),
+                "constant_approximate": _approx(certificate.constant_bound),
                 "active_variables": tuple(map(str, certificate.active_variables)),
-                "uniform_parameters": tuple(
-                    map(str, certificate.uniform_parameters)
-                ),
-            },
-        ),
-    )
+                "uniform_parameters": tuple(map(str, certificate.uniform_parameters)),
+                "guard_margins": guards}))
+    decisive = result.decisive_subexpression
+    shown = "" if decisive is None else str(decisive)
+    if len(shown) > 64: shown = shown[:61] + "..."
+    summary = ("No open-neighbourhood Lipschitz certificate exists." if verdict is Verdict.FAIL
+               else "Lipschitz certification is inconclusive.")
+    if shown: summary += f" Decisive expression: {shown}."
+    data = {}
+    if decisive is not None: data["decisive_subexpression"] = str(decisive)
+    if result.reason: data["diagnostic"] = result.reason
+    if result.witness: data["point"] = {str(key): str(value) for key, value in result.witness.items()}
+    return Finding(reaction_id, verdict, summary,
+                   Evidence("lipschitz_obstruction", data) if data else None)
 
 
-def _run(
-    context: AnalysisContext,
-    domain: ConcentrationDomain,
-    dependencies: Mapping,
-    definedness_check: str,
-) -> tuple[Finding, ...]:
-    active = tuple(context.case.symbols.concentrations.values())
-    findings = []
-    certificates = []
+def _network(context, domain, certificates):
+    certificate = derive_network_lipschitz(domain, context.case.symbols.species_ids,
+                                            context.stoichiometry, certificates)
+    return Finding(context.case.name, Verdict.PASS,
+        f"Certified source-vector Lipschitz constant (L∞ to L∞): {_display(certificate.constant_bound)}.",
+        Evidence("network_lipschitz_certificate", {
+            "domain": certificate.domain.value, "input_norm": certificate.norm,
+            "output_norm": certificate.norm, "constant_bound": certificate.constant_bound,
+            "constant_approximate": _approx(certificate.constant_bound),
+            "component_bounds": dict(certificate.component_bounds),
+            "active_variables": tuple(map(str, certificate.active_variables)),
+            "uniform_parameters": tuple(map(str, certificate.uniform_parameters))}))
+
+
+def _run(context, domain, dependencies, prerequisite):
+    findings, certificates = [], []
     for reaction in context.case.reactions:
-        skipped = reaction_skip(dependencies, definedness_check, reaction.id)
-        if skipped is not None:
+        skipped = reaction_skip(dependencies, prerequisite, reaction.id)
+        if skipped:
             findings.append(skipped)
             continue
-        result = context.expression_analyzer.lipschitz(
-            reaction.rate, domain, active
-        )
+        result = context.expression_analyzer.lipschitz(reaction.rate, domain)
         findings.append(_rate_finding(reaction.id, result))
-        if result.certificate is not None:
-            certificates.append(result.certificate)
-    if len(certificates) != len(context.case.reactions):
-        return tuple(findings)
-    return (*findings, _network_finding(context, domain, tuple(certificates)))
+        if result.certificate: certificates.append(result.certificate)
+    if len(certificates) == len(context.case.reactions):
+        findings.append(_network(context, domain, tuple(certificates)))
+    return tuple(findings)
 
 
-def run_physical(
-    context: AnalysisContext,
-    dependencies: Mapping,
-) -> tuple[Finding, ...]:
-    return _run(
-        context,
-        context.physical_domain,
-        dependencies,
-        "physical_rate_definedness",
-    )
+def run_physical(context, dependencies):
+    return _run(context, context.physical_domain, dependencies, "physical_rate_definedness")
 
 
-def run_augmented(
-    context: AnalysisContext,
-    dependencies: Mapping,
-) -> tuple[Finding, ...]:
-    return _run(
-        context,
-        context.augmented_domain,
-        dependencies,
-        "augmented_rate_definedness",
-    )
-
-
-__all__ = ("run_augmented", "run_physical")
+def run_augmented(context, dependencies):
+    return _run(context, context.augmented_domain, dependencies, "augmented_rate_definedness")
