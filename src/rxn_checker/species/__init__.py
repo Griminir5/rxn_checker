@@ -4,7 +4,6 @@ from ..model import Phase, Species
 from .registry import (
     PROPERTY_REGISTRY,
     PropertyRegistry,
-    SpeciesProperties,
 )
 
 __all__ = (
@@ -12,5 +11,4 @@ __all__ = (
     "Phase",
     "PropertyRegistry",
     "Species",
-    "SpeciesProperties",
 )

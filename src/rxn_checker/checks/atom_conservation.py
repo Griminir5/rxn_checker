@@ -7,9 +7,8 @@ from types import MappingProxyType
 import sympy as sp
 
 from ..context import AnalysisContext
-from ..model import Reaction
+from ..model import Reaction, Species
 from ..results import Evidence, Finding, Verdict
-from ..species import PROPERTY_REGISTRY, PropertyRegistry
 
 
 @dataclass(frozen=True)
@@ -25,24 +24,27 @@ class AtomConservationResult:
 
 def _element_totals(
     side: Mapping[str, sp.Expr],
-    property_registry: PropertyRegistry,
+    species_by_id: Mapping[str, Species],
 ) -> dict[str, sp.Expr]:
     totals: dict[str, sp.Expr] = {}
     for species_id, coefficient in side.items():
-        record = property_registry.get_record(species_id)
-        for element, atom_count in record.atoms.items():
+        try:
+            species = species_by_id[species_id]
+        except KeyError as error:
+            raise ValueError(f"Unknown species '{species_id}'.") from error
+        for element, atom_count in species.atoms.items():
             totals[element] = totals.get(element, sp.S.Zero) + coefficient * atom_count
     return totals
 
 
 def check_atom_conservation(
     reaction: Reaction,
-    property_registry: PropertyRegistry = PROPERTY_REGISTRY,
+    species_by_id: Mapping[str, Species],
 ) -> AtomConservationResult:
     """Check exact equality of reactant and product element totals."""
 
-    reactant_totals = _element_totals(reaction.reactants, property_registry)
-    product_totals = _element_totals(reaction.products, property_registry)
+    reactant_totals = _element_totals(reaction.reactants, species_by_id)
+    product_totals = _element_totals(reaction.products, species_by_id)
     elements = tuple(dict.fromkeys((*reactant_totals, *product_totals)))
     imbalances = {
         element: product_totals.get(element, sp.S.Zero)
@@ -65,7 +67,7 @@ def run(context: AnalysisContext, _dependencies: Mapping) -> tuple[Finding, ...]
     findings: list[Finding] = []
     for reaction in context.case.reactions:
         try:
-            result = check_atom_conservation(reaction, context.property_registry)
+            result = check_atom_conservation(reaction, context.species_by_id)
         except (KeyError, ValueError) as error:
             findings.append(
                 Finding(reaction.id, Verdict.FAIL, str(error.args[0]))

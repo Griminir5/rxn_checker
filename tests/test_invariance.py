@@ -169,8 +169,8 @@ def test_atom_totals_are_exact_and_mass_uses_exact_tolerance_arithmetic() -> Non
         sp.S.One,
     )
 
-    atoms = check_atom_conservation(reaction)
-    mass = check_mass_conservation(reaction)
+    atoms = check_atom_conservation(reaction, PROPERTY_REGISTRY.records)
+    mass = check_mass_conservation(reaction, PROPERTY_REGISTRY.records)
     assert atoms.passed is True
     assert atoms.reactant_totals["Fe"] == sp.Rational(47, 50)
     assert mass.passed is True
@@ -187,8 +187,8 @@ def test_exact_atom_and_tolerant_mass_imbalances_fail() -> None:
         sp.S.One,
     )
 
-    atoms = check_atom_conservation(reaction)
-    mass = check_mass_conservation(reaction)
+    atoms = check_atom_conservation(reaction, PROPERTY_REGISTRY.records)
+    mass = check_mass_conservation(reaction, PROPERTY_REGISTRY.records)
     assert atoms.passed is False
     assert atoms.imbalances == {"Ex": 1}
     assert mass.passed is False
@@ -205,7 +205,7 @@ def test_missing_molar_mass_fails_the_chemistry_gate() -> None:
     result = run_checks(
         case,
         only=("forward_invariance",),
-        context=AnalysisContext(case, registry),
+        context=AnalysisContext(case),
     )
 
     assert result.results["mass_conservation"].verdict is Verdict.FAIL

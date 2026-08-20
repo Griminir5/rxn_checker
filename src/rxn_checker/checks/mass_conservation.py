@@ -6,9 +6,8 @@ from dataclasses import dataclass
 import sympy as sp
 
 from ..context import AnalysisContext
-from ..model import RationalInput, Reaction, parse_rational
+from ..model import RationalInput, Reaction, Species, parse_rational
 from ..results import Evidence, Finding, Verdict
-from ..species import PROPERTY_REGISTRY, PropertyRegistry
 
 MASS_RELATIVE_TOLERANCE = sp.Rational(1, 10**9)
 MASS_ABSOLUTE_TOLERANCE = sp.Rational(1, 10**12)
@@ -32,34 +31,37 @@ def _tolerance(value: RationalInput, label: str) -> sp.Rational:
     return tolerance
 
 
-def _molecular_weights(
+def _molar_masses(
     reaction_id: str,
     species_ids: tuple[str, ...],
-    property_registry: PropertyRegistry,
+    species_by_id: Mapping[str, Species],
 ) -> dict[str, sp.Expr]:
-    molecular_weights: dict[str, sp.Expr] = {}
+    molar_masses: dict[str, sp.Expr] = {}
     missing: list[str] = []
     for species_id in species_ids:
-        molecular_weight = property_registry.get_record(species_id).mw
-        if molecular_weight is None:
+        try:
+            molar_mass = species_by_id[species_id].molar_mass
+        except KeyError as error:
+            raise ValueError(f"Unknown species '{species_id}'.") from error
+        if molar_mass is None:
             missing.append(species_id)
         else:
-            molecular_weights[species_id] = molecular_weight
+            molar_masses[species_id] = molar_mass
     if missing:
         raise ValueError(
             f"Cannot check mass conservation for reaction '{reaction_id}'; "
-            "molecular weight is missing for species: " + ", ".join(missing) + "."
+            "molar mass is missing for species: " + ", ".join(missing) + "."
         )
-    return molecular_weights
+    return molar_masses
 
 
 def _side_mass(
     side: Mapping[str, sp.Expr],
-    molecular_weights: Mapping[str, sp.Expr],
+    molar_masses: Mapping[str, sp.Expr],
 ) -> sp.Expr:
     return sum(
         (
-            coefficient * molecular_weights[species_id]
+            coefficient * molar_masses[species_id]
             for species_id, coefficient in side.items()
         ),
         sp.S.Zero,
@@ -68,7 +70,7 @@ def _side_mass(
 
 def check_mass_conservation(
     reaction: Reaction,
-    property_registry: PropertyRegistry = PROPERTY_REGISTRY,
+    species_by_id: Mapping[str, Species],
     *,
     rel_tol: RationalInput = MASS_RELATIVE_TOLERANCE,
     abs_tol: RationalInput = MASS_ABSOLUTE_TOLERANCE,
@@ -78,9 +80,9 @@ def check_mass_conservation(
     relative_tolerance = _tolerance(rel_tol, "rel_tol")
     absolute_tolerance = _tolerance(abs_tol, "abs_tol")
     species_ids = tuple(dict.fromkeys((*reaction.reactants, *reaction.products)))
-    molecular_weights = _molecular_weights(reaction.id, species_ids, property_registry)
-    reactant_mass = _side_mass(reaction.reactants, molecular_weights)
-    product_mass = _side_mass(reaction.products, molecular_weights)
+    molar_masses = _molar_masses(reaction.id, species_ids, species_by_id)
+    reactant_mass = _side_mass(reaction.reactants, molar_masses)
+    product_mass = _side_mass(reaction.products, molar_masses)
     imbalance = product_mass - reactant_mass
     allowed = max(
         absolute_tolerance,
@@ -101,7 +103,7 @@ def run(context: AnalysisContext, _dependencies: Mapping) -> tuple[Finding, ...]
     findings: list[Finding] = []
     for reaction in context.case.reactions:
         try:
-            result = check_mass_conservation(reaction, context.property_registry)
+            result = check_mass_conservation(reaction, context.species_by_id)
         except (KeyError, ValueError) as error:
             findings.append(
                 Finding(reaction.id, Verdict.FAIL, str(error.args[0]))

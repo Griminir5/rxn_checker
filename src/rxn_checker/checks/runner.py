@@ -74,7 +74,7 @@ def execute_plan(
             current_stage = spec.stage
             stage_failed = False
 
-        if stopped_after is not None:
+        if stopped_after is not None and spec.stage is not Stage.ANALYSIS:
             result = _skip(
                 spec,
                 case,

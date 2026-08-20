@@ -1,9 +1,12 @@
 """Validated static check DAG and deterministic selection."""
 
-from collections.abc import Iterable, Mapping
+from collections.abc import Iterable
 
-from ..context import AnalysisContext
-from ..results import CheckResult, Finding, Verdict
+from .analyses import (
+    run_conserved_quantities,
+    run_steady_state_equations,
+    run_structural_faces,
+)
 from .atom_conservation import run as run_atom_conservation
 from .definedness import run_augmented as run_augmented_definedness
 from .definedness import run_physical as run_physical_definedness
@@ -23,16 +26,6 @@ _PHYSICAL = frozenset(("physical", "robust", "analysis", "all"))
 _ROBUST = frozenset(("robust", "all"))
 _ANALYSIS = frozenset(("analysis", "all"))
 _STAGE_ORDER = {stage: index for index, stage in enumerate(Stage)}
-
-
-def _placeholder(message: str):
-    def run(
-        context: AnalysisContext,
-        _dependencies: Mapping[str, CheckResult],
-    ) -> Finding:
-        return Finding(context.case.name, Verdict.UNKNOWN, message)
-
-    return run
 
 
 CHECK_REGISTRY = (
@@ -155,7 +148,7 @@ CHECK_REGISTRY = (
         ("atom_conservation", "mass_conservation"),
         False,
         _ANALYSIS,
-        _placeholder("Compact conserved quantities are scheduled for Phase 8."),
+        run_conserved_quantities,
     ),
     CheckSpec(
         "structural_faces",
@@ -165,7 +158,7 @@ CHECK_REGISTRY = (
         ("atom_conservation", "mass_conservation"),
         False,
         _ANALYSIS,
-        _placeholder("Structural-face analysis is scheduled for Phase 8."),
+        run_structural_faces,
     ),
     CheckSpec(
         "steady_state_equations",
@@ -175,7 +168,7 @@ CHECK_REGISTRY = (
         ("atom_conservation", "mass_conservation"),
         False,
         _ANALYSIS,
-        _placeholder("Steady-state equations are scheduled for Phase 8."),
+        run_steady_state_equations,
     ),
 )
 

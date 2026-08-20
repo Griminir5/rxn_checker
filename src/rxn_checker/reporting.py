@@ -9,7 +9,7 @@ import sympy as sp
 
 from .checks.definitions import CheckScope, CheckSpec, Stage
 from .checks.registry import CHECK_REGISTRY
-from .results import Finding, RunResult, Verdict
+from .results import Finding, Role, RunResult, Verdict
 
 
 _STAGE_NAMES = {
@@ -102,11 +102,15 @@ def render_text(
                     )
                 )
             elif verbosity == "failures" and not show_passing_case_detail:
-                visible = tuple(
-                    item
-                    for item in findings
-                    if item.evidence is not None
-                    and item.evidence.kind == "negative_side_summary"
+                visible = (
+                    findings
+                    if result.role is Role.ANALYSIS
+                    else tuple(
+                        item
+                        for item in findings
+                        if item.evidence is not None
+                        and item.evidence.kind == "negative_side_summary"
+                    )
                 )
             for finding in visible:
                 subject = (

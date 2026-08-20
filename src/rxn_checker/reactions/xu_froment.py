@@ -10,10 +10,10 @@ from ..species.registry import PROPERTY_REGISTRY
 GAS_CONSTANT_J_PER_MOL_K = 8.31446261815324
 MIN_H2_MOLE_FRACTION = 0.001
 H2_MOLE_FRACTION_SMOOTH_EPS_SQUARED = 1.0e-4
-NI_MW_KG_PER_MOL = PROPERTY_REGISTRY.get_record("Ni").mw
+NI_MOLAR_MASS_KG_PER_MOL = PROPERTY_REGISTRY.get_record("Ni").molar_mass
 
-if NI_MW_KG_PER_MOL is None:
-    raise ValueError("Nickel molecular weight must be available for Xu-Froment kinetics.")
+if NI_MOLAR_MASS_KG_PER_MOL is None:
+    raise ValueError("Nickel molar mass must be available for Xu-Froment kinetics.")
 
 XU_FROMENT_RATE_COEFFICIENTS = {
     "smr": 1.17e15,
@@ -191,7 +191,7 @@ def xu_froment_terms(symbols: CaseSymbols) -> XuFromentTerms:
         p_inv_h2_pa_inv=p_inv_h2_pa_inv,
         denominator=denominator,
         catalyst_mass_density_kg_per_m3=(
-            Max(symbols.concentration("Ni"), 0) * NI_MW_KG_PER_MOL
+            Max(symbols.concentration("Ni"), 0) * NI_MOLAR_MASS_KG_PER_MOL
         ),
     )
 

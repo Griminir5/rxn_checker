@@ -92,8 +92,8 @@ def test_fractional_wustite_decomposition_balances() -> None:
         rate=Rational(1),
     )
 
-    assert check_atom_conservation(reaction).passed
-    assert check_mass_conservation(reaction).passed
+    assert check_atom_conservation(reaction, PROPERTY_REGISTRY.records).passed
+    assert check_mass_conservation(reaction, PROPERTY_REGISTRY.records).passed
 
 
 def test_loading_imports_only_selected_built_in_families() -> None:

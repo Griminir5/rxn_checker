@@ -7,15 +7,18 @@ import sympy as sp
 
 from .case import Case
 from .domain import ConcentrationDomain, DomainKind
+from .model import Species
 from .network import ReactionNetwork, build_network
 from .proof import ExpressionAnalyzer
-from .species import PROPERTY_REGISTRY, PropertyRegistry
 
 
 @dataclass
 class AnalysisContext:
     case: Case
-    property_registry: PropertyRegistry = PROPERTY_REGISTRY
+
+    @cached_property
+    def species_by_id(self) -> dict[str, Species]:
+        return {species.id: species for species in self.case.species}
 
     @cached_property
     def physical_domain(self) -> ConcentrationDomain:

@@ -134,12 +134,7 @@ PROPERTY_REGISTRY = PropertyRegistry(
     }
 )
 
-
-# Compatibility alias for code written against the pre-rewrite name.
-SpeciesProperties = Species
-
 __all__ = (
     "PROPERTY_REGISTRY",
     "PropertyRegistry",
-    "SpeciesProperties",
 )

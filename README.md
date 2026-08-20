@@ -188,6 +188,15 @@ coordinate do not block its result. Strict attraction on `c < 0` is reported as
 a separate diagnostic, including coordinates that are non-repelling but stuck;
 it does not imply finite-time re-entry.
 
+Three optional analyses remain separate from physical validity. Conserved
+quantities are a primitive-integer basis of the exact stoichiometric left
+nullspace, accompanied by rank, connected components, and unchanged species.
+Structural dead and invariant faces are bounded minimal-set searches over
+reactant, catalyst, and production supports; they do not inspect rate algebra.
+Steady-state analysis reports a low-complexity independent set of sparse
+equations `F_i = 0` without solving or decomposing branches. Text uses reaction
+rate identifiers, while JSON retains each complete structural expression.
+
 The runner produces one renderer-independent `RunResult`. Each `CheckResult`
 contains `Finding` objects with one of these verdicts:
 

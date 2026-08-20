@@ -90,13 +90,6 @@ class Species:
         object.__setattr__(self, "atoms", MappingProxyType(atoms))
         object.__setattr__(self, "molar_mass", molar_mass)
 
-    @property
-    def mw(self) -> sp.Rational | None:
-        """Compatibility name for the legacy chemistry checks."""
-
-        return self.molar_mass
-
-
 @dataclass(frozen=True)
 class CaseSymbols:
     """Concentration coordinates and uniformly bounded external parameters."""
@@ -171,13 +164,6 @@ class CaseSymbols:
     @property
     def all_symbols(self) -> frozenset[sp.Symbol]:
         return self.concentration_symbols | self.parameter_symbols
-
-    @property
-    def symbols(self) -> frozenset[sp.Symbol]:
-        """Compatibility view used by checks that predate ``CaseSymbols``."""
-
-        return self.all_symbols
-
 
 def _reaction_side(
     values: Mapping[str, RationalInput],
