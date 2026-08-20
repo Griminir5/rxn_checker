@@ -1,0 +1,2581 @@
+{
+  "case_name": "reforming_case",
+  "selected_checks": [
+    "atom_conservation",
+    "mass_conservation",
+    "physical_rate_definedness",
+    "rate_nonnegativity",
+    "physical_lipschitz",
+    "zero_at_depletion",
+    "physical_boundary_inward",
+    "forward_invariance",
+    "augmented_rate_definedness",
+    "augmented_lipschitz",
+    "negative_side_nonrepulsion",
+    "conserved_quantities",
+    "structural_faces"
+  ],
+  "overall": "UNKNOWN",
+  "results": {
+    "atom_conservation": {
+      "name": "Atom conservation",
+      "stage": "chemistry",
+      "domain": null,
+      "scope": "reaction",
+      "role": "blocking",
+      "verdict": "PASS",
+      "requires": [],
+      "prerequisites": {},
+      "duration_seconds": 0.00016186900029424578,
+      "findings": [
+        {
+          "subject": "medrano.reduction_h2",
+          "verdict": "PASS",
+          "summary": "All element totals balance."
+        },
+        {
+          "subject": "medrano.reduction_co",
+          "verdict": "PASS",
+          "summary": "All element totals balance."
+        },
+        {
+          "subject": "medrano.oxidation_o2",
+          "verdict": "PASS",
+          "summary": "All element totals balance."
+        },
+        {
+          "subject": "xu_froment.wgs_fw",
+          "verdict": "PASS",
+          "summary": "All element totals balance."
+        },
+        {
+          "subject": "xu_froment.smr_fw",
+          "verdict": "PASS",
+          "summary": "All element totals balance."
+        },
+        {
+          "subject": "xu_froment.overall_fw",
+          "verdict": "PASS",
+          "summary": "All element totals balance."
+        },
+        {
+          "subject": "xu_froment.wgs_bw",
+          "verdict": "PASS",
+          "summary": "All element totals balance."
+        },
+        {
+          "subject": "xu_froment.smr_bw",
+          "verdict": "PASS",
+          "summary": "All element totals balance."
+        },
+        {
+          "subject": "xu_froment.overall_bw",
+          "verdict": "PASS",
+          "summary": "All element totals balance."
+        }
+      ]
+    },
+    "mass_conservation": {
+      "name": "Mass conservation",
+      "stage": "chemistry",
+      "domain": null,
+      "scope": "reaction",
+      "role": "blocking",
+      "verdict": "PASS",
+      "requires": [],
+      "prerequisites": {},
+      "duration_seconds": 0.00048021400289144367,
+      "findings": [
+        {
+          "subject": "medrano.reduction_h2",
+          "verdict": "PASS",
+          "summary": "Stoichiometric masses balance."
+        },
+        {
+          "subject": "medrano.reduction_co",
+          "verdict": "PASS",
+          "summary": "Stoichiometric masses balance."
+        },
+        {
+          "subject": "medrano.oxidation_o2",
+          "verdict": "PASS",
+          "summary": "Stoichiometric masses balance."
+        },
+        {
+          "subject": "xu_froment.wgs_fw",
+          "verdict": "PASS",
+          "summary": "Stoichiometric masses balance."
+        },
+        {
+          "subject": "xu_froment.smr_fw",
+          "verdict": "PASS",
+          "summary": "Stoichiometric masses balance."
+        },
+        {
+          "subject": "xu_froment.overall_fw",
+          "verdict": "PASS",
+          "summary": "Stoichiometric masses balance."
+        },
+        {
+          "subject": "xu_froment.wgs_bw",
+          "verdict": "PASS",
+          "summary": "Stoichiometric masses balance."
+        },
+        {
+          "subject": "xu_froment.smr_bw",
+          "verdict": "PASS",
+          "summary": "Stoichiometric masses balance."
+        },
+        {
+          "subject": "xu_froment.overall_bw",
+          "verdict": "PASS",
+          "summary": "Stoichiometric masses balance."
+        }
+      ]
+    },
+    "physical_rate_definedness": {
+      "name": "Rate definedness",
+      "stage": "physical",
+      "domain": "physical",
+      "scope": "reaction",
+      "role": "blocking",
+      "verdict": "PASS",
+      "requires": [
+        "atom_conservation",
+        "mass_conservation"
+      ],
+      "prerequisites": {
+        "atom_conservation": "PASS",
+        "mass_conservation": "PASS"
+      },
+      "duration_seconds": 0.5931953969993629,
+      "findings": [
+        {
+          "subject": "medrano.reduction_h2",
+          "verdict": "PASS",
+          "summary": "Rate is real and finite on the physical domain."
+        },
+        {
+          "subject": "medrano.reduction_co",
+          "verdict": "PASS",
+          "summary": "Rate is real and finite on the physical domain."
+        },
+        {
+          "subject": "medrano.oxidation_o2",
+          "verdict": "PASS",
+          "summary": "Rate is real and finite on the physical domain."
+        },
+        {
+          "subject": "xu_froment.wgs_fw",
+          "verdict": "PASS",
+          "summary": "Rate is real and finite on the physical domain."
+        },
+        {
+          "subject": "xu_froment.smr_fw",
+          "verdict": "PASS",
+          "summary": "Rate is real and finite on the physical domain."
+        },
+        {
+          "subject": "xu_froment.overall_fw",
+          "verdict": "PASS",
+          "summary": "Rate is real and finite on the physical domain."
+        },
+        {
+          "subject": "xu_froment.wgs_bw",
+          "verdict": "PASS",
+          "summary": "Rate is real and finite on the physical domain."
+        },
+        {
+          "subject": "xu_froment.smr_bw",
+          "verdict": "PASS",
+          "summary": "Rate is real and finite on the physical domain."
+        },
+        {
+          "subject": "xu_froment.overall_bw",
+          "verdict": "PASS",
+          "summary": "Rate is real and finite on the physical domain."
+        }
+      ]
+    },
+    "rate_nonnegativity": {
+      "name": "Rate non-negativity",
+      "stage": "physical",
+      "domain": "physical",
+      "scope": "reaction",
+      "role": "blocking",
+      "verdict": "PASS",
+      "requires": [
+        "physical_rate_definedness"
+      ],
+      "prerequisites": {
+        "physical_rate_definedness": "PASS"
+      },
+      "duration_seconds": 0.6826005619950593,
+      "findings": [
+        {
+          "subject": "medrano.reduction_h2",
+          "verdict": "PASS",
+          "summary": "Rate is non-negative throughout the physical domain."
+        },
+        {
+          "subject": "medrano.reduction_co",
+          "verdict": "PASS",
+          "summary": "Rate is non-negative throughout the physical domain."
+        },
+        {
+          "subject": "medrano.oxidation_o2",
+          "verdict": "PASS",
+          "summary": "Rate is non-negative throughout the physical domain."
+        },
+        {
+          "subject": "xu_froment.wgs_fw",
+          "verdict": "PASS",
+          "summary": "Rate is non-negative throughout the physical domain."
+        },
+        {
+          "subject": "xu_froment.smr_fw",
+          "verdict": "PASS",
+          "summary": "Rate is non-negative throughout the physical domain."
+        },
+        {
+          "subject": "xu_froment.overall_fw",
+          "verdict": "PASS",
+          "summary": "Rate is non-negative throughout the physical domain."
+        },
+        {
+          "subject": "xu_froment.wgs_bw",
+          "verdict": "PASS",
+          "summary": "Rate is non-negative throughout the physical domain."
+        },
+        {
+          "subject": "xu_froment.smr_bw",
+          "verdict": "PASS",
+          "summary": "Rate is non-negative throughout the physical domain."
+        },
+        {
+          "subject": "xu_froment.overall_bw",
+          "verdict": "PASS",
+          "summary": "Rate is non-negative throughout the physical domain."
+        }
+      ]
+    },
+    "physical_lipschitz": {
+      "name": "Lipschitz continuity",
+      "stage": "physical",
+      "domain": "physical",
+      "scope": "reaction",
+      "role": "blocking",
+      "verdict": "PASS",
+      "requires": [
+        "physical_rate_definedness"
+      ],
+      "prerequisites": {
+        "physical_rate_definedness": "PASS"
+      },
+      "duration_seconds": 1.0039409169985447,
+      "findings": [
+        {
+          "subject": "medrano.reduction_h2",
+          "verdict": "PASS",
+          "summary": "Certified Lipschitz constant (concentration L\u221e): \u2248 3.2950457e+67 (exact bound in structured evidence).",
+          "evidence": {
+            "kind": "lipschitz_certificate",
+            "data": {
+              "domain": "physical",
+              "norm": "L_infinity",
+              "constant_bound": "30020943368509492818292610415199088727297165751769298459747738535822347624042811179907441560096071523090714286334097434447319262254893136979251822767310582515607226016382723093063694821*200**(1/5)*3821**(4/5)*exp(-216490239076907/14731500000000)/14257852539062500000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000 + 117634438551681714294800961622480388365377121477173012181572478994766586371185440334246180226500259794392814211627*200**(1/5)*3821**(4/5)*(61102235778538005842901178073640746625145064017073862796009541816338273372025089861082148496771331637605557121797424516064702709338987*3821**(2/5)*80**(1/5)*exp(-60136177521363/24552500000000)/4776250000000000000000000000000000000000000000000000000000000000000000000000000000 + 445979660388101136214426368720872838027015025612017525982066878764023700336544059710276509941570831478887849272257003*3821**(2/5)*80**(1/5)*exp(-60136177521363/4910500000000)/477625000000000000000000000000000000000000000000000000000000)*exp(-216490239076907/14731500000000)/1140628203125000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+              "constant_approximate": "3.2950457e+67",
+              "active_variables": [
+                "Ar",
+                "CH4",
+                "CO",
+                "CO2",
+                "H2",
+                "H2O",
+                "He",
+                "N2",
+                "Ni",
+                "NiO",
+                "O2"
+              ],
+              "uniform_parameters": [
+                "pressure",
+                "temperature"
+              ],
+              "guard_margins": [
+                {
+                  "expression": "temperature",
+                  "requirement": "nonzero",
+                  "margin": "11463/20"
+                },
+                {
+                  "expression": "Max(0, Ni) + Max(0, NiO) + 1/10000000000",
+                  "requirement": "nonzero",
+                  "margin": "1/10000000000"
+                },
+                {
+                  "expression": "Min(1, Max(0, NiO)/(Max(0, Ni) + Max(0, NiO) + 1/10000000000)) + 1/1000",
+                  "requirement": "nonzero",
+                  "margin": "1/1000"
+                },
+                {
+                  "expression": "Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2",
+                  "requirement": "nonzero",
+                  "margin": "50000000000000000000/6124225302966222753"
+                },
+                {
+                  "expression": "Max(0, H2/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)) + 1/10000",
+                  "requirement": "nonzero",
+                  "margin": "1/10000"
+                },
+                {
+                  "expression": "8460119*Max(0, H2/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2))/20000000 + 1",
+                  "requirement": "nonzero",
+                  "margin": "1"
+                },
+                {
+                  "expression": "482231907*Max(0, H2/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2))/20000000 + 1",
+                  "requirement": "nonzero",
+                  "margin": "1"
+                },
+                {
+                  "expression": "1851100221*Min(1, Max(0, NiO)/(Max(0, Ni) + Max(0, NiO) + 1/10000000000))/100000000 + 1",
+                  "requirement": "nonzero",
+                  "margin": "1"
+                },
+                {
+                  "expression": "31786513*Min(1, Max(0, NiO)/(Max(0, Ni) + Max(0, NiO) + 1/10000000000))/100000000 + 1",
+                  "requirement": "nonzero",
+                  "margin": "1"
+                },
+                {
+                  "expression": "59891169*Min(1, Max(0, NiO)/(Max(0, Ni) + Max(0, NiO) + 1/10000000000))/50000000 + 1",
+                  "requirement": "nonzero",
+                  "margin": "1"
+                },
+                {
+                  "expression": "1032164461*Min(1, Max(0, NiO)/(Max(0, Ni) + Max(0, NiO) + 1/10000000000))/10000000 + 1",
+                  "requirement": "nonzero",
+                  "margin": "1"
+                },
+                {
+                  "expression": "Max(1/10000000000000000, 790471717755791*(pressure/temperature)**(3/5)*(248229311552481*Max(0, H2/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2))/(50000000000000*(482231907*Max(0, H2/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2))/20000000 + 1)) + 28541908082087*Max(0, H2/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2))/(25000000000000*(8460119*Max(0, H2/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2))/20000000 + 1)))*(390300480480667*Min(1, Max(0, NiO)/(Max(0, Ni) + Max(0, NiO) + 1/10000000000))/(10000000000000*(1032164461*Min(1, Max(0, NiO)/(Max(0, Ni) + Max(0, NiO) + 1/10000000000))/10000000 + 1)) - 317700465175681*Min(1, Max(0, NiO)/(Max(0, Ni) + Max(0, NiO) + 1/10000000000))/(100000000000000*(1851100221*Min(1, Max(0, NiO)/(Max(0, Ni) + Max(0, NiO) + 1/10000000000))/100000000 + 1)) + 137471766748843*Min(1, Max(0, NiO)/(Max(0, Ni) + Max(0, NiO) + 1/10000000000))/(100000000000000*(59891169*Min(1, Max(0, NiO)/(Max(0, Ni) + Max(0, NiO) + 1/10000000000))/50000000 + 1)) - 22065504973887*Min(1, Max(0, NiO)/(Max(0, Ni) + Max(0, NiO) + 1/10000000000))/(20000000000000*(31786513*Min(1, Max(0, NiO)/(Max(0, Ni) + Max(0, NiO) + 1/10000000000))/100000000 + 1)))*exp(-180408532564089/(50000000000*temperature))/100000000000000000000000000 + 477032985511127*(pressure/temperature)**(3/5)*(248229311552481*Max(0, H2/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2))/(50000000000000*(482231907*Max(0, H2/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2))/20000000 + 1)) + 28541908082087*Max(0, H2/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2))/(25000000000000*(8460119*Max(0, H2/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2))/20000000 + 1)))*exp(-180408532564089/(10000000000*temperature))*exp(-5*Min(1, Max(0, Ni)/(Max(0, Ni) + Max(0, NiO) + 1/10000000000)))/1000000000000000000)",
+                  "requirement": "nonzero",
+                  "margin": "1/10000000000000000"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "subject": "medrano.reduction_co",
+          "verdict": "PASS",
+          "summary": "Certified Lipschitz constant (concentration L\u221e): \u2248 4.6421391e+76 (exact bound in structured evidence).",
+          "evidence": {
+            "kind": "lipschitz_certificate",
+            "data": {
+              "domain": "physical",
+              "norm": "L_infinity",
+              "constant_bound": "12115315547132763072118845152517620908448912832443951052265569409570142467005365055332595542507335009849503089242564413280064500065513105927426350578832838094407037698295996666156175877*2**(2/5)*3821**(7/10)*5**(1/10)*exp(-27662641659827/982100000000)/71289262695312500000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000 + 1175306743404360796553174837656535333824628184427575798123935573715049122127547450501862360865832464239472818554307*2**(2/5)*3821**(7/10)*5**(1/10)*(1632795652878325774296305793459050092690843313831758264642587001348909101421625017353716027038109732437542964013881798515847253575857*2**(1/5)*3821**(7/20)*5**(11/20)*exp(-180408532564089/49105000000000)/23881250000000000000000000000000000000000000000000000000000000000000000000000000 + 40019190943280394288367768869771858139243558620447459252996601017854846567150939211276878797189260655420423720154523*2**(1/5)*3821**(7/20)*5**(11/20)*exp(-60136177521363/2455250000000)/2388125000000000000000000000000000000000000000000)*exp(-27662641659827/982100000000)/142578525390625000000000000000000000000000000000000000000000000000000000000000000000000",
+              "constant_approximate": "4.6421391e+76",
+              "active_variables": [
+                "Ar",
+                "CH4",
+                "CO",
+                "CO2",
+                "H2",
+                "H2O",
+                "He",
+                "N2",
+                "Ni",
+                "NiO",
+                "O2"
+              ],
+              "uniform_parameters": [
+                "pressure",
+                "temperature"
+              ],
+              "guard_margins": [
+                {
+                  "expression": "temperature",
+                  "requirement": "nonzero",
+                  "margin": "11463/20"
+                },
+                {
+                  "expression": "Max(0, Ni) + Max(0, NiO) + 1/10000000000",
+                  "requirement": "nonzero",
+                  "margin": "1/10000000000"
+                },
+                {
+                  "expression": "Min(1, Max(0, NiO)/(Max(0, Ni) + Max(0, NiO) + 1/10000000000)) + 1/1000",
+                  "requirement": "nonzero",
+                  "margin": "1/1000"
+                },
+                {
+                  "expression": "Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2",
+                  "requirement": "nonzero",
+                  "margin": "50000000000000000000/6124225302966222753"
+                },
+                {
+                  "expression": "Max(0, CO/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)) + 1/10000",
+                  "requirement": "nonzero",
+                  "margin": "1/10000"
+                },
+                {
+                  "expression": "1972954101*Max(0, CO/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2))/100000000 + 1",
+                  "requirement": "nonzero",
+                  "margin": "1"
+                },
+                {
+                  "expression": "34224903*Max(0, CO/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2))/100000000 + 1",
+                  "requirement": "nonzero",
+                  "margin": "1"
+                },
+                {
+                  "expression": "1851100221*Min(1, Max(0, NiO)/(Max(0, Ni) + Max(0, NiO) + 1/10000000000))/100000000 + 1",
+                  "requirement": "nonzero",
+                  "margin": "1"
+                },
+                {
+                  "expression": "31786513*Min(1, Max(0, NiO)/(Max(0, Ni) + Max(0, NiO) + 1/10000000000))/100000000 + 1",
+                  "requirement": "nonzero",
+                  "margin": "1"
+                },
+                {
+                  "expression": "59891169*Min(1, Max(0, NiO)/(Max(0, Ni) + Max(0, NiO) + 1/10000000000))/50000000 + 1",
+                  "requirement": "nonzero",
+                  "margin": "1"
+                },
+                {
+                  "expression": "1032164461*Min(1, Max(0, NiO)/(Max(0, Ni) + Max(0, NiO) + 1/10000000000))/10000000 + 1",
+                  "requirement": "nonzero",
+                  "margin": "1"
+                },
+                {
+                  "expression": "Max(1/10000000000000000, 138257966804713*(pressure/temperature)**(13/20)*(5550611636307*Max(0, CO/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2))/(1562500000000*(1972954101*Max(0, CO/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2))/100000000 + 1)) + 55611487798167*Max(0, CO/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2))/(50000000000000*(34224903*Max(0, CO/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2))/100000000 + 1)))*(390300480480667*Min(1, Max(0, NiO)/(Max(0, Ni) + Max(0, NiO) + 1/10000000000))/(10000000000000*(1032164461*Min(1, Max(0, NiO)/(Max(0, Ni) + Max(0, NiO) + 1/10000000000))/10000000 + 1)) - 317700465175681*Min(1, Max(0, NiO)/(Max(0, Ni) + Max(0, NiO) + 1/10000000000))/(100000000000000*(1851100221*Min(1, Max(0, NiO)/(Max(0, Ni) + Max(0, NiO) + 1/10000000000))/100000000 + 1)) + 137471766748843*Min(1, Max(0, NiO)/(Max(0, Ni) + Max(0, NiO) + 1/10000000000))/(100000000000000*(59891169*Min(1, Max(0, NiO)/(Max(0, Ni) + Max(0, NiO) + 1/10000000000))/50000000 + 1)) - 22065504973887*Min(1, Max(0, NiO)/(Max(0, Ni) + Max(0, NiO) + 1/10000000000))/(20000000000000*(31786513*Min(1, Max(0, NiO)/(Max(0, Ni) + Max(0, NiO) + 1/10000000000))/100000000 + 1)))*exp(-541225597692267/(100000000000*temperature))/5000000000000000000000000 + 93391962971691*(pressure/temperature)**(13/20)*(5550611636307*Max(0, CO/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2))/(1562500000000*(1972954101*Max(0, CO/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2))/100000000 + 1)) + 55611487798167*Max(0, CO/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2))/(50000000000000*(34224903*Max(0, CO/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2))/100000000 + 1)))*exp(-180408532564089/(5000000000*temperature))*exp(-15*Min(1, Max(0, Ni)/(Max(0, Ni) + Max(0, NiO) + 1/10000000000)))/50000000)",
+                  "requirement": "nonzero",
+                  "margin": "1/10000000000000000"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "subject": "medrano.oxidation_o2",
+          "verdict": "PASS",
+          "summary": "Certified Lipschitz constant (concentration L\u221e): \u2248 3.4349927e+77 (exact bound in structured evidence).",
+          "evidence": {
+            "kind": "lipschitz_certificate",
+            "data": {
+              "domain": "physical",
+              "norm": "L_infinity",
+              "constant_bound": "99974369463868398372695851091564927199566570799164246180508714005440490459300558547600658064763404095685029521648021893889493864418155597345601015038589487989685133588505203008127683701547*1910500**(1/5)*exp(-20045392507121/35075000000000)/2851570507812500000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000 + 393669011924808526931848933991094758675337148072747362033849226440171786037976314693935816941937070279987878914620173*1910500**(1/5)*(25110746297582352057790835368651570809537179089264418952798594741941867024909531390490307651893*2**(1/5)*3821**(1/10)*5**(3/10)/47762500000000000000000000000000000000000000000000000000 + 194572279336845489968378126960758981652761807834481756827983612845274320007526192364418035790712147285454545392675855443618429889584199*2**(1/5)*3821**(1/10)*5**(3/10)*exp(-20045392507121/35075000000000)/23881250000000000000000000000000000000000000000000000000000000000000000000000000)*exp(-20045392507121/35075000000000)/228125640625000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+              "constant_approximate": "3.4349927e+77",
+              "active_variables": [
+                "Ar",
+                "CH4",
+                "CO",
+                "CO2",
+                "H2",
+                "H2O",
+                "He",
+                "N2",
+                "Ni",
+                "NiO",
+                "O2"
+              ],
+              "uniform_parameters": [
+                "pressure",
+                "temperature"
+              ],
+              "guard_margins": [
+                {
+                  "expression": "temperature",
+                  "requirement": "nonzero",
+                  "margin": "11463/20"
+                },
+                {
+                  "expression": "Max(0, Ni) + Max(0, NiO) + 1/10000000000",
+                  "requirement": "nonzero",
+                  "margin": "1/10000000000"
+                },
+                {
+                  "expression": "Min(1, Max(0, Ni)/(Max(0, Ni) + Max(0, NiO) + 1/10000000000)) + 1/1000",
+                  "requirement": "nonzero",
+                  "margin": "1/1000"
+                },
+                {
+                  "expression": "Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2",
+                  "requirement": "nonzero",
+                  "margin": "50000000000000000000/6124225302966222753"
+                },
+                {
+                  "expression": "Max(0, O2/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)) + 1/10000",
+                  "requirement": "nonzero",
+                  "margin": "1/10000"
+                },
+                {
+                  "expression": "3489289*Max(0, O2/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2))/50000000 + 1",
+                  "requirement": "nonzero",
+                  "margin": "1"
+                },
+                {
+                  "expression": "853678409*Max(0, O2/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2))/100000000 + 1",
+                  "requirement": "nonzero",
+                  "margin": "1"
+                },
+                {
+                  "expression": "1851100221*Min(1, Max(0, Ni)/(Max(0, Ni) + Max(0, NiO) + 1/10000000000))/100000000 + 1",
+                  "requirement": "nonzero",
+                  "margin": "1"
+                },
+                {
+                  "expression": "31786513*Min(1, Max(0, Ni)/(Max(0, Ni) + Max(0, NiO) + 1/10000000000))/100000000 + 1",
+                  "requirement": "nonzero",
+                  "margin": "1"
+                },
+                {
+                  "expression": "59891169*Min(1, Max(0, Ni)/(Max(0, Ni) + Max(0, NiO) + 1/10000000000))/50000000 + 1",
+                  "requirement": "nonzero",
+                  "margin": "1"
+                },
+                {
+                  "expression": "1032164461*Min(1, Max(0, Ni)/(Max(0, Ni) + Max(0, NiO) + 1/10000000000))/10000000 + 1",
+                  "requirement": "nonzero",
+                  "margin": "1"
+                },
+                {
+                  "expression": "Max(1/10000000000000000, 103456664654537*(pressure/temperature)**(9/10)*(468448915046507*Max(0, O2/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2))/(1000000000000000*(853678409*Max(0, O2/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2))/100000000 + 1)) + 101723766910183*Max(0, O2/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2))/(100000000000000*(3489289*Max(0, O2/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2))/50000000 + 1)))*(390300480480667*Min(1, Max(0, Ni)/(Max(0, Ni) + Max(0, NiO) + 1/10000000000))/(10000000000000*(1032164461*Min(1, Max(0, Ni)/(Max(0, Ni) + Max(0, NiO) + 1/10000000000))/10000000 + 1)) - 317700465175681*Min(1, Max(0, Ni)/(Max(0, Ni) + Max(0, NiO) + 1/10000000000))/(100000000000000*(1851100221*Min(1, Max(0, Ni)/(Max(0, Ni) + Max(0, NiO) + 1/10000000000))/100000000 + 1)) + 137471766748843*Min(1, Max(0, Ni)/(Max(0, Ni) + Max(0, NiO) + 1/10000000000))/(100000000000000*(59891169*Min(1, Max(0, Ni)/(Max(0, Ni) + Max(0, NiO) + 1/10000000000))/50000000 + 1)) - 22065504973887*Min(1, Max(0, Ni)/(Max(0, Ni) + Max(0, NiO) + 1/10000000000))/(20000000000000*(31786513*Min(1, Max(0, Ni)/(Max(0, Ni) + Max(0, NiO) + 1/10000000000))/100000000 + 1)))*exp(-420953242649541/(500000000000*temperature))/1000000000000000000000000 + 29728926624867*(pressure/temperature)**(9/10)*(468448915046507*Max(0, O2/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2))/(1000000000000000*(853678409*Max(0, O2/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2))/100000000 + 1)) + 101723766910183*Max(0, O2/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2))/(100000000000000*(3489289*Max(0, O2/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2))/50000000 + 1)))/200000000000000)",
+                  "requirement": "nonzero",
+                  "margin": "1/10000000000000000"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "subject": "xu_froment.wgs_fw",
+          "verdict": "PASS",
+          "summary": "Certified Lipschitz constant (concentration L\u221e): \u2248 7.1222728e+28 (exact bound in structured evidence).",
+          "evidence": {
+            "kind": "lipschitz_certificate",
+            "data": {
+              "domain": "physical",
+              "norm": "L_infinity",
+              "constant_bound": "4122545010120937659753410459221709287736748532317622704864183037553517760699252457817351898010358722799*exp(-40369415970091/7365750000000)/1250000000000000000000000000000000000000000000000000000000000000000000000000000 + 5976699505059590249075232994934482047938492229*(155078396975225381977885729159533947806179*exp(997057823304199/57315000000000)/3125000000000000000000000000000000000000000000 + 134806711096110952961168640380509902341319*exp(92080515020711/11463000000000)/25000000000000000000000000000000000000000 + 834179873925558754037908203256839470878989*exp(849724188376859/57315000000000)/1250000000000000000000000000000000000000000 + 249233922531396867822658473417387540823052496545261295671522675405137445228337*exp(-106657524451889/14731500000000)/250000000000000000000000000000000000000000000000000000000000)*exp(-40369415970091/7365750000000)/250000000000000000000000000000",
+              "constant_approximate": "7.1222728e+28",
+              "active_variables": [
+                "Ar",
+                "CH4",
+                "CO",
+                "CO2",
+                "H2",
+                "H2O",
+                "He",
+                "N2",
+                "Ni",
+                "O2"
+              ],
+              "uniform_parameters": [
+                "pressure",
+                "temperature"
+              ],
+              "guard_margins": [
+                {
+                  "expression": "Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2",
+                  "requirement": "nonzero",
+                  "margin": "50000000000000000000/6124225302966222753"
+                },
+                {
+                  "expression": "H2**2/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)**2 + 1/10000",
+                  "requirement": "positive",
+                  "margin": "1/10000"
+                },
+                {
+                  "expression": "H2/(2*(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)) + sqrt(H2**2/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)**2 + 1/10000)/2 + 1/1000",
+                  "requirement": "nonzero",
+                  "margin": "3/500"
+                },
+                {
+                  "expression": "temperature",
+                  "requirement": "nonzero",
+                  "margin": "11463/20"
+                },
+                {
+                  "expression": "133*CH4*pressure*exp(92080515020711/(20000000000*temperature))/(20000000000*(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)) + 823*CO*pressure*exp(849724188376859/(100000000000*temperature))/(1000000000000*(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)) + 153*H2*pressure*exp(997057823304199/(100000000000*temperature))/(2500000000000000*(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)) + 177000*H2O*exp(-106657524451889/(10000000000*temperature))/((H2/(2*(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)) + sqrt(H2**2/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)**2 + 1/10000)/2 + 1/1000)*(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)) + 1",
+                  "requirement": "nonzero",
+                  "margin": "1"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "subject": "xu_froment.smr_fw",
+          "verdict": "PASS",
+          "summary": "Certified Lipschitz constant (concentration L\u221e): \u2248 7.2926496e+36 (exact bound in structured evidence).",
+          "evidence": {
+            "kind": "lipschitz_certificate",
+            "data": {
+              "domain": "physical",
+              "norm": "L_infinity",
+              "constant_bound": "468166337636536524866772288628788962727855736636813444532044355501585235956119850273039634680228417101566429*sqrt(6)*exp(-119575123999/6100000000)/1000000000000000000000000000000000000000000000000000000000000000000000 + 678728682991881852554116867255732974620428586584959*sqrt(6)*(155078396975225381977885729159533947806179*exp(997057823304199/57315000000000)/3125000000000000000000000000000000000000000000 + 134806711096110952961168640380509902341319*exp(92080515020711/11463000000000)/25000000000000000000000000000000000000000 + 834179873925558754037908203256839470878989*exp(849724188376859/57315000000000)/1250000000000000000000000000000000000000000 + 249233922531396867822658473417387540823052496545261295671522675405137445228337*exp(-106657524451889/14731500000000)/250000000000000000000000000000000000000000000000000000000000)*exp(-119575123999/6100000000)/500000000000000000000",
+              "constant_approximate": "7.2926496e+36",
+              "active_variables": [
+                "Ar",
+                "CH4",
+                "CO",
+                "CO2",
+                "H2",
+                "H2O",
+                "He",
+                "N2",
+                "Ni",
+                "O2"
+              ],
+              "uniform_parameters": [
+                "pressure",
+                "temperature"
+              ],
+              "guard_margins": [
+                {
+                  "expression": "pressure",
+                  "requirement": "nonzero",
+                  "margin": "100000"
+                },
+                {
+                  "expression": "Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2",
+                  "requirement": "nonzero",
+                  "margin": "50000000000000000000/6124225302966222753"
+                },
+                {
+                  "expression": "H2**2/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)**2 + 1/10000",
+                  "requirement": "positive",
+                  "margin": "1/10000"
+                },
+                {
+                  "expression": "H2/(2*(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)) + sqrt(H2**2/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)**2 + 1/10000)/2 + 1/1000",
+                  "requirement": "nonzero",
+                  "margin": "3/500"
+                },
+                {
+                  "expression": "1/(pressure*(H2/(2*(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)) + sqrt(H2**2/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)**2 + 1/10000)/2 + 1/1000))",
+                  "requirement": "positive",
+                  "margin": "1/(3000000*(sqrt(37506135811491722867514979220414899009)/100000000000000000 + 6124325302966222753/100000000000000000))"
+                },
+                {
+                  "expression": "temperature",
+                  "requirement": "nonzero",
+                  "margin": "11463/20"
+                },
+                {
+                  "expression": "133*CH4*pressure*exp(92080515020711/(20000000000*temperature))/(20000000000*(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)) + 823*CO*pressure*exp(849724188376859/(100000000000*temperature))/(1000000000000*(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)) + 153*H2*pressure*exp(997057823304199/(100000000000*temperature))/(2500000000000000*(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)) + 177000*H2O*exp(-106657524451889/(10000000000*temperature))/((H2/(2*(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)) + sqrt(H2**2/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)**2 + 1/10000)/2 + 1/1000)*(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)) + 1",
+                  "requirement": "nonzero",
+                  "margin": "1"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "subject": "xu_froment.overall_fw",
+          "verdict": "PASS",
+          "summary": "Certified Lipschitz constant (concentration L\u221e): \u2248 7.8653868e+41 (exact bound in structured evidence).",
+          "evidence": {
+            "kind": "lipschitz_certificate",
+            "data": {
+              "domain": "physical",
+              "norm": "L_infinity",
+              "constant_bound": "48202530873137518765986308820636854485489937001693957222620566670256673611073705873497813671743829941856896375648904885804173431*sqrt(6)*exp(-41906324849887/2104500000000)/500000000000000000000000000000000000000000000000000000000000000000000000000000000000 + 9983155146649739210766331264326814377985304335058250782706763418176443*sqrt(6)*(155078396975225381977885729159533947806179*exp(997057823304199/57315000000000)/3125000000000000000000000000000000000000000000 + 134806711096110952961168640380509902341319*exp(92080515020711/11463000000000)/25000000000000000000000000000000000000000 + 834179873925558754037908203256839470878989*exp(849724188376859/57315000000000)/1250000000000000000000000000000000000000000 + 249233922531396867822658473417387540823052496545261295671522675405137445228337*exp(-106657524451889/14731500000000)/250000000000000000000000000000000000000000000000000000000000)*exp(-41906324849887/2104500000000)/50000000000000000000000000000000000",
+              "constant_approximate": "7.8653868e+41",
+              "active_variables": [
+                "Ar",
+                "CH4",
+                "CO",
+                "CO2",
+                "H2",
+                "H2O",
+                "He",
+                "N2",
+                "Ni",
+                "O2"
+              ],
+              "uniform_parameters": [
+                "pressure",
+                "temperature"
+              ],
+              "guard_margins": [
+                {
+                  "expression": "pressure",
+                  "requirement": "nonzero",
+                  "margin": "100000"
+                },
+                {
+                  "expression": "Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2",
+                  "requirement": "nonzero",
+                  "margin": "50000000000000000000/6124225302966222753"
+                },
+                {
+                  "expression": "H2**2/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)**2 + 1/10000",
+                  "requirement": "positive",
+                  "margin": "1/10000"
+                },
+                {
+                  "expression": "H2/(2*(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)) + sqrt(H2**2/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)**2 + 1/10000)/2 + 1/1000",
+                  "requirement": "nonzero",
+                  "margin": "3/500"
+                },
+                {
+                  "expression": "1/(pressure*(H2/(2*(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)) + sqrt(H2**2/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)**2 + 1/10000)/2 + 1/1000))",
+                  "requirement": "positive",
+                  "margin": "1/(3000000*(sqrt(37506135811491722867514979220414899009)/100000000000000000 + 6124325302966222753/100000000000000000))"
+                },
+                {
+                  "expression": "temperature",
+                  "requirement": "nonzero",
+                  "margin": "11463/20"
+                },
+                {
+                  "expression": "133*CH4*pressure*exp(92080515020711/(20000000000*temperature))/(20000000000*(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)) + 823*CO*pressure*exp(849724188376859/(100000000000*temperature))/(1000000000000*(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)) + 153*H2*pressure*exp(997057823304199/(100000000000*temperature))/(2500000000000000*(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)) + 177000*H2O*exp(-106657524451889/(10000000000*temperature))/((H2/(2*(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)) + sqrt(H2**2/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)**2 + 1/10000)/2 + 1/1000)*(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)) + 1",
+                  "requirement": "nonzero",
+                  "margin": "1"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "subject": "xu_froment.wgs_bw",
+          "verdict": "PASS",
+          "summary": "Certified Lipschitz constant (concentration L\u221e): \u2248 1.5745711e+45 (exact bound in structured evidence).",
+          "evidence": {
+            "kind": "lipschitz_certificate",
+            "data": {
+              "domain": "physical",
+              "norm": "L_infinity",
+              "constant_bound": "18138348476285070060801278613296630511364842145582006298789572368700336565063335242329261472807527576863515453*exp(44768386956340907694684513132846125689/942816000000000000000000000000000000)/25000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000 + 26296246152478307254386088940051358623439208774101663*(155078396975225381977885729159533947806179*exp(997057823304199/57315000000000)/3125000000000000000000000000000000000000000000 + 134806711096110952961168640380509902341319*exp(92080515020711/11463000000000)/25000000000000000000000000000000000000000 + 834179873925558754037908203256839470878989*exp(849724188376859/57315000000000)/1250000000000000000000000000000000000000000 + 249233922531396867822658473417387540823052496545261295671522675405137445228337*exp(-106657524451889/14731500000000)/250000000000000000000000000000000000000000000000000000000000)*exp(44768386956340907694684513132846125689/942816000000000000000000000000000000)/5000000000000000000000000000000000000000000",
+              "constant_approximate": "1.5745711e+45",
+              "active_variables": [
+                "Ar",
+                "CH4",
+                "CO",
+                "CO2",
+                "H2",
+                "H2O",
+                "He",
+                "N2",
+                "Ni",
+                "O2"
+              ],
+              "uniform_parameters": [
+                "pressure",
+                "temperature"
+              ],
+              "guard_margins": [
+                {
+                  "expression": "Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2",
+                  "requirement": "nonzero",
+                  "margin": "50000000000000000000/6124225302966222753"
+                },
+                {
+                  "expression": "H2**2/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)**2 + 1/10000",
+                  "requirement": "positive",
+                  "margin": "1/10000"
+                },
+                {
+                  "expression": "H2/(2*(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)) + sqrt(H2**2/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)**2 + 1/10000)/2 + 1/1000",
+                  "requirement": "nonzero",
+                  "margin": "3/500"
+                },
+                {
+                  "expression": "temperature",
+                  "requirement": "nonzero",
+                  "margin": "11463/20"
+                },
+                {
+                  "expression": "133*CH4*pressure*exp(92080515020711/(20000000000*temperature))/(20000000000*(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)) + 823*CO*pressure*exp(849724188376859/(100000000000*temperature))/(1000000000000*(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)) + 153*H2*pressure*exp(997057823304199/(100000000000*temperature))/(2500000000000000*(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)) + 177000*H2O*exp(-106657524451889/(10000000000*temperature))/((H2/(2*(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)) + sqrt(H2**2/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)**2 + 1/10000)/2 + 1/1000)*(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)) + 1",
+                  "requirement": "nonzero",
+                  "margin": "1"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "subject": "xu_froment.smr_bw",
+          "verdict": "PASS",
+          "summary": "Certified Lipschitz constant (concentration L\u221e): \u2248 3.7639800e+327 (exact bound in structured evidence).",
+          "evidence": {
+            "kind": "lipschitz_certificate",
+            "data": {
+              "domain": "physical",
+              "norm": "L_infinity",
+              "constant_bound": "138991178233641078492171243749670822022268568582599053306705408899025636174676137529029313009939936395533970504759437591016952371181151570150285381*sqrt(6)*exp(25588798538273315846806135548269143/48800000000000000000000000000000)/100000000000000000000000000000000000000000000000000000 + 201503805725643047763497906013307416597289001405708246331279761837883159929760240217858551*sqrt(6)*(155078396975225381977885729159533947806179*exp(997057823304199/57315000000000)/3125000000000000000000000000000000000000000000 + 134806711096110952961168640380509902341319*exp(92080515020711/11463000000000)/25000000000000000000000000000000000000000 + 834179873925558754037908203256839470878989*exp(849724188376859/57315000000000)/1250000000000000000000000000000000000000000 + 249233922531396867822658473417387540823052496545261295671522675405137445228337*exp(-106657524451889/14731500000000)/250000000000000000000000000000000000000000000000000000000000)*exp(25588798538273315846806135548269143/48800000000000000000000000000000)/50000",
+              "constant_approximate": "3.7639800e+327",
+              "active_variables": [
+                "Ar",
+                "CH4",
+                "CO",
+                "CO2",
+                "H2",
+                "H2O",
+                "He",
+                "N2",
+                "Ni",
+                "O2"
+              ],
+              "uniform_parameters": [
+                "pressure",
+                "temperature"
+              ],
+              "guard_margins": [
+                {
+                  "expression": "pressure",
+                  "requirement": "nonzero",
+                  "margin": "100000"
+                },
+                {
+                  "expression": "Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2",
+                  "requirement": "nonzero",
+                  "margin": "50000000000000000000/6124225302966222753"
+                },
+                {
+                  "expression": "H2**2/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)**2 + 1/10000",
+                  "requirement": "positive",
+                  "margin": "1/10000"
+                },
+                {
+                  "expression": "H2/(2*(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)) + sqrt(H2**2/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)**2 + 1/10000)/2 + 1/1000",
+                  "requirement": "nonzero",
+                  "margin": "3/500"
+                },
+                {
+                  "expression": "1/(pressure*(H2/(2*(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)) + sqrt(H2**2/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)**2 + 1/10000)/2 + 1/1000))",
+                  "requirement": "positive",
+                  "margin": "1/(3000000*(sqrt(37506135811491722867514979220414899009)/100000000000000000 + 6124325302966222753/100000000000000000))"
+                },
+                {
+                  "expression": "temperature",
+                  "requirement": "nonzero",
+                  "margin": "11463/20"
+                },
+                {
+                  "expression": "133*CH4*pressure*exp(92080515020711/(20000000000*temperature))/(20000000000*(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)) + 823*CO*pressure*exp(849724188376859/(100000000000*temperature))/(1000000000000*(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)) + 153*H2*pressure*exp(997057823304199/(100000000000*temperature))/(2500000000000000*(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)) + 177000*H2O*exp(-106657524451889/(10000000000*temperature))/((H2/(2*(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)) + sqrt(H2**2/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)**2 + 1/10000)/2 + 1/1000)*(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)) + 1",
+                  "requirement": "nonzero",
+                  "margin": "1"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "subject": "xu_froment.overall_bw",
+          "verdict": "PASS",
+          "summary": "Certified Lipschitz constant (concentration L\u221e): \u2248 1.0618542e+277 (exact bound in structured evidence).",
+          "evidence": {
+            "kind": "lipschitz_certificate",
+            "data": {
+              "domain": "physical",
+              "norm": "L_infinity",
+              "constant_bound": "7499260731418250946806333875041844317623022751127894937263266745705633777536892401598921876310222909699454571737728768451970895758220834405568700814785827555032909633*sqrt(6)*exp(1403258544326620431497062719445636451/3367200000000000000000000000000000)/25000000000000000000000000000000000000000000000000000000000000000000000000000 + 1553160833438441152605861387244302914416055851405956424865737689450124632274477760141672688176886877292408349*sqrt(6)*(155078396975225381977885729159533947806179*exp(997057823304199/57315000000000)/3125000000000000000000000000000000000000000000 + 134806711096110952961168640380509902341319*exp(92080515020711/11463000000000)/25000000000000000000000000000000000000000 + 834179873925558754037908203256839470878989*exp(849724188376859/57315000000000)/1250000000000000000000000000000000000000000 + 249233922531396867822658473417387540823052496545261295671522675405137445228337*exp(-106657524451889/14731500000000)/250000000000000000000000000000000000000000000000000000000000)*exp(1403258544326620431497062719445636451/3367200000000000000000000000000000)/2500000000000000000000000000",
+              "constant_approximate": "1.0618542e+277",
+              "active_variables": [
+                "Ar",
+                "CH4",
+                "CO",
+                "CO2",
+                "H2",
+                "H2O",
+                "He",
+                "N2",
+                "Ni",
+                "O2"
+              ],
+              "uniform_parameters": [
+                "pressure",
+                "temperature"
+              ],
+              "guard_margins": [
+                {
+                  "expression": "pressure",
+                  "requirement": "nonzero",
+                  "margin": "100000"
+                },
+                {
+                  "expression": "Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2",
+                  "requirement": "nonzero",
+                  "margin": "50000000000000000000/6124225302966222753"
+                },
+                {
+                  "expression": "H2**2/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)**2 + 1/10000",
+                  "requirement": "positive",
+                  "margin": "1/10000"
+                },
+                {
+                  "expression": "H2/(2*(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)) + sqrt(H2**2/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)**2 + 1/10000)/2 + 1/1000",
+                  "requirement": "nonzero",
+                  "margin": "3/500"
+                },
+                {
+                  "expression": "1/(pressure*(H2/(2*(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)) + sqrt(H2**2/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)**2 + 1/10000)/2 + 1/1000))",
+                  "requirement": "positive",
+                  "margin": "1/(3000000*(sqrt(37506135811491722867514979220414899009)/100000000000000000 + 6124325302966222753/100000000000000000))"
+                },
+                {
+                  "expression": "temperature",
+                  "requirement": "nonzero",
+                  "margin": "11463/20"
+                },
+                {
+                  "expression": "133*CH4*pressure*exp(92080515020711/(20000000000*temperature))/(20000000000*(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)) + 823*CO*pressure*exp(849724188376859/(100000000000*temperature))/(1000000000000*(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)) + 153*H2*pressure*exp(997057823304199/(100000000000*temperature))/(2500000000000000*(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)) + 177000*H2O*exp(-106657524451889/(10000000000*temperature))/((H2/(2*(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)) + sqrt(H2**2/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)**2 + 1/10000)/2 + 1/1000)*(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)) + 1",
+                  "requirement": "nonzero",
+                  "margin": "1"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "subject": "reforming_case",
+          "verdict": "PASS",
+          "summary": "Certified source-vector Lipschitz constant (L\u221e to L\u221e): \u2248 1.1291940e+328 (exact bound in structured evidence).",
+          "evidence": {
+            "kind": "network_lipschitz_certificate",
+            "data": {
+              "domain": "physical",
+              "input_norm": "L_infinity",
+              "output_norm": "L_infinity",
+              "constant_bound": "4122545010120937659753410459221709287736748532317622704864183037553517760699252457817351898010358722799*exp(-40369415970091/7365750000000)/1250000000000000000000000000000000000000000000000000000000000000000000000000000 + 5976699505059590249075232994934482047938492229*(155078396975225381977885729159533947806179*exp(997057823304199/57315000000000)/3125000000000000000000000000000000000000000000 + 134806711096110952961168640380509902341319*exp(92080515020711/11463000000000)/25000000000000000000000000000000000000000 + 834179873925558754037908203256839470878989*exp(849724188376859/57315000000000)/1250000000000000000000000000000000000000000 + 249233922531396867822658473417387540823052496545261295671522675405137445228337*exp(-106657524451889/14731500000000)/250000000000000000000000000000000000000000000000000000000000)*exp(-40369415970091/7365750000000)/250000000000000000000000000000 + 1404499012909609574600316865886366888183567209910440333596133066504755707868359550819118904040685251304699287*sqrt(6)*exp(-119575123999/6100000000)/1000000000000000000000000000000000000000000000000000000000000000000000 + 48202530873137518765986308820636854485489937001693957222620566670256673611073705873497813671743829941856896375648904885804173431*sqrt(6)*exp(-41906324849887/2104500000000)/125000000000000000000000000000000000000000000000000000000000000000000000000000000000 + 2036186048975645557662350601767198923861285759754877*sqrt(6)*(155078396975225381977885729159533947806179*exp(997057823304199/57315000000000)/3125000000000000000000000000000000000000000000 + 134806711096110952961168640380509902341319*exp(92080515020711/11463000000000)/25000000000000000000000000000000000000000 + 834179873925558754037908203256839470878989*exp(849724188376859/57315000000000)/1250000000000000000000000000000000000000000 + 249233922531396867822658473417387540823052496545261295671522675405137445228337*exp(-106657524451889/14731500000000)/250000000000000000000000000000000000000000000000000000000000)*exp(-119575123999/6100000000)/500000000000000000000 + 18138348476285070060801278613296630511364842145582006298789572368700336565063335242329261472807527576863515453*exp(44768386956340907694684513132846125689/942816000000000000000000000000000000)/25000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000 + 9983155146649739210766331264326814377985304335058250782706763418176443*sqrt(6)*(155078396975225381977885729159533947806179*exp(997057823304199/57315000000000)/3125000000000000000000000000000000000000000000 + 134806711096110952961168640380509902341319*exp(92080515020711/11463000000000)/25000000000000000000000000000000000000000 + 834179873925558754037908203256839470878989*exp(849724188376859/57315000000000)/1250000000000000000000000000000000000000000 + 249233922531396867822658473417387540823052496545261295671522675405137445228337*exp(-106657524451889/14731500000000)/250000000000000000000000000000000000000000000000000000000000)*exp(-41906324849887/2104500000000)/12500000000000000000000000000000000 + 26296246152478307254386088940051358623439208774101663*(155078396975225381977885729159533947806179*exp(997057823304199/57315000000000)/3125000000000000000000000000000000000000000000 + 134806711096110952961168640380509902341319*exp(92080515020711/11463000000000)/25000000000000000000000000000000000000000 + 834179873925558754037908203256839470878989*exp(849724188376859/57315000000000)/1250000000000000000000000000000000000000000 + 249233922531396867822658473417387540823052496545261295671522675405137445228337*exp(-106657524451889/14731500000000)/250000000000000000000000000000000000000000000000000000000000)*exp(44768386956340907694684513132846125689/942816000000000000000000000000000000)/5000000000000000000000000000000000000000000 + 30020943368509492818292610415199088727297165751769298459747738535822347624042811179907441560096071523090714286334097434447319262254893136979251822767310582515607226016382723093063694821*200**(1/5)*3821**(4/5)*exp(-216490239076907/14731500000000)/14257852539062500000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000 + 117634438551681714294800961622480388365377121477173012181572478994766586371185440334246180226500259794392814211627*200**(1/5)*3821**(4/5)*(61102235778538005842901178073640746625145064017073862796009541816338273372025089861082148496771331637605557121797424516064702709338987*3821**(2/5)*80**(1/5)*exp(-60136177521363/24552500000000)/4776250000000000000000000000000000000000000000000000000000000000000000000000000000 + 445979660388101136214426368720872838027015025612017525982066878764023700336544059710276509941570831478887849272257003*3821**(2/5)*80**(1/5)*exp(-60136177521363/4910500000000)/477625000000000000000000000000000000000000000000000000000000)*exp(-216490239076907/14731500000000)/1140628203125000000000000000000000000000000000000000000000000000000000000000000000000000000000000 + 7499260731418250946806333875041844317623022751127894937263266745705633777536892401598921876310222909699454571737728768451970895758220834405568700814785827555032909633*sqrt(6)*exp(1403258544326620431497062719445636451/3367200000000000000000000000000000)/6250000000000000000000000000000000000000000000000000000000000000000000000000 + 1553160833438441152605861387244302914416055851405956424865737689450124632274477760141672688176886877292408349*sqrt(6)*(155078396975225381977885729159533947806179*exp(997057823304199/57315000000000)/3125000000000000000000000000000000000000000000 + 134806711096110952961168640380509902341319*exp(92080515020711/11463000000000)/25000000000000000000000000000000000000000 + 834179873925558754037908203256839470878989*exp(849724188376859/57315000000000)/1250000000000000000000000000000000000000000 + 249233922531396867822658473417387540823052496545261295671522675405137445228337*exp(-106657524451889/14731500000000)/250000000000000000000000000000000000000000000000000000000000)*exp(1403258544326620431497062719445636451/3367200000000000000000000000000000)/625000000000000000000000000 + 416973534700923235476513731249012466066805705747797159920116226697076908524028412587087939029819809186601911514278312773050857113543454710450856143*sqrt(6)*exp(25588798538273315846806135548269143/48800000000000000000000000000000)/100000000000000000000000000000000000000000000000000000 + 604511417176929143290493718039922249791867004217124738993839285513649479789280720653575653*sqrt(6)*(155078396975225381977885729159533947806179*exp(997057823304199/57315000000000)/3125000000000000000000000000000000000000000000 + 134806711096110952961168640380509902341319*exp(92080515020711/11463000000000)/25000000000000000000000000000000000000000 + 834179873925558754037908203256839470878989*exp(849724188376859/57315000000000)/1250000000000000000000000000000000000000000 + 249233922531396867822658473417387540823052496545261295671522675405137445228337*exp(-106657524451889/14731500000000)/250000000000000000000000000000000000000000000000000000000000)*exp(25588798538273315846806135548269143/48800000000000000000000000000000)/50000",
+              "constant_approximate": "1.1291940e+328",
+              "component_bounds": {
+                "Ar": "0",
+                "CH4": "468166337636536524866772288628788962727855736636813444532044355501585235956119850273039634680228417101566429*sqrt(6)*exp(-119575123999/6100000000)/1000000000000000000000000000000000000000000000000000000000000000000000 + 48202530873137518765986308820636854485489937001693957222620566670256673611073705873497813671743829941856896375648904885804173431*sqrt(6)*exp(-41906324849887/2104500000000)/500000000000000000000000000000000000000000000000000000000000000000000000000000000000 + 678728682991881852554116867255732974620428586584959*sqrt(6)*(155078396975225381977885729159533947806179*exp(997057823304199/57315000000000)/3125000000000000000000000000000000000000000000 + 134806711096110952961168640380509902341319*exp(92080515020711/11463000000000)/25000000000000000000000000000000000000000 + 834179873925558754037908203256839470878989*exp(849724188376859/57315000000000)/1250000000000000000000000000000000000000000 + 249233922531396867822658473417387540823052496545261295671522675405137445228337*exp(-106657524451889/14731500000000)/250000000000000000000000000000000000000000000000000000000000)*exp(-119575123999/6100000000)/500000000000000000000 + 9983155146649739210766331264326814377985304335058250782706763418176443*sqrt(6)*(155078396975225381977885729159533947806179*exp(997057823304199/57315000000000)/3125000000000000000000000000000000000000000000 + 134806711096110952961168640380509902341319*exp(92080515020711/11463000000000)/25000000000000000000000000000000000000000 + 834179873925558754037908203256839470878989*exp(849724188376859/57315000000000)/1250000000000000000000000000000000000000000 + 249233922531396867822658473417387540823052496545261295671522675405137445228337*exp(-106657524451889/14731500000000)/250000000000000000000000000000000000000000000000000000000000)*exp(-41906324849887/2104500000000)/50000000000000000000000000000000000 + 7499260731418250946806333875041844317623022751127894937263266745705633777536892401598921876310222909699454571737728768451970895758220834405568700814785827555032909633*sqrt(6)*exp(1403258544326620431497062719445636451/3367200000000000000000000000000000)/25000000000000000000000000000000000000000000000000000000000000000000000000000 + 1553160833438441152605861387244302914416055851405956424865737689450124632274477760141672688176886877292408349*sqrt(6)*(155078396975225381977885729159533947806179*exp(997057823304199/57315000000000)/3125000000000000000000000000000000000000000000 + 134806711096110952961168640380509902341319*exp(92080515020711/11463000000000)/25000000000000000000000000000000000000000 + 834179873925558754037908203256839470878989*exp(849724188376859/57315000000000)/1250000000000000000000000000000000000000000 + 249233922531396867822658473417387540823052496545261295671522675405137445228337*exp(-106657524451889/14731500000000)/250000000000000000000000000000000000000000000000000000000000)*exp(1403258544326620431497062719445636451/3367200000000000000000000000000000)/2500000000000000000000000000 + 138991178233641078492171243749670822022268568582599053306705408899025636174676137529029313009939936395533970504759437591016952371181151570150285381*sqrt(6)*exp(25588798538273315846806135548269143/48800000000000000000000000000000)/100000000000000000000000000000000000000000000000000000 + 201503805725643047763497906013307416597289001405708246331279761837883159929760240217858551*sqrt(6)*(155078396975225381977885729159533947806179*exp(997057823304199/57315000000000)/3125000000000000000000000000000000000000000000 + 134806711096110952961168640380509902341319*exp(92080515020711/11463000000000)/25000000000000000000000000000000000000000 + 834179873925558754037908203256839470878989*exp(849724188376859/57315000000000)/1250000000000000000000000000000000000000000 + 249233922531396867822658473417387540823052496545261295671522675405137445228337*exp(-106657524451889/14731500000000)/250000000000000000000000000000000000000000000000000000000000)*exp(25588798538273315846806135548269143/48800000000000000000000000000000)/50000",
+                "CO": "4122545010120937659753410459221709287736748532317622704864183037553517760699252457817351898010358722799*exp(-40369415970091/7365750000000)/1250000000000000000000000000000000000000000000000000000000000000000000000000000 + 5976699505059590249075232994934482047938492229*(155078396975225381977885729159533947806179*exp(997057823304199/57315000000000)/3125000000000000000000000000000000000000000000 + 134806711096110952961168640380509902341319*exp(92080515020711/11463000000000)/25000000000000000000000000000000000000000 + 834179873925558754037908203256839470878989*exp(849724188376859/57315000000000)/1250000000000000000000000000000000000000000 + 249233922531396867822658473417387540823052496545261295671522675405137445228337*exp(-106657524451889/14731500000000)/250000000000000000000000000000000000000000000000000000000000)*exp(-40369415970091/7365750000000)/250000000000000000000000000000 + 468166337636536524866772288628788962727855736636813444532044355501585235956119850273039634680228417101566429*sqrt(6)*exp(-119575123999/6100000000)/1000000000000000000000000000000000000000000000000000000000000000000000 + 678728682991881852554116867255732974620428586584959*sqrt(6)*(155078396975225381977885729159533947806179*exp(997057823304199/57315000000000)/3125000000000000000000000000000000000000000000 + 134806711096110952961168640380509902341319*exp(92080515020711/11463000000000)/25000000000000000000000000000000000000000 + 834179873925558754037908203256839470878989*exp(849724188376859/57315000000000)/1250000000000000000000000000000000000000000 + 249233922531396867822658473417387540823052496545261295671522675405137445228337*exp(-106657524451889/14731500000000)/250000000000000000000000000000000000000000000000000000000000)*exp(-119575123999/6100000000)/500000000000000000000 + 18138348476285070060801278613296630511364842145582006298789572368700336565063335242329261472807527576863515453*exp(44768386956340907694684513132846125689/942816000000000000000000000000000000)/25000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000 + 26296246152478307254386088940051358623439208774101663*(155078396975225381977885729159533947806179*exp(997057823304199/57315000000000)/3125000000000000000000000000000000000000000000 + 134806711096110952961168640380509902341319*exp(92080515020711/11463000000000)/25000000000000000000000000000000000000000 + 834179873925558754037908203256839470878989*exp(849724188376859/57315000000000)/1250000000000000000000000000000000000000000 + 249233922531396867822658473417387540823052496545261295671522675405137445228337*exp(-106657524451889/14731500000000)/250000000000000000000000000000000000000000000000000000000000)*exp(44768386956340907694684513132846125689/942816000000000000000000000000000000)/5000000000000000000000000000000000000000000 + 12115315547132763072118845152517620908448912832443951052265569409570142467005365055332595542507335009849503089242564413280064500065513105927426350578832838094407037698295996666156175877*2**(2/5)*3821**(7/10)*5**(1/10)*exp(-27662641659827/982100000000)/71289262695312500000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000 + 1175306743404360796553174837656535333824628184427575798123935573715049122127547450501862360865832464239472818554307*2**(2/5)*3821**(7/10)*5**(1/10)*(1632795652878325774296305793459050092690843313831758264642587001348909101421625017353716027038109732437542964013881798515847253575857*2**(1/5)*3821**(7/20)*5**(11/20)*exp(-180408532564089/49105000000000)/23881250000000000000000000000000000000000000000000000000000000000000000000000000 + 40019190943280394288367768869771858139243558620447459252996601017854846567150939211276878797189260655420423720154523*2**(1/5)*3821**(7/20)*5**(11/20)*exp(-60136177521363/2455250000000)/2388125000000000000000000000000000000000000000000)*exp(-27662641659827/982100000000)/142578525390625000000000000000000000000000000000000000000000000000000000000000000000000 + 138991178233641078492171243749670822022268568582599053306705408899025636174676137529029313009939936395533970504759437591016952371181151570150285381*sqrt(6)*exp(25588798538273315846806135548269143/48800000000000000000000000000000)/100000000000000000000000000000000000000000000000000000 + 201503805725643047763497906013307416597289001405708246331279761837883159929760240217858551*sqrt(6)*(155078396975225381977885729159533947806179*exp(997057823304199/57315000000000)/3125000000000000000000000000000000000000000000 + 134806711096110952961168640380509902341319*exp(92080515020711/11463000000000)/25000000000000000000000000000000000000000 + 834179873925558754037908203256839470878989*exp(849724188376859/57315000000000)/1250000000000000000000000000000000000000000 + 249233922531396867822658473417387540823052496545261295671522675405137445228337*exp(-106657524451889/14731500000000)/250000000000000000000000000000000000000000000000000000000000)*exp(25588798538273315846806135548269143/48800000000000000000000000000000)/50000",
+                "CO2": "4122545010120937659753410459221709287736748532317622704864183037553517760699252457817351898010358722799*exp(-40369415970091/7365750000000)/1250000000000000000000000000000000000000000000000000000000000000000000000000000 + 5976699505059590249075232994934482047938492229*(155078396975225381977885729159533947806179*exp(997057823304199/57315000000000)/3125000000000000000000000000000000000000000000 + 134806711096110952961168640380509902341319*exp(92080515020711/11463000000000)/25000000000000000000000000000000000000000 + 834179873925558754037908203256839470878989*exp(849724188376859/57315000000000)/1250000000000000000000000000000000000000000 + 249233922531396867822658473417387540823052496545261295671522675405137445228337*exp(-106657524451889/14731500000000)/250000000000000000000000000000000000000000000000000000000000)*exp(-40369415970091/7365750000000)/250000000000000000000000000000 + 48202530873137518765986308820636854485489937001693957222620566670256673611073705873497813671743829941856896375648904885804173431*sqrt(6)*exp(-41906324849887/2104500000000)/500000000000000000000000000000000000000000000000000000000000000000000000000000000000 + 18138348476285070060801278613296630511364842145582006298789572368700336565063335242329261472807527576863515453*exp(44768386956340907694684513132846125689/942816000000000000000000000000000000)/25000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000 + 9983155146649739210766331264326814377985304335058250782706763418176443*sqrt(6)*(155078396975225381977885729159533947806179*exp(997057823304199/57315000000000)/3125000000000000000000000000000000000000000000 + 134806711096110952961168640380509902341319*exp(92080515020711/11463000000000)/25000000000000000000000000000000000000000 + 834179873925558754037908203256839470878989*exp(849724188376859/57315000000000)/1250000000000000000000000000000000000000000 + 249233922531396867822658473417387540823052496545261295671522675405137445228337*exp(-106657524451889/14731500000000)/250000000000000000000000000000000000000000000000000000000000)*exp(-41906324849887/2104500000000)/50000000000000000000000000000000000 + 26296246152478307254386088940051358623439208774101663*(155078396975225381977885729159533947806179*exp(997057823304199/57315000000000)/3125000000000000000000000000000000000000000000 + 134806711096110952961168640380509902341319*exp(92080515020711/11463000000000)/25000000000000000000000000000000000000000 + 834179873925558754037908203256839470878989*exp(849724188376859/57315000000000)/1250000000000000000000000000000000000000000 + 249233922531396867822658473417387540823052496545261295671522675405137445228337*exp(-106657524451889/14731500000000)/250000000000000000000000000000000000000000000000000000000000)*exp(44768386956340907694684513132846125689/942816000000000000000000000000000000)/5000000000000000000000000000000000000000000 + 12115315547132763072118845152517620908448912832443951052265569409570142467005365055332595542507335009849503089242564413280064500065513105927426350578832838094407037698295996666156175877*2**(2/5)*3821**(7/10)*5**(1/10)*exp(-27662641659827/982100000000)/71289262695312500000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000 + 1175306743404360796553174837656535333824628184427575798123935573715049122127547450501862360865832464239472818554307*2**(2/5)*3821**(7/10)*5**(1/10)*(1632795652878325774296305793459050092690843313831758264642587001348909101421625017353716027038109732437542964013881798515847253575857*2**(1/5)*3821**(7/20)*5**(11/20)*exp(-180408532564089/49105000000000)/23881250000000000000000000000000000000000000000000000000000000000000000000000000 + 40019190943280394288367768869771858139243558620447459252996601017854846567150939211276878797189260655420423720154523*2**(1/5)*3821**(7/20)*5**(11/20)*exp(-60136177521363/2455250000000)/2388125000000000000000000000000000000000000000000)*exp(-27662641659827/982100000000)/142578525390625000000000000000000000000000000000000000000000000000000000000000000000000 + 7499260731418250946806333875041844317623022751127894937263266745705633777536892401598921876310222909699454571737728768451970895758220834405568700814785827555032909633*sqrt(6)*exp(1403258544326620431497062719445636451/3367200000000000000000000000000000)/25000000000000000000000000000000000000000000000000000000000000000000000000000 + 1553160833438441152605861387244302914416055851405956424865737689450124632274477760141672688176886877292408349*sqrt(6)*(155078396975225381977885729159533947806179*exp(997057823304199/57315000000000)/3125000000000000000000000000000000000000000000 + 134806711096110952961168640380509902341319*exp(92080515020711/11463000000000)/25000000000000000000000000000000000000000 + 834179873925558754037908203256839470878989*exp(849724188376859/57315000000000)/1250000000000000000000000000000000000000000 + 249233922531396867822658473417387540823052496545261295671522675405137445228337*exp(-106657524451889/14731500000000)/250000000000000000000000000000000000000000000000000000000000)*exp(1403258544326620431497062719445636451/3367200000000000000000000000000000)/2500000000000000000000000000",
+                "H2": "4122545010120937659753410459221709287736748532317622704864183037553517760699252457817351898010358722799*exp(-40369415970091/7365750000000)/1250000000000000000000000000000000000000000000000000000000000000000000000000000 + 5976699505059590249075232994934482047938492229*(155078396975225381977885729159533947806179*exp(997057823304199/57315000000000)/3125000000000000000000000000000000000000000000 + 134806711096110952961168640380509902341319*exp(92080515020711/11463000000000)/25000000000000000000000000000000000000000 + 834179873925558754037908203256839470878989*exp(849724188376859/57315000000000)/1250000000000000000000000000000000000000000 + 249233922531396867822658473417387540823052496545261295671522675405137445228337*exp(-106657524451889/14731500000000)/250000000000000000000000000000000000000000000000000000000000)*exp(-40369415970091/7365750000000)/250000000000000000000000000000 + 1404499012909609574600316865886366888183567209910440333596133066504755707868359550819118904040685251304699287*sqrt(6)*exp(-119575123999/6100000000)/1000000000000000000000000000000000000000000000000000000000000000000000 + 48202530873137518765986308820636854485489937001693957222620566670256673611073705873497813671743829941856896375648904885804173431*sqrt(6)*exp(-41906324849887/2104500000000)/125000000000000000000000000000000000000000000000000000000000000000000000000000000000 + 2036186048975645557662350601767198923861285759754877*sqrt(6)*(155078396975225381977885729159533947806179*exp(997057823304199/57315000000000)/3125000000000000000000000000000000000000000000 + 134806711096110952961168640380509902341319*exp(92080515020711/11463000000000)/25000000000000000000000000000000000000000 + 834179873925558754037908203256839470878989*exp(849724188376859/57315000000000)/1250000000000000000000000000000000000000000 + 249233922531396867822658473417387540823052496545261295671522675405137445228337*exp(-106657524451889/14731500000000)/250000000000000000000000000000000000000000000000000000000000)*exp(-119575123999/6100000000)/500000000000000000000 + 18138348476285070060801278613296630511364842145582006298789572368700336565063335242329261472807527576863515453*exp(44768386956340907694684513132846125689/942816000000000000000000000000000000)/25000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000 + 9983155146649739210766331264326814377985304335058250782706763418176443*sqrt(6)*(155078396975225381977885729159533947806179*exp(997057823304199/57315000000000)/3125000000000000000000000000000000000000000000 + 134806711096110952961168640380509902341319*exp(92080515020711/11463000000000)/25000000000000000000000000000000000000000 + 834179873925558754037908203256839470878989*exp(849724188376859/57315000000000)/1250000000000000000000000000000000000000000 + 249233922531396867822658473417387540823052496545261295671522675405137445228337*exp(-106657524451889/14731500000000)/250000000000000000000000000000000000000000000000000000000000)*exp(-41906324849887/2104500000000)/12500000000000000000000000000000000 + 26296246152478307254386088940051358623439208774101663*(155078396975225381977885729159533947806179*exp(997057823304199/57315000000000)/3125000000000000000000000000000000000000000000 + 134806711096110952961168640380509902341319*exp(92080515020711/11463000000000)/25000000000000000000000000000000000000000 + 834179873925558754037908203256839470878989*exp(849724188376859/57315000000000)/1250000000000000000000000000000000000000000 + 249233922531396867822658473417387540823052496545261295671522675405137445228337*exp(-106657524451889/14731500000000)/250000000000000000000000000000000000000000000000000000000000)*exp(44768386956340907694684513132846125689/942816000000000000000000000000000000)/5000000000000000000000000000000000000000000 + 30020943368509492818292610415199088727297165751769298459747738535822347624042811179907441560096071523090714286334097434447319262254893136979251822767310582515607226016382723093063694821*200**(1/5)*3821**(4/5)*exp(-216490239076907/14731500000000)/14257852539062500000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000 + 117634438551681714294800961622480388365377121477173012181572478994766586371185440334246180226500259794392814211627*200**(1/5)*3821**(4/5)*(61102235778538005842901178073640746625145064017073862796009541816338273372025089861082148496771331637605557121797424516064702709338987*3821**(2/5)*80**(1/5)*exp(-60136177521363/24552500000000)/4776250000000000000000000000000000000000000000000000000000000000000000000000000000 + 445979660388101136214426368720872838027015025612017525982066878764023700336544059710276509941570831478887849272257003*3821**(2/5)*80**(1/5)*exp(-60136177521363/4910500000000)/477625000000000000000000000000000000000000000000000000000000)*exp(-216490239076907/14731500000000)/1140628203125000000000000000000000000000000000000000000000000000000000000000000000000000000000000 + 7499260731418250946806333875041844317623022751127894937263266745705633777536892401598921876310222909699454571737728768451970895758220834405568700814785827555032909633*sqrt(6)*exp(1403258544326620431497062719445636451/3367200000000000000000000000000000)/6250000000000000000000000000000000000000000000000000000000000000000000000000 + 1553160833438441152605861387244302914416055851405956424865737689450124632274477760141672688176886877292408349*sqrt(6)*(155078396975225381977885729159533947806179*exp(997057823304199/57315000000000)/3125000000000000000000000000000000000000000000 + 134806711096110952961168640380509902341319*exp(92080515020711/11463000000000)/25000000000000000000000000000000000000000 + 834179873925558754037908203256839470878989*exp(849724188376859/57315000000000)/1250000000000000000000000000000000000000000 + 249233922531396867822658473417387540823052496545261295671522675405137445228337*exp(-106657524451889/14731500000000)/250000000000000000000000000000000000000000000000000000000000)*exp(1403258544326620431497062719445636451/3367200000000000000000000000000000)/625000000000000000000000000 + 416973534700923235476513731249012466066805705747797159920116226697076908524028412587087939029819809186601911514278312773050857113543454710450856143*sqrt(6)*exp(25588798538273315846806135548269143/48800000000000000000000000000000)/100000000000000000000000000000000000000000000000000000 + 604511417176929143290493718039922249791867004217124738993839285513649479789280720653575653*sqrt(6)*(155078396975225381977885729159533947806179*exp(997057823304199/57315000000000)/3125000000000000000000000000000000000000000000 + 134806711096110952961168640380509902341319*exp(92080515020711/11463000000000)/25000000000000000000000000000000000000000 + 834179873925558754037908203256839470878989*exp(849724188376859/57315000000000)/1250000000000000000000000000000000000000000 + 249233922531396867822658473417387540823052496545261295671522675405137445228337*exp(-106657524451889/14731500000000)/250000000000000000000000000000000000000000000000000000000000)*exp(25588798538273315846806135548269143/48800000000000000000000000000000)/50000",
+                "H2O": "4122545010120937659753410459221709287736748532317622704864183037553517760699252457817351898010358722799*exp(-40369415970091/7365750000000)/1250000000000000000000000000000000000000000000000000000000000000000000000000000 + 5976699505059590249075232994934482047938492229*(155078396975225381977885729159533947806179*exp(997057823304199/57315000000000)/3125000000000000000000000000000000000000000000 + 134806711096110952961168640380509902341319*exp(92080515020711/11463000000000)/25000000000000000000000000000000000000000 + 834179873925558754037908203256839470878989*exp(849724188376859/57315000000000)/1250000000000000000000000000000000000000000 + 249233922531396867822658473417387540823052496545261295671522675405137445228337*exp(-106657524451889/14731500000000)/250000000000000000000000000000000000000000000000000000000000)*exp(-40369415970091/7365750000000)/250000000000000000000000000000 + 468166337636536524866772288628788962727855736636813444532044355501585235956119850273039634680228417101566429*sqrt(6)*exp(-119575123999/6100000000)/1000000000000000000000000000000000000000000000000000000000000000000000 + 48202530873137518765986308820636854485489937001693957222620566670256673611073705873497813671743829941856896375648904885804173431*sqrt(6)*exp(-41906324849887/2104500000000)/250000000000000000000000000000000000000000000000000000000000000000000000000000000000 + 678728682991881852554116867255732974620428586584959*sqrt(6)*(155078396975225381977885729159533947806179*exp(997057823304199/57315000000000)/3125000000000000000000000000000000000000000000 + 134806711096110952961168640380509902341319*exp(92080515020711/11463000000000)/25000000000000000000000000000000000000000 + 834179873925558754037908203256839470878989*exp(849724188376859/57315000000000)/1250000000000000000000000000000000000000000 + 249233922531396867822658473417387540823052496545261295671522675405137445228337*exp(-106657524451889/14731500000000)/250000000000000000000000000000000000000000000000000000000000)*exp(-119575123999/6100000000)/500000000000000000000 + 18138348476285070060801278613296630511364842145582006298789572368700336565063335242329261472807527576863515453*exp(44768386956340907694684513132846125689/942816000000000000000000000000000000)/25000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000 + 9983155146649739210766331264326814377985304335058250782706763418176443*sqrt(6)*(155078396975225381977885729159533947806179*exp(997057823304199/57315000000000)/3125000000000000000000000000000000000000000000 + 134806711096110952961168640380509902341319*exp(92080515020711/11463000000000)/25000000000000000000000000000000000000000 + 834179873925558754037908203256839470878989*exp(849724188376859/57315000000000)/1250000000000000000000000000000000000000000 + 249233922531396867822658473417387540823052496545261295671522675405137445228337*exp(-106657524451889/14731500000000)/250000000000000000000000000000000000000000000000000000000000)*exp(-41906324849887/2104500000000)/25000000000000000000000000000000000 + 26296246152478307254386088940051358623439208774101663*(155078396975225381977885729159533947806179*exp(997057823304199/57315000000000)/3125000000000000000000000000000000000000000000 + 134806711096110952961168640380509902341319*exp(92080515020711/11463000000000)/25000000000000000000000000000000000000000 + 834179873925558754037908203256839470878989*exp(849724188376859/57315000000000)/1250000000000000000000000000000000000000000 + 249233922531396867822658473417387540823052496545261295671522675405137445228337*exp(-106657524451889/14731500000000)/250000000000000000000000000000000000000000000000000000000000)*exp(44768386956340907694684513132846125689/942816000000000000000000000000000000)/5000000000000000000000000000000000000000000 + 30020943368509492818292610415199088727297165751769298459747738535822347624042811179907441560096071523090714286334097434447319262254893136979251822767310582515607226016382723093063694821*200**(1/5)*3821**(4/5)*exp(-216490239076907/14731500000000)/14257852539062500000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000 + 117634438551681714294800961622480388365377121477173012181572478994766586371185440334246180226500259794392814211627*200**(1/5)*3821**(4/5)*(61102235778538005842901178073640746625145064017073862796009541816338273372025089861082148496771331637605557121797424516064702709338987*3821**(2/5)*80**(1/5)*exp(-60136177521363/24552500000000)/4776250000000000000000000000000000000000000000000000000000000000000000000000000000 + 445979660388101136214426368720872838027015025612017525982066878764023700336544059710276509941570831478887849272257003*3821**(2/5)*80**(1/5)*exp(-60136177521363/4910500000000)/477625000000000000000000000000000000000000000000000000000000)*exp(-216490239076907/14731500000000)/1140628203125000000000000000000000000000000000000000000000000000000000000000000000000000000000000 + 7499260731418250946806333875041844317623022751127894937263266745705633777536892401598921876310222909699454571737728768451970895758220834405568700814785827555032909633*sqrt(6)*exp(1403258544326620431497062719445636451/3367200000000000000000000000000000)/12500000000000000000000000000000000000000000000000000000000000000000000000000 + 1553160833438441152605861387244302914416055851405956424865737689450124632274477760141672688176886877292408349*sqrt(6)*(155078396975225381977885729159533947806179*exp(997057823304199/57315000000000)/3125000000000000000000000000000000000000000000 + 134806711096110952961168640380509902341319*exp(92080515020711/11463000000000)/25000000000000000000000000000000000000000 + 834179873925558754037908203256839470878989*exp(849724188376859/57315000000000)/1250000000000000000000000000000000000000000 + 249233922531396867822658473417387540823052496545261295671522675405137445228337*exp(-106657524451889/14731500000000)/250000000000000000000000000000000000000000000000000000000000)*exp(1403258544326620431497062719445636451/3367200000000000000000000000000000)/1250000000000000000000000000 + 138991178233641078492171243749670822022268568582599053306705408899025636174676137529029313009939936395533970504759437591016952371181151570150285381*sqrt(6)*exp(25588798538273315846806135548269143/48800000000000000000000000000000)/100000000000000000000000000000000000000000000000000000 + 201503805725643047763497906013307416597289001405708246331279761837883159929760240217858551*sqrt(6)*(155078396975225381977885729159533947806179*exp(997057823304199/57315000000000)/3125000000000000000000000000000000000000000000 + 134806711096110952961168640380509902341319*exp(92080515020711/11463000000000)/25000000000000000000000000000000000000000 + 834179873925558754037908203256839470878989*exp(849724188376859/57315000000000)/1250000000000000000000000000000000000000000 + 249233922531396867822658473417387540823052496545261295671522675405137445228337*exp(-106657524451889/14731500000000)/250000000000000000000000000000000000000000000000000000000000)*exp(25588798538273315846806135548269143/48800000000000000000000000000000)/50000",
+                "He": "0",
+                "N2": "0",
+                "O2": "99974369463868398372695851091564927199566570799164246180508714005440490459300558547600658064763404095685029521648021893889493864418155597345601015038589487989685133588505203008127683701547*1910500**(1/5)*exp(-20045392507121/35075000000000)/5703141015625000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000 + 393669011924808526931848933991094758675337148072747362033849226440171786037976314693935816941937070279987878914620173*1910500**(1/5)*(25110746297582352057790835368651570809537179089264418952798594741941867024909531390490307651893*2**(1/5)*3821**(1/10)*5**(3/10)/47762500000000000000000000000000000000000000000000000000 + 194572279336845489968378126960758981652761807834481756827983612845274320007526192364418035790712147285454545392675855443618429889584199*2**(1/5)*3821**(1/10)*5**(3/10)*exp(-20045392507121/35075000000000)/23881250000000000000000000000000000000000000000000000000000000000000000000000000)*exp(-20045392507121/35075000000000)/456251281250000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+                "Ni": "30020943368509492818292610415199088727297165751769298459747738535822347624042811179907441560096071523090714286334097434447319262254893136979251822767310582515607226016382723093063694821*200**(1/5)*3821**(4/5)*exp(-216490239076907/14731500000000)/14257852539062500000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000 + 12115315547132763072118845152517620908448912832443951052265569409570142467005365055332595542507335009849503089242564413280064500065513105927426350578832838094407037698295996666156175877*2**(2/5)*3821**(7/10)*5**(1/10)*exp(-27662641659827/982100000000)/71289262695312500000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000 + 99974369463868398372695851091564927199566570799164246180508714005440490459300558547600658064763404095685029521648021893889493864418155597345601015038589487989685133588505203008127683701547*1910500**(1/5)*exp(-20045392507121/35075000000000)/2851570507812500000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000 + 117634438551681714294800961622480388365377121477173012181572478994766586371185440334246180226500259794392814211627*200**(1/5)*3821**(4/5)*(61102235778538005842901178073640746625145064017073862796009541816338273372025089861082148496771331637605557121797424516064702709338987*3821**(2/5)*80**(1/5)*exp(-60136177521363/24552500000000)/4776250000000000000000000000000000000000000000000000000000000000000000000000000000 + 445979660388101136214426368720872838027015025612017525982066878764023700336544059710276509941570831478887849272257003*3821**(2/5)*80**(1/5)*exp(-60136177521363/4910500000000)/477625000000000000000000000000000000000000000000000000000000)*exp(-216490239076907/14731500000000)/1140628203125000000000000000000000000000000000000000000000000000000000000000000000000000000000000 + 1175306743404360796553174837656535333824628184427575798123935573715049122127547450501862360865832464239472818554307*2**(2/5)*3821**(7/10)*5**(1/10)*(1632795652878325774296305793459050092690843313831758264642587001348909101421625017353716027038109732437542964013881798515847253575857*2**(1/5)*3821**(7/20)*5**(11/20)*exp(-180408532564089/49105000000000)/23881250000000000000000000000000000000000000000000000000000000000000000000000000 + 40019190943280394288367768869771858139243558620447459252996601017854846567150939211276878797189260655420423720154523*2**(1/5)*3821**(7/20)*5**(11/20)*exp(-60136177521363/2455250000000)/2388125000000000000000000000000000000000000000000)*exp(-27662641659827/982100000000)/142578525390625000000000000000000000000000000000000000000000000000000000000000000000000 + 393669011924808526931848933991094758675337148072747362033849226440171786037976314693935816941937070279987878914620173*1910500**(1/5)*(25110746297582352057790835368651570809537179089264418952798594741941867024909531390490307651893*2**(1/5)*3821**(1/10)*5**(3/10)/47762500000000000000000000000000000000000000000000000000 + 194572279336845489968378126960758981652761807834481756827983612845274320007526192364418035790712147285454545392675855443618429889584199*2**(1/5)*3821**(1/10)*5**(3/10)*exp(-20045392507121/35075000000000)/23881250000000000000000000000000000000000000000000000000000000000000000000000000)*exp(-20045392507121/35075000000000)/228125640625000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+                "NiO": "30020943368509492818292610415199088727297165751769298459747738535822347624042811179907441560096071523090714286334097434447319262254893136979251822767310582515607226016382723093063694821*200**(1/5)*3821**(4/5)*exp(-216490239076907/14731500000000)/14257852539062500000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000 + 12115315547132763072118845152517620908448912832443951052265569409570142467005365055332595542507335009849503089242564413280064500065513105927426350578832838094407037698295996666156175877*2**(2/5)*3821**(7/10)*5**(1/10)*exp(-27662641659827/982100000000)/71289262695312500000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000 + 99974369463868398372695851091564927199566570799164246180508714005440490459300558547600658064763404095685029521648021893889493864418155597345601015038589487989685133588505203008127683701547*1910500**(1/5)*exp(-20045392507121/35075000000000)/2851570507812500000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000 + 117634438551681714294800961622480388365377121477173012181572478994766586371185440334246180226500259794392814211627*200**(1/5)*3821**(4/5)*(61102235778538005842901178073640746625145064017073862796009541816338273372025089861082148496771331637605557121797424516064702709338987*3821**(2/5)*80**(1/5)*exp(-60136177521363/24552500000000)/4776250000000000000000000000000000000000000000000000000000000000000000000000000000 + 445979660388101136214426368720872838027015025612017525982066878764023700336544059710276509941570831478887849272257003*3821**(2/5)*80**(1/5)*exp(-60136177521363/4910500000000)/477625000000000000000000000000000000000000000000000000000000)*exp(-216490239076907/14731500000000)/1140628203125000000000000000000000000000000000000000000000000000000000000000000000000000000000000 + 1175306743404360796553174837656535333824628184427575798123935573715049122127547450501862360865832464239472818554307*2**(2/5)*3821**(7/10)*5**(1/10)*(1632795652878325774296305793459050092690843313831758264642587001348909101421625017353716027038109732437542964013881798515847253575857*2**(1/5)*3821**(7/20)*5**(11/20)*exp(-180408532564089/49105000000000)/23881250000000000000000000000000000000000000000000000000000000000000000000000000 + 40019190943280394288367768869771858139243558620447459252996601017854846567150939211276878797189260655420423720154523*2**(1/5)*3821**(7/20)*5**(11/20)*exp(-60136177521363/2455250000000)/2388125000000000000000000000000000000000000000000)*exp(-27662641659827/982100000000)/142578525390625000000000000000000000000000000000000000000000000000000000000000000000000 + 393669011924808526931848933991094758675337148072747362033849226440171786037976314693935816941937070279987878914620173*1910500**(1/5)*(25110746297582352057790835368651570809537179089264418952798594741941867024909531390490307651893*2**(1/5)*3821**(1/10)*5**(3/10)/47762500000000000000000000000000000000000000000000000000 + 194572279336845489968378126960758981652761807834481756827983612845274320007526192364418035790712147285454545392675855443618429889584199*2**(1/5)*3821**(1/10)*5**(3/10)*exp(-20045392507121/35075000000000)/23881250000000000000000000000000000000000000000000000000000000000000000000000000)*exp(-20045392507121/35075000000000)/228125640625000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+                "CaAl2O4": "0"
+              },
+              "active_variables": [
+                "Ar",
+                "CH4",
+                "CO",
+                "CO2",
+                "H2",
+                "H2O",
+                "He",
+                "N2",
+                "Ni",
+                "NiO",
+                "O2"
+              ],
+              "uniform_parameters": [
+                "pressure",
+                "temperature"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "zero_at_depletion": {
+      "name": "Zero rate at depletion",
+      "stage": "physical",
+      "domain": "physical",
+      "scope": "reaction",
+      "role": "blocking",
+      "verdict": "PASS",
+      "requires": [
+        "physical_rate_definedness"
+      ],
+      "prerequisites": {
+        "physical_rate_definedness": "PASS"
+      },
+      "duration_seconds": 0.6459810930027743,
+      "findings": [
+        {
+          "subject": "medrano.reduction_h2",
+          "verdict": "PASS",
+          "summary": "Rate is exactly zero at every required depletion boundary."
+        },
+        {
+          "subject": "medrano.reduction_co",
+          "verdict": "PASS",
+          "summary": "Rate is exactly zero at every required depletion boundary."
+        },
+        {
+          "subject": "medrano.oxidation_o2",
+          "verdict": "PASS",
+          "summary": "Rate is exactly zero at every required depletion boundary."
+        },
+        {
+          "subject": "xu_froment.wgs_fw",
+          "verdict": "PASS",
+          "summary": "Rate is exactly zero at every required depletion boundary."
+        },
+        {
+          "subject": "xu_froment.smr_fw",
+          "verdict": "PASS",
+          "summary": "Rate is exactly zero at every required depletion boundary."
+        },
+        {
+          "subject": "xu_froment.overall_fw",
+          "verdict": "PASS",
+          "summary": "Rate is exactly zero at every required depletion boundary."
+        },
+        {
+          "subject": "xu_froment.wgs_bw",
+          "verdict": "PASS",
+          "summary": "Rate is exactly zero at every required depletion boundary."
+        },
+        {
+          "subject": "xu_froment.smr_bw",
+          "verdict": "PASS",
+          "summary": "Rate is exactly zero at every required depletion boundary."
+        },
+        {
+          "subject": "xu_froment.overall_bw",
+          "verdict": "PASS",
+          "summary": "Rate is exactly zero at every required depletion boundary."
+        }
+      ]
+    },
+    "physical_boundary_inward": {
+      "name": "Physical boundary inward",
+      "stage": "physical",
+      "domain": "physical",
+      "scope": "case",
+      "role": "blocking",
+      "verdict": "PASS",
+      "requires": [
+        "rate_nonnegativity",
+        "zero_at_depletion"
+      ],
+      "prerequisites": {
+        "rate_nonnegativity": "PASS",
+        "zero_at_depletion": "PASS"
+      },
+      "duration_seconds": 9.986299846787006e-05,
+      "findings": [
+        {
+          "subject": "reforming_case",
+          "verdict": "PASS",
+          "summary": "Every zero-concentration face has a non-negative reaction source.",
+          "evidence": {
+            "kind": "physical_boundary_inward_certificate",
+            "data": {
+              "domain": "physical",
+              "faces": {
+                "Ar": {
+                  "vanishing_consumers": [],
+                  "nonnegative_contributions": []
+                },
+                "CH4": {
+                  "vanishing_consumers": [
+                    {
+                      "reaction": "xu_froment.smr_fw",
+                      "stoichiometric_coefficient": "-1"
+                    },
+                    {
+                      "reaction": "xu_froment.overall_fw",
+                      "stoichiometric_coefficient": "-1"
+                    }
+                  ],
+                  "nonnegative_contributions": [
+                    {
+                      "reaction": "xu_froment.smr_bw",
+                      "stoichiometric_coefficient": "1"
+                    },
+                    {
+                      "reaction": "xu_froment.overall_bw",
+                      "stoichiometric_coefficient": "1"
+                    }
+                  ]
+                },
+                "CO": {
+                  "vanishing_consumers": [
+                    {
+                      "reaction": "medrano.reduction_co",
+                      "stoichiometric_coefficient": "-1"
+                    },
+                    {
+                      "reaction": "xu_froment.wgs_fw",
+                      "stoichiometric_coefficient": "-1"
+                    },
+                    {
+                      "reaction": "xu_froment.smr_bw",
+                      "stoichiometric_coefficient": "-1"
+                    }
+                  ],
+                  "nonnegative_contributions": [
+                    {
+                      "reaction": "xu_froment.smr_fw",
+                      "stoichiometric_coefficient": "1"
+                    },
+                    {
+                      "reaction": "xu_froment.wgs_bw",
+                      "stoichiometric_coefficient": "1"
+                    }
+                  ]
+                },
+                "CO2": {
+                  "vanishing_consumers": [
+                    {
+                      "reaction": "xu_froment.wgs_bw",
+                      "stoichiometric_coefficient": "-1"
+                    },
+                    {
+                      "reaction": "xu_froment.overall_bw",
+                      "stoichiometric_coefficient": "-1"
+                    }
+                  ],
+                  "nonnegative_contributions": [
+                    {
+                      "reaction": "medrano.reduction_co",
+                      "stoichiometric_coefficient": "1"
+                    },
+                    {
+                      "reaction": "xu_froment.wgs_fw",
+                      "stoichiometric_coefficient": "1"
+                    },
+                    {
+                      "reaction": "xu_froment.overall_fw",
+                      "stoichiometric_coefficient": "1"
+                    }
+                  ]
+                },
+                "H2": {
+                  "vanishing_consumers": [
+                    {
+                      "reaction": "medrano.reduction_h2",
+                      "stoichiometric_coefficient": "-1"
+                    },
+                    {
+                      "reaction": "xu_froment.wgs_bw",
+                      "stoichiometric_coefficient": "-1"
+                    },
+                    {
+                      "reaction": "xu_froment.smr_bw",
+                      "stoichiometric_coefficient": "-3"
+                    },
+                    {
+                      "reaction": "xu_froment.overall_bw",
+                      "stoichiometric_coefficient": "-4"
+                    }
+                  ],
+                  "nonnegative_contributions": [
+                    {
+                      "reaction": "xu_froment.wgs_fw",
+                      "stoichiometric_coefficient": "1"
+                    },
+                    {
+                      "reaction": "xu_froment.smr_fw",
+                      "stoichiometric_coefficient": "3"
+                    },
+                    {
+                      "reaction": "xu_froment.overall_fw",
+                      "stoichiometric_coefficient": "4"
+                    }
+                  ]
+                },
+                "H2O": {
+                  "vanishing_consumers": [
+                    {
+                      "reaction": "xu_froment.wgs_fw",
+                      "stoichiometric_coefficient": "-1"
+                    },
+                    {
+                      "reaction": "xu_froment.smr_fw",
+                      "stoichiometric_coefficient": "-1"
+                    },
+                    {
+                      "reaction": "xu_froment.overall_fw",
+                      "stoichiometric_coefficient": "-2"
+                    }
+                  ],
+                  "nonnegative_contributions": [
+                    {
+                      "reaction": "medrano.reduction_h2",
+                      "stoichiometric_coefficient": "1"
+                    },
+                    {
+                      "reaction": "xu_froment.wgs_bw",
+                      "stoichiometric_coefficient": "1"
+                    },
+                    {
+                      "reaction": "xu_froment.smr_bw",
+                      "stoichiometric_coefficient": "1"
+                    },
+                    {
+                      "reaction": "xu_froment.overall_bw",
+                      "stoichiometric_coefficient": "2"
+                    }
+                  ]
+                },
+                "He": {
+                  "vanishing_consumers": [],
+                  "nonnegative_contributions": []
+                },
+                "N2": {
+                  "vanishing_consumers": [],
+                  "nonnegative_contributions": []
+                },
+                "O2": {
+                  "vanishing_consumers": [
+                    {
+                      "reaction": "medrano.oxidation_o2",
+                      "stoichiometric_coefficient": "-1/2"
+                    }
+                  ],
+                  "nonnegative_contributions": []
+                },
+                "Ni": {
+                  "vanishing_consumers": [
+                    {
+                      "reaction": "medrano.oxidation_o2",
+                      "stoichiometric_coefficient": "-1"
+                    }
+                  ],
+                  "nonnegative_contributions": [
+                    {
+                      "reaction": "medrano.reduction_h2",
+                      "stoichiometric_coefficient": "1"
+                    },
+                    {
+                      "reaction": "medrano.reduction_co",
+                      "stoichiometric_coefficient": "1"
+                    }
+                  ]
+                },
+                "NiO": {
+                  "vanishing_consumers": [
+                    {
+                      "reaction": "medrano.reduction_h2",
+                      "stoichiometric_coefficient": "-1"
+                    },
+                    {
+                      "reaction": "medrano.reduction_co",
+                      "stoichiometric_coefficient": "-1"
+                    }
+                  ],
+                  "nonnegative_contributions": [
+                    {
+                      "reaction": "medrano.oxidation_o2",
+                      "stoichiometric_coefficient": "1"
+                    }
+                  ]
+                },
+                "CaAl2O4": {
+                  "vanishing_consumers": [],
+                  "nonnegative_contributions": []
+                }
+              },
+              "argument": "Negative stoichiometric contributions vanish by depletion; all remaining contributions are non-negative."
+            }
+          }
+        }
+      ]
+    },
+    "forward_invariance": {
+      "name": "Forward invariance",
+      "stage": "physical",
+      "domain": "physical",
+      "scope": "case",
+      "role": "blocking",
+      "verdict": "PASS",
+      "requires": [
+        "physical_boundary_inward",
+        "physical_lipschitz"
+      ],
+      "prerequisites": {
+        "physical_boundary_inward": "PASS",
+        "physical_lipschitz": "PASS"
+      },
+      "duration_seconds": 3.4328993933741e-05,
+      "findings": [
+        {
+          "subject": "reforming_case",
+          "verdict": "PASS",
+          "summary": "The nonnegative concentration orthant is forward invariant throughout the declared physical domain.",
+          "evidence": {
+            "kind": "forward_invariance_certificate",
+            "data": {
+              "domain": "physical",
+              "state_set": "nonnegative concentration orthant",
+              "uniform_parameter_ranges": {
+                "temperature": {
+                  "lower": "11463/20",
+                  "upper": "29463/20"
+                },
+                "pressure": {
+                  "lower": "100000",
+                  "upper": "3000000"
+                }
+              },
+              "source_lipschitz_norm": "L_infinity",
+              "source_lipschitz_constant_bound": "4122545010120937659753410459221709287736748532317622704864183037553517760699252457817351898010358722799*exp(-40369415970091/7365750000000)/1250000000000000000000000000000000000000000000000000000000000000000000000000000 + 5976699505059590249075232994934482047938492229*(155078396975225381977885729159533947806179*exp(997057823304199/57315000000000)/3125000000000000000000000000000000000000000000 + 134806711096110952961168640380509902341319*exp(92080515020711/11463000000000)/25000000000000000000000000000000000000000 + 834179873925558754037908203256839470878989*exp(849724188376859/57315000000000)/1250000000000000000000000000000000000000000 + 249233922531396867822658473417387540823052496545261295671522675405137445228337*exp(-106657524451889/14731500000000)/250000000000000000000000000000000000000000000000000000000000)*exp(-40369415970091/7365750000000)/250000000000000000000000000000 + 1404499012909609574600316865886366888183567209910440333596133066504755707868359550819118904040685251304699287*sqrt(6)*exp(-119575123999/6100000000)/1000000000000000000000000000000000000000000000000000000000000000000000 + 48202530873137518765986308820636854485489937001693957222620566670256673611073705873497813671743829941856896375648904885804173431*sqrt(6)*exp(-41906324849887/2104500000000)/125000000000000000000000000000000000000000000000000000000000000000000000000000000000 + 2036186048975645557662350601767198923861285759754877*sqrt(6)*(155078396975225381977885729159533947806179*exp(997057823304199/57315000000000)/3125000000000000000000000000000000000000000000 + 134806711096110952961168640380509902341319*exp(92080515020711/11463000000000)/25000000000000000000000000000000000000000 + 834179873925558754037908203256839470878989*exp(849724188376859/57315000000000)/1250000000000000000000000000000000000000000 + 249233922531396867822658473417387540823052496545261295671522675405137445228337*exp(-106657524451889/14731500000000)/250000000000000000000000000000000000000000000000000000000000)*exp(-119575123999/6100000000)/500000000000000000000 + 18138348476285070060801278613296630511364842145582006298789572368700336565063335242329261472807527576863515453*exp(44768386956340907694684513132846125689/942816000000000000000000000000000000)/25000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000 + 9983155146649739210766331264326814377985304335058250782706763418176443*sqrt(6)*(155078396975225381977885729159533947806179*exp(997057823304199/57315000000000)/3125000000000000000000000000000000000000000000 + 134806711096110952961168640380509902341319*exp(92080515020711/11463000000000)/25000000000000000000000000000000000000000 + 834179873925558754037908203256839470878989*exp(849724188376859/57315000000000)/1250000000000000000000000000000000000000000 + 249233922531396867822658473417387540823052496545261295671522675405137445228337*exp(-106657524451889/14731500000000)/250000000000000000000000000000000000000000000000000000000000)*exp(-41906324849887/2104500000000)/12500000000000000000000000000000000 + 26296246152478307254386088940051358623439208774101663*(155078396975225381977885729159533947806179*exp(997057823304199/57315000000000)/3125000000000000000000000000000000000000000000 + 134806711096110952961168640380509902341319*exp(92080515020711/11463000000000)/25000000000000000000000000000000000000000 + 834179873925558754037908203256839470878989*exp(849724188376859/57315000000000)/1250000000000000000000000000000000000000000 + 249233922531396867822658473417387540823052496545261295671522675405137445228337*exp(-106657524451889/14731500000000)/250000000000000000000000000000000000000000000000000000000000)*exp(44768386956340907694684513132846125689/942816000000000000000000000000000000)/5000000000000000000000000000000000000000000 + 30020943368509492818292610415199088727297165751769298459747738535822347624042811179907441560096071523090714286334097434447319262254893136979251822767310582515607226016382723093063694821*200**(1/5)*3821**(4/5)*exp(-216490239076907/14731500000000)/14257852539062500000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000 + 117634438551681714294800961622480388365377121477173012181572478994766586371185440334246180226500259794392814211627*200**(1/5)*3821**(4/5)*(61102235778538005842901178073640746625145064017073862796009541816338273372025089861082148496771331637605557121797424516064702709338987*3821**(2/5)*80**(1/5)*exp(-60136177521363/24552500000000)/4776250000000000000000000000000000000000000000000000000000000000000000000000000000 + 445979660388101136214426368720872838027015025612017525982066878764023700336544059710276509941570831478887849272257003*3821**(2/5)*80**(1/5)*exp(-60136177521363/4910500000000)/477625000000000000000000000000000000000000000000000000000000)*exp(-216490239076907/14731500000000)/1140628203125000000000000000000000000000000000000000000000000000000000000000000000000000000000000 + 7499260731418250946806333875041844317623022751127894937263266745705633777536892401598921876310222909699454571737728768451970895758220834405568700814785827555032909633*sqrt(6)*exp(1403258544326620431497062719445636451/3367200000000000000000000000000000)/6250000000000000000000000000000000000000000000000000000000000000000000000000 + 1553160833438441152605861387244302914416055851405956424865737689450124632274477760141672688176886877292408349*sqrt(6)*(155078396975225381977885729159533947806179*exp(997057823304199/57315000000000)/3125000000000000000000000000000000000000000000 + 134806711096110952961168640380509902341319*exp(92080515020711/11463000000000)/25000000000000000000000000000000000000000 + 834179873925558754037908203256839470878989*exp(849724188376859/57315000000000)/1250000000000000000000000000000000000000000 + 249233922531396867822658473417387540823052496545261295671522675405137445228337*exp(-106657524451889/14731500000000)/250000000000000000000000000000000000000000000000000000000000)*exp(1403258544326620431497062719445636451/3367200000000000000000000000000000)/625000000000000000000000000 + 416973534700923235476513731249012466066805705747797159920116226697076908524028412587087939029819809186601911514278312773050857113543454710450856143*sqrt(6)*exp(25588798538273315846806135548269143/48800000000000000000000000000000)/100000000000000000000000000000000000000000000000000000 + 604511417176929143290493718039922249791867004217124738993839285513649479789280720653575653*sqrt(6)*(155078396975225381977885729159533947806179*exp(997057823304199/57315000000000)/3125000000000000000000000000000000000000000000 + 134806711096110952961168640380509902341319*exp(92080515020711/11463000000000)/25000000000000000000000000000000000000000 + 834179873925558754037908203256839470878989*exp(849724188376859/57315000000000)/1250000000000000000000000000000000000000000 + 249233922531396867822658473417387540823052496545261295671522675405137445228337*exp(-106657524451889/14731500000000)/250000000000000000000000000000000000000000000000000000000000)*exp(25588798538273315846806135548269143/48800000000000000000000000000000)/50000",
+              "boundary_face_count": 12,
+              "theorem_inputs": [
+                "physical_boundary_inward",
+                "physical_lipschitz"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "augmented_rate_definedness": {
+      "name": "Augmented rate definedness",
+      "stage": "augmented",
+      "domain": "augmented",
+      "scope": "reaction",
+      "role": "blocking",
+      "verdict": "UNKNOWN",
+      "requires": [
+        "atom_conservation",
+        "mass_conservation"
+      ],
+      "prerequisites": {
+        "atom_conservation": "PASS",
+        "mass_conservation": "PASS"
+      },
+      "duration_seconds": 0.8946872689994052,
+      "findings": [
+        {
+          "subject": "medrano.reduction_h2",
+          "verdict": "PASS",
+          "summary": "Rate is real and finite on the augmented domain."
+        },
+        {
+          "subject": "medrano.reduction_co",
+          "verdict": "PASS",
+          "summary": "Rate is real and finite on the augmented domain."
+        },
+        {
+          "subject": "medrano.oxidation_o2",
+          "verdict": "PASS",
+          "summary": "Rate is real and finite on the augmented domain."
+        },
+        {
+          "subject": "xu_froment.wgs_fw",
+          "verdict": "UNKNOWN",
+          "summary": "Rate definedness on the augmented domain is inconclusive. Decisive expression: H2O.",
+          "evidence": {
+            "kind": "definedness_guard",
+            "data": {
+              "decisive_subexpression": "H2O",
+              "requirement": "nonzero",
+              "diagnostic": "The available enclosure is inconclusive."
+            }
+          }
+        },
+        {
+          "subject": "xu_froment.smr_fw",
+          "verdict": "UNKNOWN",
+          "summary": "Rate definedness on the augmented domain is inconclusive. Decisive expression: H2O.",
+          "evidence": {
+            "kind": "definedness_guard",
+            "data": {
+              "decisive_subexpression": "H2O",
+              "requirement": "nonzero",
+              "diagnostic": "The available enclosure is inconclusive."
+            }
+          }
+        },
+        {
+          "subject": "xu_froment.overall_fw",
+          "verdict": "UNKNOWN",
+          "summary": "Rate definedness on the augmented domain is inconclusive. Decisive expression: H2O.",
+          "evidence": {
+            "kind": "definedness_guard",
+            "data": {
+              "decisive_subexpression": "H2O",
+              "requirement": "nonzero",
+              "diagnostic": "The available enclosure is inconclusive."
+            }
+          }
+        },
+        {
+          "subject": "xu_froment.wgs_bw",
+          "verdict": "UNKNOWN",
+          "summary": "Rate definedness on the augmented domain is inconclusive. Decisive expression: H2O.",
+          "evidence": {
+            "kind": "definedness_guard",
+            "data": {
+              "decisive_subexpression": "H2O",
+              "requirement": "nonzero",
+              "diagnostic": "The available enclosure is inconclusive."
+            }
+          }
+        },
+        {
+          "subject": "xu_froment.smr_bw",
+          "verdict": "UNKNOWN",
+          "summary": "Rate definedness on the augmented domain is inconclusive. Decisive expression: H2O.",
+          "evidence": {
+            "kind": "definedness_guard",
+            "data": {
+              "decisive_subexpression": "H2O",
+              "requirement": "nonzero",
+              "diagnostic": "The available enclosure is inconclusive."
+            }
+          }
+        },
+        {
+          "subject": "xu_froment.overall_bw",
+          "verdict": "UNKNOWN",
+          "summary": "Rate definedness on the augmented domain is inconclusive. Decisive expression: H2O.",
+          "evidence": {
+            "kind": "definedness_guard",
+            "data": {
+              "decisive_subexpression": "H2O",
+              "requirement": "nonzero",
+              "diagnostic": "The available enclosure is inconclusive."
+            }
+          }
+        }
+      ]
+    },
+    "augmented_lipschitz": {
+      "name": "Augmented Lipschitz continuity",
+      "stage": "augmented",
+      "domain": "augmented",
+      "scope": "reaction",
+      "role": "blocking",
+      "verdict": "SKIPPED",
+      "requires": [
+        "augmented_rate_definedness"
+      ],
+      "prerequisites": {
+        "augmented_rate_definedness": "UNKNOWN"
+      },
+      "duration_seconds": 0.5648871679950389,
+      "findings": [
+        {
+          "subject": "medrano.reduction_h2",
+          "verdict": "PASS",
+          "summary": "Certified Lipschitz constant (concentration L\u221e): \u2248 3.2950457e+67 (exact bound in structured evidence).",
+          "evidence": {
+            "kind": "lipschitz_certificate",
+            "data": {
+              "domain": "augmented",
+              "norm": "L_infinity",
+              "constant_bound": "30020943368509492818292610415199088727297165751769298459747738535822347624042811179907441560096071523090714286334097434447319262254893136979251822767310582515607226016382723093063694821*200**(1/5)*3821**(4/5)*exp(-216490239076907/14731500000000)/14257852539062500000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000 + 117634438551681714294800961622480388365377121477173012181572478994766586371185440334246180226500259794392814211627*200**(1/5)*3821**(4/5)*(61102235778538005842901178073640746625145064017073862796009541816338273372025089861082148496771331637605557121797424516064702709338987*3821**(2/5)*80**(1/5)*exp(-60136177521363/24552500000000)/4776250000000000000000000000000000000000000000000000000000000000000000000000000000 + 445979660388101136214426368720872838027015025612017525982066878764023700336544059710276509941570831478887849272257003*3821**(2/5)*80**(1/5)*exp(-60136177521363/4910500000000)/477625000000000000000000000000000000000000000000000000000000)*exp(-216490239076907/14731500000000)/1140628203125000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+              "constant_approximate": "3.2950457e+67",
+              "active_variables": [
+                "Ar",
+                "CH4",
+                "CO",
+                "CO2",
+                "H2",
+                "H2O",
+                "He",
+                "N2",
+                "Ni",
+                "NiO",
+                "O2"
+              ],
+              "uniform_parameters": [
+                "pressure",
+                "temperature"
+              ],
+              "guard_margins": [
+                {
+                  "expression": "temperature",
+                  "requirement": "nonzero",
+                  "margin": "11463/20"
+                },
+                {
+                  "expression": "Max(0, Ni) + Max(0, NiO) + 1/10000000000",
+                  "requirement": "nonzero",
+                  "margin": "1/10000000000"
+                },
+                {
+                  "expression": "Min(1, Max(0, NiO)/(Max(0, Ni) + Max(0, NiO) + 1/10000000000)) + 1/1000",
+                  "requirement": "nonzero",
+                  "margin": "1/1000"
+                },
+                {
+                  "expression": "Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2",
+                  "requirement": "nonzero",
+                  "margin": "50000000000000000000/6124225302966222753"
+                },
+                {
+                  "expression": "Max(0, H2/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)) + 1/10000",
+                  "requirement": "nonzero",
+                  "margin": "1/10000"
+                },
+                {
+                  "expression": "8460119*Max(0, H2/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2))/20000000 + 1",
+                  "requirement": "nonzero",
+                  "margin": "1"
+                },
+                {
+                  "expression": "482231907*Max(0, H2/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2))/20000000 + 1",
+                  "requirement": "nonzero",
+                  "margin": "1"
+                },
+                {
+                  "expression": "1851100221*Min(1, Max(0, NiO)/(Max(0, Ni) + Max(0, NiO) + 1/10000000000))/100000000 + 1",
+                  "requirement": "nonzero",
+                  "margin": "1"
+                },
+                {
+                  "expression": "31786513*Min(1, Max(0, NiO)/(Max(0, Ni) + Max(0, NiO) + 1/10000000000))/100000000 + 1",
+                  "requirement": "nonzero",
+                  "margin": "1"
+                },
+                {
+                  "expression": "59891169*Min(1, Max(0, NiO)/(Max(0, Ni) + Max(0, NiO) + 1/10000000000))/50000000 + 1",
+                  "requirement": "nonzero",
+                  "margin": "1"
+                },
+                {
+                  "expression": "1032164461*Min(1, Max(0, NiO)/(Max(0, Ni) + Max(0, NiO) + 1/10000000000))/10000000 + 1",
+                  "requirement": "nonzero",
+                  "margin": "1"
+                },
+                {
+                  "expression": "Max(1/10000000000000000, 790471717755791*(pressure/temperature)**(3/5)*(248229311552481*Max(0, H2/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2))/(50000000000000*(482231907*Max(0, H2/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2))/20000000 + 1)) + 28541908082087*Max(0, H2/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2))/(25000000000000*(8460119*Max(0, H2/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2))/20000000 + 1)))*(390300480480667*Min(1, Max(0, NiO)/(Max(0, Ni) + Max(0, NiO) + 1/10000000000))/(10000000000000*(1032164461*Min(1, Max(0, NiO)/(Max(0, Ni) + Max(0, NiO) + 1/10000000000))/10000000 + 1)) - 317700465175681*Min(1, Max(0, NiO)/(Max(0, Ni) + Max(0, NiO) + 1/10000000000))/(100000000000000*(1851100221*Min(1, Max(0, NiO)/(Max(0, Ni) + Max(0, NiO) + 1/10000000000))/100000000 + 1)) + 137471766748843*Min(1, Max(0, NiO)/(Max(0, Ni) + Max(0, NiO) + 1/10000000000))/(100000000000000*(59891169*Min(1, Max(0, NiO)/(Max(0, Ni) + Max(0, NiO) + 1/10000000000))/50000000 + 1)) - 22065504973887*Min(1, Max(0, NiO)/(Max(0, Ni) + Max(0, NiO) + 1/10000000000))/(20000000000000*(31786513*Min(1, Max(0, NiO)/(Max(0, Ni) + Max(0, NiO) + 1/10000000000))/100000000 + 1)))*exp(-180408532564089/(50000000000*temperature))/100000000000000000000000000 + 477032985511127*(pressure/temperature)**(3/5)*(248229311552481*Max(0, H2/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2))/(50000000000000*(482231907*Max(0, H2/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2))/20000000 + 1)) + 28541908082087*Max(0, H2/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2))/(25000000000000*(8460119*Max(0, H2/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2))/20000000 + 1)))*exp(-180408532564089/(10000000000*temperature))*exp(-5*Min(1, Max(0, Ni)/(Max(0, Ni) + Max(0, NiO) + 1/10000000000)))/1000000000000000000)",
+                  "requirement": "nonzero",
+                  "margin": "1/10000000000000000"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "subject": "medrano.reduction_co",
+          "verdict": "PASS",
+          "summary": "Certified Lipschitz constant (concentration L\u221e): \u2248 4.6421391e+76 (exact bound in structured evidence).",
+          "evidence": {
+            "kind": "lipschitz_certificate",
+            "data": {
+              "domain": "augmented",
+              "norm": "L_infinity",
+              "constant_bound": "12115315547132763072118845152517620908448912832443951052265569409570142467005365055332595542507335009849503089242564413280064500065513105927426350578832838094407037698295996666156175877*2**(2/5)*3821**(7/10)*5**(1/10)*exp(-27662641659827/982100000000)/71289262695312500000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000 + 1175306743404360796553174837656535333824628184427575798123935573715049122127547450501862360865832464239472818554307*2**(2/5)*3821**(7/10)*5**(1/10)*(1632795652878325774296305793459050092690843313831758264642587001348909101421625017353716027038109732437542964013881798515847253575857*2**(1/5)*3821**(7/20)*5**(11/20)*exp(-180408532564089/49105000000000)/23881250000000000000000000000000000000000000000000000000000000000000000000000000 + 40019190943280394288367768869771858139243558620447459252996601017854846567150939211276878797189260655420423720154523*2**(1/5)*3821**(7/20)*5**(11/20)*exp(-60136177521363/2455250000000)/2388125000000000000000000000000000000000000000000)*exp(-27662641659827/982100000000)/142578525390625000000000000000000000000000000000000000000000000000000000000000000000000",
+              "constant_approximate": "4.6421391e+76",
+              "active_variables": [
+                "Ar",
+                "CH4",
+                "CO",
+                "CO2",
+                "H2",
+                "H2O",
+                "He",
+                "N2",
+                "Ni",
+                "NiO",
+                "O2"
+              ],
+              "uniform_parameters": [
+                "pressure",
+                "temperature"
+              ],
+              "guard_margins": [
+                {
+                  "expression": "temperature",
+                  "requirement": "nonzero",
+                  "margin": "11463/20"
+                },
+                {
+                  "expression": "Max(0, Ni) + Max(0, NiO) + 1/10000000000",
+                  "requirement": "nonzero",
+                  "margin": "1/10000000000"
+                },
+                {
+                  "expression": "Min(1, Max(0, NiO)/(Max(0, Ni) + Max(0, NiO) + 1/10000000000)) + 1/1000",
+                  "requirement": "nonzero",
+                  "margin": "1/1000"
+                },
+                {
+                  "expression": "Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2",
+                  "requirement": "nonzero",
+                  "margin": "50000000000000000000/6124225302966222753"
+                },
+                {
+                  "expression": "Max(0, CO/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)) + 1/10000",
+                  "requirement": "nonzero",
+                  "margin": "1/10000"
+                },
+                {
+                  "expression": "1972954101*Max(0, CO/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2))/100000000 + 1",
+                  "requirement": "nonzero",
+                  "margin": "1"
+                },
+                {
+                  "expression": "34224903*Max(0, CO/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2))/100000000 + 1",
+                  "requirement": "nonzero",
+                  "margin": "1"
+                },
+                {
+                  "expression": "1851100221*Min(1, Max(0, NiO)/(Max(0, Ni) + Max(0, NiO) + 1/10000000000))/100000000 + 1",
+                  "requirement": "nonzero",
+                  "margin": "1"
+                },
+                {
+                  "expression": "31786513*Min(1, Max(0, NiO)/(Max(0, Ni) + Max(0, NiO) + 1/10000000000))/100000000 + 1",
+                  "requirement": "nonzero",
+                  "margin": "1"
+                },
+                {
+                  "expression": "59891169*Min(1, Max(0, NiO)/(Max(0, Ni) + Max(0, NiO) + 1/10000000000))/50000000 + 1",
+                  "requirement": "nonzero",
+                  "margin": "1"
+                },
+                {
+                  "expression": "1032164461*Min(1, Max(0, NiO)/(Max(0, Ni) + Max(0, NiO) + 1/10000000000))/10000000 + 1",
+                  "requirement": "nonzero",
+                  "margin": "1"
+                },
+                {
+                  "expression": "Max(1/10000000000000000, 138257966804713*(pressure/temperature)**(13/20)*(5550611636307*Max(0, CO/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2))/(1562500000000*(1972954101*Max(0, CO/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2))/100000000 + 1)) + 55611487798167*Max(0, CO/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2))/(50000000000000*(34224903*Max(0, CO/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2))/100000000 + 1)))*(390300480480667*Min(1, Max(0, NiO)/(Max(0, Ni) + Max(0, NiO) + 1/10000000000))/(10000000000000*(1032164461*Min(1, Max(0, NiO)/(Max(0, Ni) + Max(0, NiO) + 1/10000000000))/10000000 + 1)) - 317700465175681*Min(1, Max(0, NiO)/(Max(0, Ni) + Max(0, NiO) + 1/10000000000))/(100000000000000*(1851100221*Min(1, Max(0, NiO)/(Max(0, Ni) + Max(0, NiO) + 1/10000000000))/100000000 + 1)) + 137471766748843*Min(1, Max(0, NiO)/(Max(0, Ni) + Max(0, NiO) + 1/10000000000))/(100000000000000*(59891169*Min(1, Max(0, NiO)/(Max(0, Ni) + Max(0, NiO) + 1/10000000000))/50000000 + 1)) - 22065504973887*Min(1, Max(0, NiO)/(Max(0, Ni) + Max(0, NiO) + 1/10000000000))/(20000000000000*(31786513*Min(1, Max(0, NiO)/(Max(0, Ni) + Max(0, NiO) + 1/10000000000))/100000000 + 1)))*exp(-541225597692267/(100000000000*temperature))/5000000000000000000000000 + 93391962971691*(pressure/temperature)**(13/20)*(5550611636307*Max(0, CO/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2))/(1562500000000*(1972954101*Max(0, CO/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2))/100000000 + 1)) + 55611487798167*Max(0, CO/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2))/(50000000000000*(34224903*Max(0, CO/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2))/100000000 + 1)))*exp(-180408532564089/(5000000000*temperature))*exp(-15*Min(1, Max(0, Ni)/(Max(0, Ni) + Max(0, NiO) + 1/10000000000)))/50000000)",
+                  "requirement": "nonzero",
+                  "margin": "1/10000000000000000"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "subject": "medrano.oxidation_o2",
+          "verdict": "PASS",
+          "summary": "Certified Lipschitz constant (concentration L\u221e): \u2248 3.4349927e+77 (exact bound in structured evidence).",
+          "evidence": {
+            "kind": "lipschitz_certificate",
+            "data": {
+              "domain": "augmented",
+              "norm": "L_infinity",
+              "constant_bound": "99974369463868398372695851091564927199566570799164246180508714005440490459300558547600658064763404095685029521648021893889493864418155597345601015038589487989685133588505203008127683701547*1910500**(1/5)*exp(-20045392507121/35075000000000)/2851570507812500000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000 + 393669011924808526931848933991094758675337148072747362033849226440171786037976314693935816941937070279987878914620173*1910500**(1/5)*(25110746297582352057790835368651570809537179089264418952798594741941867024909531390490307651893*2**(1/5)*3821**(1/10)*5**(3/10)/47762500000000000000000000000000000000000000000000000000 + 194572279336845489968378126960758981652761807834481756827983612845274320007526192364418035790712147285454545392675855443618429889584199*2**(1/5)*3821**(1/10)*5**(3/10)*exp(-20045392507121/35075000000000)/23881250000000000000000000000000000000000000000000000000000000000000000000000000)*exp(-20045392507121/35075000000000)/228125640625000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+              "constant_approximate": "3.4349927e+77",
+              "active_variables": [
+                "Ar",
+                "CH4",
+                "CO",
+                "CO2",
+                "H2",
+                "H2O",
+                "He",
+                "N2",
+                "Ni",
+                "NiO",
+                "O2"
+              ],
+              "uniform_parameters": [
+                "pressure",
+                "temperature"
+              ],
+              "guard_margins": [
+                {
+                  "expression": "temperature",
+                  "requirement": "nonzero",
+                  "margin": "11463/20"
+                },
+                {
+                  "expression": "Max(0, Ni) + Max(0, NiO) + 1/10000000000",
+                  "requirement": "nonzero",
+                  "margin": "1/10000000000"
+                },
+                {
+                  "expression": "Min(1, Max(0, Ni)/(Max(0, Ni) + Max(0, NiO) + 1/10000000000)) + 1/1000",
+                  "requirement": "nonzero",
+                  "margin": "1/1000"
+                },
+                {
+                  "expression": "Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2",
+                  "requirement": "nonzero",
+                  "margin": "50000000000000000000/6124225302966222753"
+                },
+                {
+                  "expression": "Max(0, O2/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2)) + 1/10000",
+                  "requirement": "nonzero",
+                  "margin": "1/10000"
+                },
+                {
+                  "expression": "3489289*Max(0, O2/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2))/50000000 + 1",
+                  "requirement": "nonzero",
+                  "margin": "1"
+                },
+                {
+                  "expression": "853678409*Max(0, O2/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2))/100000000 + 1",
+                  "requirement": "nonzero",
+                  "margin": "1"
+                },
+                {
+                  "expression": "1851100221*Min(1, Max(0, Ni)/(Max(0, Ni) + Max(0, NiO) + 1/10000000000))/100000000 + 1",
+                  "requirement": "nonzero",
+                  "margin": "1"
+                },
+                {
+                  "expression": "31786513*Min(1, Max(0, Ni)/(Max(0, Ni) + Max(0, NiO) + 1/10000000000))/100000000 + 1",
+                  "requirement": "nonzero",
+                  "margin": "1"
+                },
+                {
+                  "expression": "59891169*Min(1, Max(0, Ni)/(Max(0, Ni) + Max(0, NiO) + 1/10000000000))/50000000 + 1",
+                  "requirement": "nonzero",
+                  "margin": "1"
+                },
+                {
+                  "expression": "1032164461*Min(1, Max(0, Ni)/(Max(0, Ni) + Max(0, NiO) + 1/10000000000))/10000000 + 1",
+                  "requirement": "nonzero",
+                  "margin": "1"
+                },
+                {
+                  "expression": "Max(1/10000000000000000, 103456664654537*(pressure/temperature)**(9/10)*(468448915046507*Max(0, O2/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2))/(1000000000000000*(853678409*Max(0, O2/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2))/100000000 + 1)) + 101723766910183*Max(0, O2/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2))/(100000000000000*(3489289*Max(0, O2/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2))/50000000 + 1)))*(390300480480667*Min(1, Max(0, Ni)/(Max(0, Ni) + Max(0, NiO) + 1/10000000000))/(10000000000000*(1032164461*Min(1, Max(0, Ni)/(Max(0, Ni) + Max(0, NiO) + 1/10000000000))/10000000 + 1)) - 317700465175681*Min(1, Max(0, Ni)/(Max(0, Ni) + Max(0, NiO) + 1/10000000000))/(100000000000000*(1851100221*Min(1, Max(0, Ni)/(Max(0, Ni) + Max(0, NiO) + 1/10000000000))/100000000 + 1)) + 137471766748843*Min(1, Max(0, Ni)/(Max(0, Ni) + Max(0, NiO) + 1/10000000000))/(100000000000000*(59891169*Min(1, Max(0, Ni)/(Max(0, Ni) + Max(0, NiO) + 1/10000000000))/50000000 + 1)) - 22065504973887*Min(1, Max(0, Ni)/(Max(0, Ni) + Max(0, NiO) + 1/10000000000))/(20000000000000*(31786513*Min(1, Max(0, Ni)/(Max(0, Ni) + Max(0, NiO) + 1/10000000000))/100000000 + 1)))*exp(-420953242649541/(500000000000*temperature))/1000000000000000000000000 + 29728926624867*(pressure/temperature)**(9/10)*(468448915046507*Max(0, O2/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2))/(1000000000000000*(853678409*Max(0, O2/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2))/100000000 + 1)) + 101723766910183*Max(0, O2/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2))/(100000000000000*(3489289*Max(0, O2/(Ar + CH4 + CO + CO2 + H2 + H2O + He + N2 + O2))/50000000 + 1)))/200000000000000)",
+                  "requirement": "nonzero",
+                  "margin": "1/10000000000000000"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "subject": "xu_froment.wgs_fw",
+          "verdict": "SKIPPED",
+          "summary": "Requires augmented_rate_definedness=PASS for this reaction (UNKNOWN)."
+        },
+        {
+          "subject": "xu_froment.smr_fw",
+          "verdict": "SKIPPED",
+          "summary": "Requires augmented_rate_definedness=PASS for this reaction (UNKNOWN)."
+        },
+        {
+          "subject": "xu_froment.overall_fw",
+          "verdict": "SKIPPED",
+          "summary": "Requires augmented_rate_definedness=PASS for this reaction (UNKNOWN)."
+        },
+        {
+          "subject": "xu_froment.wgs_bw",
+          "verdict": "SKIPPED",
+          "summary": "Requires augmented_rate_definedness=PASS for this reaction (UNKNOWN)."
+        },
+        {
+          "subject": "xu_froment.smr_bw",
+          "verdict": "SKIPPED",
+          "summary": "Requires augmented_rate_definedness=PASS for this reaction (UNKNOWN)."
+        },
+        {
+          "subject": "xu_froment.overall_bw",
+          "verdict": "SKIPPED",
+          "summary": "Requires augmented_rate_definedness=PASS for this reaction (UNKNOWN)."
+        }
+      ]
+    },
+    "negative_side_nonrepulsion": {
+      "name": "Negative-side non-repulsion",
+      "stage": "augmented",
+      "domain": "augmented",
+      "scope": "case",
+      "role": "blocking",
+      "verdict": "SKIPPED",
+      "requires": [
+        "augmented_lipschitz"
+      ],
+      "prerequisites": {
+        "augmented_lipschitz": "SKIPPED"
+      },
+      "duration_seconds": 1.2675637760039535,
+      "findings": [
+        {
+          "subject": "Ar",
+          "verdict": "PASS",
+          "summary": "Non-repelling for Ar <= 0: proved; strictly attracting for Ar < 0: disproved. The coordinate is stuck on the negative side.",
+          "evidence": {
+            "kind": "negative_side_certificate",
+            "data": {
+              "domain": "augmented",
+              "coordinate": "Ar",
+              "non_repulsion": {
+                "verdict": "proved",
+                "source_lower_bound": "0",
+                "source_upper_bound": "0",
+                "contributions": []
+              },
+              "strict_attraction": {
+                "verdict": "disproved",
+                "stuck": true,
+                "source_lower_bound": "0",
+                "source_upper_bound": "0",
+                "contributions": [],
+                "diagnostic": "The source upper bound violates the sign requirement."
+              }
+            }
+          }
+        },
+        {
+          "subject": "CH4",
+          "verdict": "SKIPPED",
+          "summary": "Requires augmented regularity for contributing reactions: xu_froment.smr_fw, xu_froment.overall_fw, xu_froment.smr_bw, xu_froment.overall_bw.",
+          "evidence": {
+            "kind": "missing_augmented_regularity",
+            "data": {
+              "reactions": [
+                "xu_froment.smr_fw",
+                "xu_froment.overall_fw",
+                "xu_froment.smr_bw",
+                "xu_froment.overall_bw"
+              ]
+            }
+          }
+        },
+        {
+          "subject": "CO",
+          "verdict": "SKIPPED",
+          "summary": "Requires augmented regularity for contributing reactions: xu_froment.wgs_fw, xu_froment.smr_fw, xu_froment.wgs_bw, xu_froment.smr_bw.",
+          "evidence": {
+            "kind": "missing_augmented_regularity",
+            "data": {
+              "reactions": [
+                "xu_froment.wgs_fw",
+                "xu_froment.smr_fw",
+                "xu_froment.wgs_bw",
+                "xu_froment.smr_bw"
+              ]
+            }
+          }
+        },
+        {
+          "subject": "CO2",
+          "verdict": "SKIPPED",
+          "summary": "Requires augmented regularity for contributing reactions: xu_froment.wgs_fw, xu_froment.overall_fw, xu_froment.wgs_bw, xu_froment.overall_bw.",
+          "evidence": {
+            "kind": "missing_augmented_regularity",
+            "data": {
+              "reactions": [
+                "xu_froment.wgs_fw",
+                "xu_froment.overall_fw",
+                "xu_froment.wgs_bw",
+                "xu_froment.overall_bw"
+              ]
+            }
+          }
+        },
+        {
+          "subject": "H2",
+          "verdict": "SKIPPED",
+          "summary": "Requires augmented regularity for contributing reactions: xu_froment.wgs_fw, xu_froment.smr_fw, xu_froment.overall_fw, xu_froment.wgs_bw, xu_froment.smr_bw, xu_froment.overall_bw.",
+          "evidence": {
+            "kind": "missing_augmented_regularity",
+            "data": {
+              "reactions": [
+                "xu_froment.wgs_fw",
+                "xu_froment.smr_fw",
+                "xu_froment.overall_fw",
+                "xu_froment.wgs_bw",
+                "xu_froment.smr_bw",
+                "xu_froment.overall_bw"
+              ]
+            }
+          }
+        },
+        {
+          "subject": "H2O",
+          "verdict": "SKIPPED",
+          "summary": "Requires augmented regularity for contributing reactions: xu_froment.wgs_fw, xu_froment.smr_fw, xu_froment.overall_fw, xu_froment.wgs_bw, xu_froment.smr_bw, xu_froment.overall_bw.",
+          "evidence": {
+            "kind": "missing_augmented_regularity",
+            "data": {
+              "reactions": [
+                "xu_froment.wgs_fw",
+                "xu_froment.smr_fw",
+                "xu_froment.overall_fw",
+                "xu_froment.wgs_bw",
+                "xu_froment.smr_bw",
+                "xu_froment.overall_bw"
+              ]
+            }
+          }
+        },
+        {
+          "subject": "He",
+          "verdict": "PASS",
+          "summary": "Non-repelling for He <= 0: proved; strictly attracting for He < 0: disproved. The coordinate is stuck on the negative side.",
+          "evidence": {
+            "kind": "negative_side_certificate",
+            "data": {
+              "domain": "augmented",
+              "coordinate": "He",
+              "non_repulsion": {
+                "verdict": "proved",
+                "source_lower_bound": "0",
+                "source_upper_bound": "0",
+                "contributions": []
+              },
+              "strict_attraction": {
+                "verdict": "disproved",
+                "stuck": true,
+                "source_lower_bound": "0",
+                "source_upper_bound": "0",
+                "contributions": [],
+                "diagnostic": "The source upper bound violates the sign requirement."
+              }
+            }
+          }
+        },
+        {
+          "subject": "N2",
+          "verdict": "PASS",
+          "summary": "Non-repelling for N2 <= 0: proved; strictly attracting for N2 < 0: disproved. The coordinate is stuck on the negative side.",
+          "evidence": {
+            "kind": "negative_side_certificate",
+            "data": {
+              "domain": "augmented",
+              "coordinate": "N2",
+              "non_repulsion": {
+                "verdict": "proved",
+                "source_lower_bound": "0",
+                "source_upper_bound": "0",
+                "contributions": []
+              },
+              "strict_attraction": {
+                "verdict": "disproved",
+                "stuck": true,
+                "source_lower_bound": "0",
+                "source_upper_bound": "0",
+                "contributions": [],
+                "diagnostic": "The source upper bound violates the sign requirement."
+              }
+            }
+          }
+        },
+        {
+          "subject": "O2",
+          "verdict": "PASS",
+          "summary": "Non-repelling for O2 <= 0: proved; strictly attracting for O2 < 0: disproved. The coordinate is stuck on the negative side.",
+          "evidence": {
+            "kind": "negative_side_certificate",
+            "data": {
+              "domain": "augmented",
+              "coordinate": "O2",
+              "non_repulsion": {
+                "verdict": "proved",
+                "source_lower_bound": "0",
+                "source_upper_bound": "0",
+                "contributions": [
+                  {
+                    "reaction": "medrano.oxidation_o2",
+                    "stoichiometric_coefficient": "-1/2",
+                    "rate_interval": [
+                      "0",
+                      "0"
+                    ],
+                    "source_interval": [
+                      "0",
+                      "0"
+                    ]
+                  }
+                ]
+              },
+              "strict_attraction": {
+                "verdict": "disproved",
+                "stuck": true,
+                "source_lower_bound": "0",
+                "source_upper_bound": "0",
+                "contributions": [
+                  {
+                    "reaction": "medrano.oxidation_o2",
+                    "stoichiometric_coefficient": "-1/2",
+                    "rate_interval": [
+                      "0",
+                      "0"
+                    ],
+                    "source_interval": [
+                      "0",
+                      "0"
+                    ]
+                  }
+                ],
+                "diagnostic": "The source upper bound violates the sign requirement."
+              }
+            }
+          }
+        },
+        {
+          "subject": "Ni",
+          "verdict": "PASS",
+          "summary": "Non-repelling for Ni <= 0: proved; strictly attracting for Ni < 0: unknown.",
+          "evidence": {
+            "kind": "negative_side_certificate",
+            "data": {
+              "domain": "augmented",
+              "coordinate": "Ni",
+              "non_repulsion": {
+                "verdict": "proved",
+                "source_lower_bound": "0",
+                "source_upper_bound": "4356831057491639730132171706029228274120027828260881250995859602963395689116625123234105452895872476450872092345375156022391483255618306717413554486507871385439*200**(1/5)*3821**(4/5)*exp(-216490239076907/14731500000000)/8449097809534364141581508440430913223741290365950312021408734375000000000000000000000000000000000000000000000000000000000000000 + 537405918340320600749798763828096269371898201969581249194210806522604797639332831747329423510123419329427208924790426581737094798003630056846550356485782315879*2**(2/5)*3821**(7/10)*5**(1/10)*exp(-27662641659827/982100000000)/13038731187553031082687513025356347567501991305478876576248046875000000000000000000000000000000000000000000000000000",
+                "contributions": [
+                  {
+                    "reaction": "medrano.reduction_h2",
+                    "stoichiometric_coefficient": "1",
+                    "rate_interval": [
+                      "0",
+                      "4356831057491639730132171706029228274120027828260881250995859602963395689116625123234105452895872476450872092345375156022391483255618306717413554486507871385439*200**(1/5)*3821**(4/5)*exp(-216490239076907/14731500000000)/8449097809534364141581508440430913223741290365950312021408734375000000000000000000000000000000000000000000000000000000000000000"
+                    ],
+                    "source_interval": [
+                      "0",
+                      "4356831057491639730132171706029228274120027828260881250995859602963395689116625123234105452895872476450872092345375156022391483255618306717413554486507871385439*200**(1/5)*3821**(4/5)*exp(-216490239076907/14731500000000)/8449097809534364141581508440430913223741290365950312021408734375000000000000000000000000000000000000000000000000000000000000000"
+                    ]
+                  },
+                  {
+                    "reaction": "medrano.reduction_co",
+                    "stoichiometric_coefficient": "1",
+                    "rate_interval": [
+                      "0",
+                      "537405918340320600749798763828096269371898201969581249194210806522604797639332831747329423510123419329427208924790426581737094798003630056846550356485782315879*2**(2/5)*3821**(7/10)*5**(1/10)*exp(-27662641659827/982100000000)/13038731187553031082687513025356347567501991305478876576248046875000000000000000000000000000000000000000000000000000"
+                    ],
+                    "source_interval": [
+                      "0",
+                      "537405918340320600749798763828096269371898201969581249194210806522604797639332831747329423510123419329427208924790426581737094798003630056846550356485782315879*2**(2/5)*3821**(7/10)*5**(1/10)*exp(-27662641659827/982100000000)/13038731187553031082687513025356347567501991305478876576248046875000000000000000000000000000000000000000000000000000"
+                    ]
+                  },
+                  {
+                    "reaction": "medrano.oxidation_o2",
+                    "stoichiometric_coefficient": "-1",
+                    "rate_interval": [
+                      "0",
+                      "0"
+                    ],
+                    "source_interval": [
+                      "0",
+                      "0"
+                    ]
+                  }
+                ]
+              },
+              "strict_attraction": {
+                "verdict": "unknown",
+                "stuck": false,
+                "source_lower_bound": "0",
+                "source_upper_bound": "4356831057491639730132171706029228274120027828260881250995859602963395689116625123234105452895872476450872092345375156022391483255618306717413554486507871385439*200**(1/5)*3821**(4/5)*exp(-216490239076907/14731500000000)/8449097809534364141581508440430913223741290365950312021408734375000000000000000000000000000000000000000000000000000000000000000 + 537405918340320600749798763828096269371898201969581249194210806522604797639332831747329423510123419329427208924790426581737094798003630056846550356485782315879*2**(2/5)*3821**(7/10)*5**(1/10)*exp(-27662641659827/982100000000)/13038731187553031082687513025356347567501991305478876576248046875000000000000000000000000000000000000000000000000000",
+                "contributions": [
+                  {
+                    "reaction": "medrano.reduction_h2",
+                    "stoichiometric_coefficient": "1",
+                    "rate_interval": [
+                      "0",
+                      "4356831057491639730132171706029228274120027828260881250995859602963395689116625123234105452895872476450872092345375156022391483255618306717413554486507871385439*200**(1/5)*3821**(4/5)*exp(-216490239076907/14731500000000)/8449097809534364141581508440430913223741290365950312021408734375000000000000000000000000000000000000000000000000000000000000000"
+                    ],
+                    "source_interval": [
+                      "0",
+                      "4356831057491639730132171706029228274120027828260881250995859602963395689116625123234105452895872476450872092345375156022391483255618306717413554486507871385439*200**(1/5)*3821**(4/5)*exp(-216490239076907/14731500000000)/8449097809534364141581508440430913223741290365950312021408734375000000000000000000000000000000000000000000000000000000000000000"
+                    ]
+                  },
+                  {
+                    "reaction": "medrano.reduction_co",
+                    "stoichiometric_coefficient": "1",
+                    "rate_interval": [
+                      "0",
+                      "537405918340320600749798763828096269371898201969581249194210806522604797639332831747329423510123419329427208924790426581737094798003630056846550356485782315879*2**(2/5)*3821**(7/10)*5**(1/10)*exp(-27662641659827/982100000000)/13038731187553031082687513025356347567501991305478876576248046875000000000000000000000000000000000000000000000000000"
+                    ],
+                    "source_interval": [
+                      "0",
+                      "537405918340320600749798763828096269371898201969581249194210806522604797639332831747329423510123419329427208924790426581737094798003630056846550356485782315879*2**(2/5)*3821**(7/10)*5**(1/10)*exp(-27662641659827/982100000000)/13038731187553031082687513025356347567501991305478876576248046875000000000000000000000000000000000000000000000000000"
+                    ]
+                  },
+                  {
+                    "reaction": "medrano.oxidation_o2",
+                    "stoichiometric_coefficient": "-1",
+                    "rate_interval": [
+                      "0",
+                      "0"
+                    ],
+                    "source_interval": [
+                      "0",
+                      "0"
+                    ]
+                  }
+                ],
+                "diagnostic": "The unresolved source exceeds a bounded symbolic-search budget."
+              }
+            }
+          }
+        },
+        {
+          "subject": "NiO",
+          "verdict": "PASS",
+          "summary": "Non-repelling for NiO <= 0: proved; strictly attracting for NiO < 0: unknown.",
+          "evidence": {
+            "kind": "negative_side_certificate",
+            "data": {
+              "domain": "augmented",
+              "coordinate": "NiO",
+              "non_repulsion": {
+                "verdict": "proved",
+                "source_lower_bound": "0",
+                "source_upper_bound": "180004120679831527524825955912374290203214065067492495781187710496594203796011831468367900922568918404036916872389076474879471101184841411114028822727693888669739*1910500**(1/5)*exp(-20045392507121/35075000000000)/20861969900084849732300020840570156108003186088766202521996875000000000000000000000000000000000000000000000000000000000000000",
+                "contributions": [
+                  {
+                    "reaction": "medrano.reduction_h2",
+                    "stoichiometric_coefficient": "-1",
+                    "rate_interval": [
+                      "0",
+                      "0"
+                    ],
+                    "source_interval": [
+                      "0",
+                      "0"
+                    ]
+                  },
+                  {
+                    "reaction": "medrano.reduction_co",
+                    "stoichiometric_coefficient": "-1",
+                    "rate_interval": [
+                      "0",
+                      "0"
+                    ],
+                    "source_interval": [
+                      "0",
+                      "0"
+                    ]
+                  },
+                  {
+                    "reaction": "medrano.oxidation_o2",
+                    "stoichiometric_coefficient": "1",
+                    "rate_interval": [
+                      "0",
+                      "180004120679831527524825955912374290203214065067492495781187710496594203796011831468367900922568918404036916872389076474879471101184841411114028822727693888669739*1910500**(1/5)*exp(-20045392507121/35075000000000)/20861969900084849732300020840570156108003186088766202521996875000000000000000000000000000000000000000000000000000000000000000"
+                    ],
+                    "source_interval": [
+                      "0",
+                      "180004120679831527524825955912374290203214065067492495781187710496594203796011831468367900922568918404036916872389076474879471101184841411114028822727693888669739*1910500**(1/5)*exp(-20045392507121/35075000000000)/20861969900084849732300020840570156108003186088766202521996875000000000000000000000000000000000000000000000000000000000000000"
+                    ]
+                  }
+                ]
+              },
+              "strict_attraction": {
+                "verdict": "unknown",
+                "stuck": false,
+                "source_lower_bound": "0",
+                "source_upper_bound": "180004120679831527524825955912374290203214065067492495781187710496594203796011831468367900922568918404036916872389076474879471101184841411114028822727693888669739*1910500**(1/5)*exp(-20045392507121/35075000000000)/20861969900084849732300020840570156108003186088766202521996875000000000000000000000000000000000000000000000000000000000000000",
+                "contributions": [
+                  {
+                    "reaction": "medrano.reduction_h2",
+                    "stoichiometric_coefficient": "-1",
+                    "rate_interval": [
+                      "0",
+                      "0"
+                    ],
+                    "source_interval": [
+                      "0",
+                      "0"
+                    ]
+                  },
+                  {
+                    "reaction": "medrano.reduction_co",
+                    "stoichiometric_coefficient": "-1",
+                    "rate_interval": [
+                      "0",
+                      "0"
+                    ],
+                    "source_interval": [
+                      "0",
+                      "0"
+                    ]
+                  },
+                  {
+                    "reaction": "medrano.oxidation_o2",
+                    "stoichiometric_coefficient": "1",
+                    "rate_interval": [
+                      "0",
+                      "180004120679831527524825955912374290203214065067492495781187710496594203796011831468367900922568918404036916872389076474879471101184841411114028822727693888669739*1910500**(1/5)*exp(-20045392507121/35075000000000)/20861969900084849732300020840570156108003186088766202521996875000000000000000000000000000000000000000000000000000000000000000"
+                    ],
+                    "source_interval": [
+                      "0",
+                      "180004120679831527524825955912374290203214065067492495781187710496594203796011831468367900922568918404036916872389076474879471101184841411114028822727693888669739*1910500**(1/5)*exp(-20045392507121/35075000000000)/20861969900084849732300020840570156108003186088766202521996875000000000000000000000000000000000000000000000000000000000000000"
+                    ]
+                  }
+                ],
+                "diagnostic": "The unresolved source exceeds a bounded symbolic-search budget."
+              }
+            }
+          }
+        },
+        {
+          "subject": "CaAl2O4",
+          "verdict": "PASS",
+          "summary": "Non-repelling for CaAl2O4 <= 0: proved; strictly attracting for CaAl2O4 < 0: disproved. The coordinate is stuck on the negative side.",
+          "evidence": {
+            "kind": "negative_side_certificate",
+            "data": {
+              "domain": "augmented",
+              "coordinate": "CaAl2O4",
+              "non_repulsion": {
+                "verdict": "proved",
+                "source_lower_bound": "0",
+                "source_upper_bound": "0",
+                "contributions": []
+              },
+              "strict_attraction": {
+                "verdict": "disproved",
+                "stuck": true,
+                "source_lower_bound": "0",
+                "source_upper_bound": "0",
+                "contributions": [],
+                "diagnostic": "The source upper bound violates the sign requirement."
+              }
+            }
+          }
+        },
+        {
+          "subject": "reforming_case",
+          "verdict": "PASS",
+          "summary": "Non-repulsion proved for 7/12 excursion coordinates; strict attraction: 0 proved, 5 disproved, 2 unknown (5 stuck).",
+          "evidence": {
+            "kind": "negative_side_summary",
+            "data": {
+              "proved": 0,
+              "disproved": 5,
+              "unknown": 2,
+              "stuck": 5
+            }
+          }
+        }
+      ]
+    },
+    "conserved_quantities": {
+      "name": "Conserved quantities",
+      "stage": "analysis",
+      "domain": null,
+      "scope": "case",
+      "role": "analysis",
+      "verdict": "PASS",
+      "requires": [
+        "atom_conservation",
+        "mass_conservation"
+      ],
+      "prerequisites": {
+        "atom_conservation": "PASS",
+        "mass_conservation": "PASS"
+      },
+      "duration_seconds": 0.0019999200012534857,
+      "findings": [
+        {
+          "subject": "reforming_case",
+          "verdict": "PASS",
+          "summary": "Stoichiometric rank 4; 8 independent linear conserved quantities in 5 components; 4 unchanged species.",
+          "evidence": {
+            "kind": "conservation_summary",
+            "data": {
+              "rank": 4,
+              "shape": [
+                12,
+                9
+              ],
+              "connected_components": [
+                [
+                  "Ar"
+                ],
+                [
+                  "CH4",
+                  "CO",
+                  "CO2",
+                  "H2",
+                  "H2O",
+                  "O2",
+                  "Ni",
+                  "NiO"
+                ],
+                [
+                  "He"
+                ],
+                [
+                  "N2"
+                ],
+                [
+                  "CaAl2O4"
+                ]
+              ],
+              "unchanged_species": [
+                "Ar",
+                "He",
+                "N2",
+                "CaAl2O4"
+              ],
+              "basis_size": 8
+            }
+          }
+        },
+        {
+          "subject": "Q1",
+          "verdict": "PASS",
+          "summary": "Ar = constant.",
+          "evidence": {
+            "kind": "conserved_quantity",
+            "data": {
+              "coefficients": {
+                "Ar": "1"
+              },
+              "expression": "Ar"
+            }
+          }
+        },
+        {
+          "subject": "Q2",
+          "verdict": "PASS",
+          "summary": "CH4 + CO + CO2 = constant.",
+          "evidence": {
+            "kind": "conserved_quantity",
+            "data": {
+              "coefficients": {
+                "CH4": "1",
+                "CO": "1",
+                "CO2": "1"
+              },
+              "expression": "CH4 + CO + CO2"
+            }
+          }
+        },
+        {
+          "subject": "Q3",
+          "verdict": "PASS",
+          "summary": "2*CH4 + H2 + H2O = constant.",
+          "evidence": {
+            "kind": "conserved_quantity",
+            "data": {
+              "coefficients": {
+                "CH4": "2",
+                "H2": "1",
+                "H2O": "1"
+              },
+              "expression": "2*CH4 + H2 + H2O"
+            }
+          }
+        },
+        {
+          "subject": "Q4",
+          "verdict": "PASS",
+          "summary": "He = constant.",
+          "evidence": {
+            "kind": "conserved_quantity",
+            "data": {
+              "coefficients": {
+                "He": "1"
+              },
+              "expression": "He"
+            }
+          }
+        },
+        {
+          "subject": "Q5",
+          "verdict": "PASS",
+          "summary": "N2 = constant.",
+          "evidence": {
+            "kind": "conserved_quantity",
+            "data": {
+              "coefficients": {
+                "N2": "1"
+              },
+              "expression": "N2"
+            }
+          }
+        },
+        {
+          "subject": "Q6",
+          "verdict": "PASS",
+          "summary": "4*CH4 + CO + H2 - 2*O2 + Ni = constant.",
+          "evidence": {
+            "kind": "conserved_quantity",
+            "data": {
+              "coefficients": {
+                "CH4": "4",
+                "CO": "1",
+                "H2": "1",
+                "O2": "-2",
+                "Ni": "1"
+              },
+              "expression": "4*CH4 + CO + H2 + Ni - 2*O2"
+            }
+          }
+        },
+        {
+          "subject": "Q7",
+          "verdict": "PASS",
+          "summary": "4*CH4 + CO + H2 - 2*O2 - NiO = constant.",
+          "evidence": {
+            "kind": "conserved_quantity",
+            "data": {
+              "coefficients": {
+                "CH4": "4",
+                "CO": "1",
+                "H2": "1",
+                "O2": "-2",
+                "NiO": "-1"
+              },
+              "expression": "4*CH4 + CO + H2 - NiO - 2*O2"
+            }
+          }
+        },
+        {
+          "subject": "Q8",
+          "verdict": "PASS",
+          "summary": "CaAl2O4 = constant.",
+          "evidence": {
+            "kind": "conserved_quantity",
+            "data": {
+              "coefficients": {
+                "CaAl2O4": "1"
+              },
+              "expression": "CaAl2O4"
+            }
+          }
+        }
+      ]
+    },
+    "structural_faces": {
+      "name": "Structural faces",
+      "stage": "analysis",
+      "domain": null,
+      "scope": "case",
+      "role": "analysis",
+      "verdict": "PASS",
+      "requires": [
+        "atom_conservation",
+        "mass_conservation"
+      ],
+      "prerequisites": {
+        "atom_conservation": "PASS",
+        "mass_conservation": "PASS"
+      },
+      "duration_seconds": 0.0014553180008078925,
+      "findings": [
+        {
+          "subject": "reforming_case",
+          "verdict": "PASS",
+          "summary": "Minimal structural dead faces: {CO, H2, Ni}, {CH4, CO, H2, O2}, {CO, H2, H2O, O2}, {H2, H2O, O2, NiO}, {CH4, CO, CO2, O2, NiO}, {CO, CO2, H2O, O2, NiO}; invariant faces: {Ar}, {He}, {N2}, {O2}, {CaAl2O4}, {H2, H2O}, ... (9 total).",
+          "evidence": {
+            "kind": "structural_faces",
+            "data": {
+              "dead_faces": [
+                [
+                  "CO",
+                  "H2",
+                  "Ni"
+                ],
+                [
+                  "CH4",
+                  "CO",
+                  "H2",
+                  "O2"
+                ],
+                [
+                  "CO",
+                  "H2",
+                  "H2O",
+                  "O2"
+                ],
+                [
+                  "H2",
+                  "H2O",
+                  "O2",
+                  "NiO"
+                ],
+                [
+                  "CH4",
+                  "CO",
+                  "CO2",
+                  "O2",
+                  "NiO"
+                ],
+                [
+                  "CO",
+                  "CO2",
+                  "H2O",
+                  "O2",
+                  "NiO"
+                ]
+              ],
+              "invariant_faces": [
+                [
+                  "Ar"
+                ],
+                [
+                  "He"
+                ],
+                [
+                  "N2"
+                ],
+                [
+                  "O2"
+                ],
+                [
+                  "CaAl2O4"
+                ],
+                [
+                  "H2",
+                  "H2O"
+                ],
+                [
+                  "CH4",
+                  "CO",
+                  "CO2"
+                ],
+                [
+                  "CH4",
+                  "CO",
+                  "H2"
+                ],
+                [
+                  "CO",
+                  "H2",
+                  "Ni"
+                ]
+              ],
+              "required_supports": {
+                "medrano.reduction_h2": [
+                  "H2",
+                  "NiO"
+                ],
+                "medrano.reduction_co": [
+                  "CO",
+                  "NiO"
+                ],
+                "medrano.oxidation_o2": [
+                  "O2",
+                  "Ni"
+                ],
+                "xu_froment.wgs_fw": [
+                  "CO",
+                  "H2O",
+                  "Ni"
+                ],
+                "xu_froment.smr_fw": [
+                  "CH4",
+                  "H2O",
+                  "Ni"
+                ],
+                "xu_froment.overall_fw": [
+                  "CH4",
+                  "H2O",
+                  "Ni"
+                ],
+                "xu_froment.wgs_bw": [
+                  "CO2",
+                  "H2",
+                  "Ni"
+                ],
+                "xu_froment.smr_bw": [
+                  "CO",
+                  "H2",
+                  "Ni"
+                ],
+                "xu_froment.overall_bw": [
+                  "CO2",
+                  "H2",
+                  "Ni"
+                ]
+              },
+              "search_truncated": false,
+              "face_limit": 32
+            }
+          }
+        }
+      ]
+    }
+  }
+}

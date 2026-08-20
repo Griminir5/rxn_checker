@@ -46,14 +46,14 @@ uv run rxn-checker example_case/case.yaml
 uv run rxn-checker example_case --profile robust
 uv run rxn-checker example_case --checks physical_lipschitz
 uv run rxn-checker example_case --skip steady_state_equations
-uv run rxn-checker example_case --format json --output report.json
+uv run rxn-checker example_case --format json
 uv run rxn-checker --list-checks
 ```
 
-The command always prints its report. It writes a file only when `--output` or
-`report.output` is configured. Exit codes are `0` when every selected blocking
-check passes, `1` for a failed or inconclusive result, and `2` for invalid input
-or an internal error.
+The command prints its report and writes it beside `case.yaml` as `report.txt`
+or `report.json`. Exit codes are `0` when every selected blocking check passes,
+`1` for a failed or inconclusive result, and `2` for invalid input or an
+internal error.
 
 Cases select the `physical` profile by default. Available profiles are `basic`,
 `physical`, `robust`, `analysis`, and `all`. `checks.include` adds a check and

@@ -1499,11 +1499,10 @@ rxn-checker CASE --profile robust
 rxn-checker CASE --checks physical_lipschitz,augmented_lipschitz
 rxn-checker CASE --skip steady_state_equations
 rxn-checker CASE --format json
-rxn-checker CASE --output report.json
 rxn-checker --list-checks
 ```
 
-Do not write a report file unless `--output` or a configured output path is supplied.
+Write every report beside `case.yaml` as `report.txt` or `report.json`.
 
 Useful exit codes:
 

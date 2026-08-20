@@ -35,7 +35,6 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--checks", type=_csv, help="comma-separated checks only")
     parser.add_argument("--skip", type=_csv, default=(), help="checks to exclude")
     parser.add_argument("--format", choices=("text", "json"), dest="format")
-    parser.add_argument("--output", type=Path)
     parser.add_argument("--list-checks", action="store_true")
     parser.add_argument("--debug", action="store_true")
     return parser
@@ -113,12 +112,9 @@ def main(argv: Sequence[str] | None = None) -> int:
             verbosity=str(case.report_config.get("verbosity", "failures")),
         )
 
-    configured_output = case.report_config.get("output")
-    output = arguments.output or (
-        case_path.parent / str(configured_output) if configured_output else None
-    )
-    if output is not None:
-        output.write_text(rendered, encoding="utf-8")
+    extension = "json" if output_format == "json" else "txt"
+    output = case_path.parent / f"report.{extension}"
+    output.write_text(rendered, encoding="utf-8")
     sys.stdout.write(rendered)
     if run.overall is Verdict.ERROR:
         return 2

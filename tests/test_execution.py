@@ -201,19 +201,28 @@ def test_case_yaml_rejects_unknown_check_selection(tmp_path) -> None:
         load_case(path)
 
 
-def test_cli_checks_selects_only_requested_check_and_prerequisites(capsys) -> None:
+def test_cli_checks_selects_only_requested_check_and_prerequisites(
+    capsys, tmp_path
+) -> None:
+    case_path = tmp_path / "case.yaml"
+    case_path.write_text(
+        (ROOT / "example_case" / "case.yaml").read_text(encoding="utf-8"),
+        encoding="utf-8",
+    )
     exit_code = main(
         (
-            str(ROOT / "example_case"),
+            str(case_path),
             "--checks",
             "physical_lipschitz",
             "--format",
             "json",
         )
     )
-    payload = json.loads(capsys.readouterr().out)
+    output = capsys.readouterr().out
+    payload = json.loads(output)
 
     assert exit_code == 1
+    assert (tmp_path / "report.json").read_text(encoding="utf-8") == output
     assert payload["selected_checks"] == [
         "atom_conservation",
         "mass_conservation",

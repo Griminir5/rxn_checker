@@ -291,19 +291,16 @@ def _load_checks(value: object | None) -> dict[str, object]:
 
 def _load_report(value: object | None) -> dict[str, object]:
     if value is None:
-        return {"verbosity": "failures", "format": "text", "output": None}
+        return {"verbosity": "failures", "format": "text"}
     config = _mapping(value, "Case 'report'")
-    _reject_unknown(config, {"verbosity", "format", "output"}, "report")
+    _reject_unknown(config, {"verbosity", "format"}, "report")
     verbosity = config.get("verbosity", "failures")
     if verbosity not in {"summary", "failures", "full"}:
         raise ValueError("Report verbosity must be 'summary', 'failures', or 'full'.")
     output_format = config.get("format", "text")
     if output_format not in {"text", "json"}:
         raise ValueError("Report format must be 'text' or 'json'.")
-    output = config.get("output")
-    if output is not None and (not isinstance(output, str) or not output):
-        raise ValueError("Report output must be a non-empty path string.")
-    return {"verbosity": verbosity, "format": output_format, "output": output}
+    return {"verbosity": verbosity, "format": output_format}
 
 
 def _selector(selector: str) -> tuple[str, str | None]:
