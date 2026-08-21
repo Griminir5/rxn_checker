@@ -6,29 +6,16 @@ faces use only reactant, catalyst, and product supports.
 """
 
 from collections.abc import Callable, Mapping, Sequence
-from math import gcd, lcm
 
 import sympy as sp
 
 from ..context import AnalysisContext
+from ..network import primitive_integer_vector
 from ..results import CheckResult, Evidence, Finding, Verdict
 
 
 _FACE_LIMIT = 32
 _SEARCH_LIMIT = 8192
-
-
-def _primitive_vector(vector: sp.MatrixBase) -> tuple[sp.Integer, ...]:
-    """Scale one rational null vector to coprime integer coefficients."""
-
-    values = tuple(sp.Rational(value) for value in vector)
-    scale = lcm(*(int(sp.denom(value)) for value in values))
-    integers = [int(value * scale) for value in values]
-    divisor = gcd(*(abs(value) for value in integers if value))
-    integers = [value // divisor for value in integers]
-    if next(value for value in integers if value) < 0:
-        integers = [-value for value in integers]
-    return tuple(sp.Integer(value) for value in integers)
 
 
 def _linear_text(terms: Sequence[tuple[sp.Expr, str]]) -> str:
@@ -87,7 +74,9 @@ def run_conserved_quantities(
 
     matrix = context.stoichiometry
     species_ids = context.case.symbols.species_ids
-    basis = tuple(_primitive_vector(vector) for vector in matrix.T.nullspace())
+    basis = tuple(
+        primitive_integer_vector(vector) for vector in matrix.T.nullspace()
+    )
     rank = matrix.rows - len(basis)
     unchanged = tuple(
         species_ids[row]

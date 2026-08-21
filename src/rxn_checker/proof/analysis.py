@@ -772,6 +772,26 @@ class ExpressionAnalyzer:
             )
         return self._lipschitz_results[key]
 
+    def gradient_envelope(
+        self,
+        expression: object,
+        domain: ConcentrationDomain,
+        active_variables: Iterable[sp.Symbol] | None = None,
+    ) -> "LipschitzResult":
+        """Bound each requested partial derivative in one compositional walk."""
+
+        active = domain.all_intervals if active_variables is None else active_variables
+        key = self._key(expression, domain, active)
+        if not set(key[2]) <= set(domain.all_intervals):
+            raise ValueError("Gradient variables must be coordinates of the domain.")
+        if key not in self._lipschitz_results:
+            from .lipschitz import compute_lipschitz
+
+            self._lipschitz_results[key] = compute_lipschitz(
+                self, key[0], domain, key[2]
+            )
+        return self._lipschitz_results[key]
+
 
 __all__ = (
     "BoundResult",

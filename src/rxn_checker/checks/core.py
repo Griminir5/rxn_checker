@@ -12,6 +12,8 @@ from .analyses import run_conserved_quantities, run_steady_state_equations, run_
 from .atom_conservation import run as atom_conservation
 from .definedness import run_augmented as augmented_definedness
 from .definedness import run_physical as physical_definedness
+from .differential_profile import run as run_differential_solver_profile
+from .evaluation_profile import run as run_evaluation_profile
 from .invariance import run_boundary_inward, run_forward_invariance
 from .lipschitz import run_augmented as augmented_lipschitz
 from .lipschitz import run_physical as physical_lipschitz
@@ -90,14 +92,22 @@ CHECK_REGISTRY = (
           ("atom_conservation", "mass_conservation"), run_structural_faces, blocking=False),
     _spec("steady_state_equations", "Steady-state equations", ANALYSIS, C,
           ("atom_conservation", "mass_conservation"), run_steady_state_equations, blocking=False),
+    _spec("evaluation_profile", "Evaluation profile", ANALYSIS, C, (),
+          run_evaluation_profile, blocking=False),
+    _spec("differential_solver_profile", "Differential solver profile", ANALYSIS,
+          C, (), run_differential_solver_profile, blocking=False),
 )
 PROFILES = frozenset(("basic", "physical", "robust", "analysis", "all"))
 _TARGETS = {
     "basic": ("atom_conservation", "mass_conservation"),
     "physical": ("forward_invariance",),
     "robust": ("forward_invariance", "negative_side_nonrepulsion"),
-    "analysis": ("forward_invariance", "conserved_quantities", "structural_faces", "steady_state_equations"),
-    "all": ("forward_invariance", "negative_side_nonrepulsion", "conserved_quantities", "structural_faces", "steady_state_equations"),
+    "analysis": ("forward_invariance", "conserved_quantities", "structural_faces",
+                 "steady_state_equations", "evaluation_profile",
+                 "differential_solver_profile"),
+    "all": ("forward_invariance", "negative_side_nonrepulsion", "conserved_quantities",
+            "structural_faces", "steady_state_equations", "evaluation_profile",
+            "differential_solver_profile"),
 }
 
 

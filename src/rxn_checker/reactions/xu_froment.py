@@ -62,18 +62,6 @@ def _equilibrium(kind, temperature):
                       for power, coefficient in enumerate(_EQUILIBRIUM[kind])))
 
 
-def _eq_const_smr(temperature):
-    return _equilibrium("smr", temperature)
-
-
-def _eq_const_wgs(temperature):
-    return _equilibrium("wgs", temperature)
-
-
-def _eq_const_overall(temperature):
-    return _equilibrium("overall", temperature)
-
-
 def xu_froment_terms(symbols: CaseSymbols) -> XuFromentTerms:
     temperature, pressure = symbols.temperature, symbols.pressure
     total = _total_gas_concentration(symbols)

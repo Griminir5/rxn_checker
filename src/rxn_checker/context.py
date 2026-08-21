@@ -8,7 +8,7 @@ import sympy as sp
 from .case import Case
 from .domain import ConcentrationDomain, DomainKind
 from .model import Species
-from .network import ReactionNetwork, build_network
+from .network import FluxNetwork, ReactionNetwork, build_network, source_equivalent_fluxes
 from .proof import ExpressionAnalyzer
 
 
@@ -42,6 +42,16 @@ class AnalysisContext:
     @cached_property
     def expression_analyzer(self) -> ExpressionAnalyzer:
         return ExpressionAnalyzer()
+
+    @cached_property
+    def source_equivalent_network(self) -> FluxNetwork:
+        return source_equivalent_fluxes(self.case.reactions, self.stoichiometry)
+
+    @cached_property
+    def stoichiometric_rank_factorization(
+        self,
+    ) -> tuple[sp.ImmutableMatrix, sp.ImmutableMatrix]:
+        return self.source_equivalent_network.rank_factorization
 
     @property
     def stoichiometry(self) -> sp.ImmutableMatrix:

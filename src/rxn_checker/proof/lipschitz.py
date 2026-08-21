@@ -21,6 +21,18 @@ class GuardMargin:
 
 
 @dataclass(frozen=True)
+class GradientEnvelope:
+    """Per-variable absolute derivative bounds from one compositional walk."""
+
+    components: tuple[tuple[sp.Symbol, sp.Expr], ...]
+    guards: tuple[GuardMargin, ...] = ()
+
+    @property
+    def linfinity_lipschitz(self) -> sp.Expr:
+        return sum((bound for _, bound in self.components), sp.S.Zero)
+
+
+@dataclass(frozen=True)
 class LipschitzCertificate:
     domain: DomainKind
     norm: str
@@ -28,6 +40,7 @@ class LipschitzCertificate:
     active_variables: tuple[sp.Symbol, ...]
     uniform_parameters: tuple[sp.Symbol, ...]
     guard_margins: tuple[GuardMargin, ...]
+    gradient_envelope: GradientEnvelope | None = None
 
 
 @dataclass(frozen=True)
@@ -53,6 +66,10 @@ class NetworkLipschitzCertificate:
 class _LipBound:
     constant: sp.Expr
     guards: tuple[GuardMargin, ...] = ()
+    components: tuple[tuple[sp.Symbol, sp.Expr], ...] = ()
+
+    def component(self, variable: sp.Symbol) -> sp.Expr:
+        return dict(self.components).get(variable, sp.S.Zero)
 
 
 def _ordered(symbols) -> tuple[sp.Symbol, ...]:
@@ -69,6 +86,18 @@ def compute_lipschitz(analyzer: ExpressionAnalyzer, expression: sp.Expr,
                       active: tuple[sp.Symbol, ...]) -> LipschitzResult:
     """Compute small recursive bounds and wrap metadata once at the root."""
     cache: dict[sp.Expr, _LipBound | LipschitzResult] = {}
+
+    def scaled_components(child, factor):
+        return tuple((variable, factor * bound) for variable, bound in child.components)
+
+    def combined_components(children, combine=sum):
+        variables = _ordered(
+            variable for child in children for variable, _ in child.components
+        )
+        return tuple(
+            (variable, combine(child.component(variable) for child in children))
+            for variable in variables
+        )
 
     def absolute(value):
         bounds = analyzer.bounds(value, domain)
@@ -108,7 +137,7 @@ def compute_lipschitz(analyzer: ExpressionAnalyzer, expression: sp.Expr,
         if value.is_real is not True:
             return _failure(ProofVerdict.UNKNOWN, value, reason=
                             "The unfamiliar function is not known to be real-valued.")
-        constants = []
+        components = []
         for variable in _ordered(value.free_symbols & set(active)):
             derivative = sp.diff(value, variable)
             if derivative.has(sp.Derivative):
@@ -122,8 +151,11 @@ def compute_lipschitz(analyzer: ExpressionAnalyzer, expression: sp.Expr,
             bound = absolute(derivative)
             if isinstance(bound, LipschitzResult):
                 return bound
-            constants.append(bound)
-        return _LipBound(sum(constants, sp.S.Zero))
+            components.append((variable, bound))
+        return _LipBound(
+            sum((bound for _, bound in components), sp.S.Zero),
+            components=tuple(components),
+        )
 
     def visit(value):
         if value in cache:
@@ -135,7 +167,11 @@ def compute_lipschitz(analyzer: ExpressionAnalyzer, expression: sp.Expr,
             result = _failure(defined.verdict, defined.decisive_subexpression,
                               defined.witness, defined.reason)
         elif value.is_Atom:
-            result = _LipBound(sp.S.One if value in active else sp.S.Zero)
+            active_atom = value in active
+            result = _LipBound(
+                sp.S.One if active_atom else sp.S.Zero,
+                components=((value, sp.S.One),) if active_atom else (),
+            )
         elif isinstance(value, sp.Pow):
             base, exponent = value.args
             child = visit(base)
@@ -154,11 +190,17 @@ def compute_lipschitz(analyzer: ExpressionAnalyzer, expression: sp.Expr,
                 if isinstance(guarded, LipschitzResult):
                     result = guarded
                 elif child.constant == 0 or exponent == 0:
-                    result = _LipBound(sp.S.Zero, child.guards + ((guarded,) if guarded else ()))
+                    result = _LipBound(
+                        sp.S.Zero,
+                        child.guards + ((guarded,) if guarded else ()),
+                    )
                 else:
                     factor = absolute(exponent * base ** (exponent - 1))
                     result = factor if isinstance(factor, LipschitzResult) else _LipBound(
-                        factor * child.constant, child.guards + ((guarded,) if guarded else ()))
+                        factor * child.constant,
+                        child.guards + ((guarded,) if guarded else ()),
+                        scaled_components(child, factor),
+                    )
         else:
             children = tuple(visit(argument) for argument in value.args)
             failed = next((item for item in children if isinstance(item, LipschitzResult)), None)
@@ -168,12 +210,15 @@ def compute_lipschitz(analyzer: ExpressionAnalyzer, expression: sp.Expr,
                 guards = merged(children)
                 constants = tuple(item.constant for item in children)
                 if isinstance(value, sp.Add):
-                    result = _LipBound(sum(constants), guards)
+                    result = _LipBound(
+                        sum(constants), guards, combined_components(children)
+                    )
                 elif isinstance(value, sp.Mul):
                     if not any(constants):
                         result = _LipBound(sp.S.Zero, guards)
                     else:
                         terms = []
+                        component_terms = {variable: [] for variable in active}
                         for i, constant in enumerate(constants):
                             if constant == 0:
                                 continue
@@ -184,27 +229,50 @@ def compute_lipschitz(analyzer: ExpressionAnalyzer, expression: sp.Expr,
                             if failed:
                                 break
                             terms.append(constant * sp.prod(bounds))
-                        result = failed or _LipBound(sum(terms), guards)
+                            factor = sp.prod(bounds)
+                            for variable, bound in children[i].components:
+                                component_terms[variable].append(bound * factor)
+                        result = failed or _LipBound(
+                            sum(terms),
+                            guards,
+                            tuple(
+                                (variable, sum(values))
+                                for variable, values in component_terms.items()
+                                if values
+                            ),
+                        )
                 elif value.func is sp.Abs:
-                    result = _LipBound(constants[0], guards)
+                    result = _LipBound(constants[0], guards, children[0].components)
                 elif value.func in {sp.Min, sp.Max}:
-                    result = _LipBound(sp.Max(*constants), guards)
+                    result = _LipBound(
+                        sp.Max(*constants),
+                        guards,
+                        combined_components(children, lambda values: sp.Max(*tuple(values))),
+                    )
                 elif value.func in {sp.sin, sp.cos, sp.tanh, sp.atan}:
-                    result = _LipBound(constants[0], guards)
+                    result = _LipBound(constants[0], guards, children[0].components)
                 elif value.func is sp.exp:
                     bounds = analyzer.bounds(value.args[0], domain)
-                    result = (_LipBound(sp.exp(bounds.upper) * constants[0], guards)
+                    factor = sp.exp(bounds.upper) if bounds.known else None
+                    result = (_LipBound(
+                                  factor * constants[0], guards,
+                                  scaled_components(children[0], factor))
                               if bounds.known else _failure(ProofVerdict.UNKNOWN,
                               bounds.decisive_subexpression or value.args[0], reason=bounds.reason))
                 elif value.func is sp.log:
                     guarded = guard(value.args[0], SignRequirement.POSITIVE)
                     result = guarded if isinstance(guarded, LipschitzResult) else _LipBound(
-                        constants[0] / guarded.margin, guards + (guarded,))
+                        constants[0] / guarded.margin,
+                        guards + (guarded,),
+                        scaled_components(children[0], 1 / guarded.margin),
+                    )
                 elif value.func in {sp.sinh, sp.cosh}:
                     derivative = (sp.cosh if value.func is sp.sinh else sp.sinh)(value.args[0])
                     bound = absolute(derivative)
                     result = bound if isinstance(bound, LipschitzResult) else _LipBound(
-                        bound * constants[0], guards)
+                        bound * constants[0], guards,
+                        scaled_components(children[0], bound),
+                    )
                 else:
                     result = derivative_fallback(value)
         cache[value] = result
@@ -216,8 +284,11 @@ def compute_lipschitz(analyzer: ExpressionAnalyzer, expression: sp.Expr,
     used = expression.free_symbols
     certificate = LipschitzCertificate(
         domain.kind, "L_infinity", sp.sympify(bound.constant),
-        _ordered(used & set(active)), _ordered(used & set(domain.parameter_intervals)),
-        bound.guards)
+        _ordered(used & set(active)),
+        _ordered(used & (set(domain.parameter_intervals) - set(active))),
+        bound.guards,
+        GradientEnvelope(bound.components, bound.guards),
+    )
     return LipschitzResult(ProofVerdict.PASS, certificate)
 
 
@@ -236,5 +307,5 @@ def derive_network_lipschitz(domain: ConcentrationDomain, species_ids: Sequence[
         sp.Max(*(bound for _, bound in components)), components, active, parameters)
 
 
-__all__ = ("GuardMargin", "LipschitzCertificate", "LipschitzResult",
+__all__ = ("GradientEnvelope", "GuardMargin", "LipschitzCertificate", "LipschitzResult",
            "NetworkLipschitzCertificate", "derive_network_lipschitz")
