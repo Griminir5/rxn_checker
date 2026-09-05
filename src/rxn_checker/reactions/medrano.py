@@ -6,7 +6,7 @@ from dataclasses import dataclass
 import sympy as sp
 
 from ..model import CaseSymbols, Reaction
-from ..species.registry import PROPERTY_REGISTRY
+from ..species import PROPERTY_REGISTRY
 
 GAS_CONSTANT_J_PER_MOL_K = 8.31446261815324
 DENOMINATOR_FLOOR, POS_EPS, F_GATE, Y_GATE = 1.0e-16, 1.0e-10, 1.0e-3, 1.0e-4
@@ -35,24 +35,14 @@ class ComponentParameters:
 
 
 PARAMETERS = {
-    "H2": ComponentParameters(89960.0, 3.13e-8, 9.0e-4, 30000.0, 0.60,
-                              1.7e-3, 150000.0, 5.0, 0.0, 1.0),
-    "CO": ComponentParameters(89960.0, 3.13e-8, 3.5e-3, 45000.0, 0.65,
-                              7.4e6, 300000.0, 15.0, 0.0, 1.0),
-    "O2": ComponentParameters(151200.0, 5.8e-7, 1.2e-3, 7000.0, 0.90,
-                              1.0, 0.0, 0.0, 0.0, 2.0),
+    "H2": ComponentParameters(
+        89960.0, 3.13e-8, 9.0e-4, 30000.0, 0.60, 1.7e-3, 150000.0, 5.0, 0.0, 1.0
+    ),
+    "CO": ComponentParameters(
+        89960.0, 3.13e-8, 3.5e-3, 45000.0, 0.65, 7.4e6, 300000.0, 15.0, 0.0, 1.0
+    ),
+    "O2": ComponentParameters(151200.0, 5.8e-7, 1.2e-3, 7000.0, 0.90, 1.0, 0.0, 0.0, 0.0, 2.0),
 }
-# Compatibility views for callers that use the published constants.
-CS_MOL_PER_M3 = {key: value.cs for key, value in PARAMETERS.items()}
-R0_M = {key: value.r0 for key, value in PARAMETERS.items()}
-K0_M_PER_S = {key: value.k0 for key, value in PARAMETERS.items()}
-ACTIVATION_ENERGY_J_PER_MOL = {key: value.activation for key, value in PARAMETERS.items()}
-REACTION_ORDER = {key: value.order for key, value in PARAMETERS.items()}
-D0_M2_PER_S = {key: value.d0 for key, value in PARAMETERS.items()}
-ED_J_PER_MOL = {key: value.diffusion_energy for key, value in PARAMETERS.items()}
-KX = {key: value.kx for key, value in PARAMETERS.items()}
-KXE_J_PER_MOL = {key: value.kxe for key, value in PARAMETERS.items()}
-B = {key: value.b for key, value in PARAMETERS.items()}
 
 
 @dataclass(frozen=True)
@@ -67,28 +57,25 @@ class MedranoFamilyTerms:
     frac_oxidised: sp.Expr
 
 
-@dataclass(frozen=True)
-class MedranoTerms:
-    temperature_k: sp.Expr
-    total_gas_conc_molm3: sp.Expr
-    gas_mole_fraction: sp.Expr
-    ni_conc_molm3: sp.Expr
-    nio_conc_molm3: sp.Expr
-    total_solid_inventory_molm3: sp.Expr
-    frac_reduced: sp.Expr
-    frac_oxidised: sp.Expr
+def _available(value):
+    return sp.Max(value, 0)
 
 
-def _available(value): return sp.Max(value, 0)
-def _bounded(value): return sp.Min(1, _available(value))
+def _bounded(value):
+    return sp.Min(1, _available(value))
+
+
 def _gate(value, width):
     value = _available(value)
     return value / (value + width)
 
 
 def _total_gas(symbols):
-    gases = tuple(value for species_id, value in symbols.concentrations.items()
-                   if PROPERTY_REGISTRY.get_record(species_id).phase == "gas")
+    gases = tuple(
+        value
+        for species_id, value in symbols.concentrations.items()
+        if PROPERTY_REGISTRY.get_record(species_id).phase == "gas"
+    )
     if not gases:
         raise ValueError("Medrano kinetics require at least one gas species.")
     return sp.Add(*gases)
@@ -97,17 +84,16 @@ def _total_gas(symbols):
 def _family_terms(symbols):
     ni, nio = _available(symbols.concentration("Ni")), _available(symbols.concentration("NiO"))
     total = ni + nio
-    return MedranoFamilyTerms(symbols.temperature,
+    return MedranoFamilyTerms(
+        symbols.temperature,
         symbols.pressure / (GAS_CONSTANT_J_PER_MOL_K * symbols.temperature),
-        _total_gas(symbols), ni, nio, total, ni / (total + POS_EPS), nio / (total + POS_EPS))
-
-
-def medrano_terms(symbols: CaseSymbols, gas_species_id: str, *, shared=None):
-    shared = shared or _family_terms(symbols)
-    return MedranoTerms(shared.temperature_k, shared.total_gas_conc_molm3,
-        symbols.concentration(gas_species_id) / shared.summed_gas_conc_molm3,
-        shared.ni_conc_molm3, shared.nio_conc_molm3,
-        shared.total_solid_inventory_molm3, shared.frac_reduced, shared.frac_oxidised)
+        _total_gas(symbols),
+        ni,
+        nio,
+        total,
+        ni / (total + POS_EPS),
+        nio / (total + POS_EPS),
+    )
 
 
 def _rational_power(power, value):
@@ -118,49 +104,58 @@ def _rational_power(power, value):
 
 def k_expr(comp_key, *, temperature_k):
     params = PARAMETERS[comp_key]
-    return params.k0 * sp.exp(-params.activation /
-                              (GAS_CONSTANT_J_PER_MOL_K * temperature_k))
+    return params.k0 * sp.exp(-params.activation / (GAS_CONSTANT_J_PER_MOL_K * temperature_k))
 
 
 def D_expr(comp_key, *, temperature_k, conversion):
     params = PARAMETERS[comp_key]
     value = sp.sympify(params.d0)
     if params.diffusion_energy:
-        value *= sp.exp(-params.diffusion_energy /
-                        (GAS_CONSTANT_J_PER_MOL_K * temperature_k))
+        value *= sp.exp(-params.diffusion_energy / (GAS_CONSTANT_J_PER_MOL_K * temperature_k))
     if params.kx:
-        factor = params.kx * (sp.exp(-params.kxe /
-            (GAS_CONSTANT_J_PER_MOL_K * temperature_k)) if params.kxe else 1)
+        factor = params.kx * (
+            sp.exp(-params.kxe / (GAS_CONSTANT_J_PER_MOL_K * temperature_k)) if params.kxe else 1
+        )
         value *= sp.exp(-factor * conversion)
     return value
 
 
 def _reaction_rate(symbols, comp_key, *, shared=None):
-    terms = medrano_terms(symbols, comp_key, shared=shared)
+    terms = shared or _family_terms(symbols)
     params = PARAMETERS[comp_key]
-    conversion, unreacted = ((terms.frac_oxidised, terms.frac_reduced)
-        if comp_key == "O2" else (terms.frac_reduced, terms.frac_oxidised))
+    conversion, unreacted = (
+        (terms.frac_oxidised, terms.frac_reduced)
+        if comp_key == "O2"
+        else (terms.frac_reduced, terms.frac_oxidised)
+    )
     conversion, unreacted = _bounded(conversion), _bounded(unreacted)
-    diffusivity = D_expr(comp_key, temperature_k=terms.temperature_k,
-                         conversion=conversion)
-    gas_fraction = _available(terms.gas_mole_fraction)
+    diffusivity = D_expr(comp_key, temperature_k=terms.temperature_k, conversion=conversion)
+    gas_fraction = _available(symbols.concentration(comp_key) / terms.summed_gas_conc_molm3)
     concentration_power = terms.total_gas_conc_molm3**params.order * _rational_power(
-        params.order, gas_fraction)
+        params.order, gas_fraction
+    )
     one_third = _rational_power(ONE_THIRD, unreacted)
     two_thirds = _rational_power(TWO_THIRDS, unreacted)
     kinetic = k_expr(comp_key, temperature_k=terms.temperature_k)
-    numerator = (3 * params.b * two_thirds * kinetic * diffusivity *
-                 concentration_power**2 / (params.r0 * params.cs))
+    numerator = (
+        3
+        * params.b
+        * two_thirds
+        * kinetic
+        * diffusivity
+        * concentration_power**2
+        / (params.r0 * params.cs)
+    )
     denominator = concentration_power * (
-        diffusivity + params.r0 * kinetic * (one_third - two_thirds))
-    conversion_rate = (_gate(gas_fraction, Y_GATE) * _gate(unreacted, F_GATE) *
-                       numerator / sp.Max(denominator, DENOMINATOR_FLOOR))
+        diffusivity + params.r0 * kinetic * (one_third - two_thirds)
+    )
+    conversion_rate = (
+        _gate(gas_fraction, Y_GATE)
+        * _gate(unreacted, F_GATE)
+        * numerator
+        / sp.Max(denominator, DENOMINATOR_FLOOR)
+    )
     return terms.total_solid_inventory_molm3 * conversion_rate
-
-
-def reduction_h2_rate(symbols): return _reaction_rate(symbols, "H2")
-def reduction_co_rate(symbols): return _reaction_rate(symbols, "CO")
-def oxidation_o2_rate(symbols): return _reaction_rate(symbols, "O2")
 
 
 def build_family(symbols: CaseSymbols) -> Mapping[str, Reaction]:
@@ -170,6 +165,9 @@ def build_family(symbols: CaseSymbols) -> Mapping[str, Reaction]:
         "reduction_co": ({"CO": 1, "NiO": 1}, {"Ni": 1, "CO2": 1}, "CO"),
         "oxidation_o2": ({"O2": sp.Rational(1, 2), "Ni": 1}, {"NiO": 1}, "O2"),
     }
-    return {name: Reaction(f"medrano.{name}", reactants, products, (),
-                           _reaction_rate(symbols, key, shared=shared))
-            for name, (reactants, products, key) in specs.items()}
+    return {
+        name: Reaction(
+            f"medrano.{name}", reactants, products, (), _reaction_rate(symbols, key, shared=shared)
+        )
+        for name, (reactants, products, key) in specs.items()
+    }

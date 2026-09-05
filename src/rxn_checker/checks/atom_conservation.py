@@ -27,14 +27,18 @@ def _totals(side, species_by_id):
     return totals
 
 
-def check_atom_conservation(reaction: Reaction,
-                            species_by_id: Mapping[str, Species]) -> AtomConservationResult:
+def check_atom_conservation(
+    reaction: Reaction, species_by_id: Mapping[str, Species]
+) -> AtomConservationResult:
     reactants = _totals(reaction.reactants, species_by_id)
     products = _totals(reaction.products, species_by_id)
-    imbalances = {element: products.get(element, 0) - reactants.get(element, 0)
-                  for element in dict.fromkeys((*reactants, *products))}
-    return AtomConservationResult(reaction.id, not any(imbalances.values()),
-                                  reactants, products, imbalances)
+    imbalances = {
+        element: products.get(element, 0) - reactants.get(element, 0)
+        for element in dict.fromkeys((*reactants, *products))
+    }
+    return AtomConservationResult(
+        reaction.id, not any(imbalances.values()), reactants, products, imbalances
+    )
 
 
 def run(context: AnalysisContext, _dependencies: Mapping) -> tuple[Finding, ...]:
@@ -42,9 +46,14 @@ def run(context: AnalysisContext, _dependencies: Mapping) -> tuple[Finding, ...]
     for reaction in context.case.reactions:
         result = check_atom_conservation(reaction, context.species_by_id)
         imbalance = {key: value for key, value in result.imbalances.items() if value}
-        findings.append(Finding(reaction.id,
-            Verdict.PASS if result.passed else Verdict.FAIL,
-            "All element totals balance." if result.passed else
-            "Products and reactants have different element totals.",
-            Evidence("atom_imbalance", imbalance) if imbalance else None))
+        findings.append(
+            Finding(
+                reaction.id,
+                Verdict.PASS if result.passed else Verdict.FAIL,
+                "All element totals balance."
+                if result.passed
+                else "Products and reactants have different element totals.",
+                Evidence("atom_imbalance", imbalance) if imbalance else None,
+            )
+        )
     return tuple(findings)

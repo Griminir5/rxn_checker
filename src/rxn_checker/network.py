@@ -1,10 +1,9 @@
 """Exact network expressions shared by checks and symbolic profiles."""
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Sequence
 from dataclasses import dataclass
 from functools import cached_property
 from math import gcd, lcm
-from types import MappingProxyType
 
 import sympy as sp
 
@@ -12,9 +11,7 @@ from .case import Case
 from .model import Reaction
 
 
-def primitive_integer_vector(
-    vector: sp.MatrixBase,
-) -> tuple[sp.Integer, ...]:
+def primitive_integer_vector(vector: sp.MatrixBase) -> tuple[sp.Integer, ...]:
     """Scale a nonzero rational vector to canonical coprime integers."""
 
     values = tuple(sp.Rational(value) for value in vector)
@@ -42,16 +39,6 @@ class ReactionNetwork:
 
         return sp.ImmutableMatrix(self.stoichiometry * self.rates)
 
-    @cached_property
-    def source_terms(self) -> Mapping[str, sp.Expr]:
-        source = self.source_vector
-        return MappingProxyType(
-            {
-                species_id: source[row]
-                for row, species_id in enumerate(self.species_ids)
-            }
-        )
-
 
 @dataclass(frozen=True)
 class SourceFlux:
@@ -75,9 +62,7 @@ class FluxNetwork:
         return sp.ImmutableMatrix([flux.expression for flux in self.fluxes])
 
     @cached_property
-    def rank_factorization(
-        self,
-    ) -> tuple[sp.ImmutableMatrix, sp.ImmutableMatrix]:
+    def rank_factorization(self) -> tuple[sp.ImmutableMatrix, sp.ImmutableMatrix]:
         basis, coordinates = self.stoichiometry.rank_decomposition()
         return sp.ImmutableMatrix(basis), sp.ImmutableMatrix(coordinates)
 
@@ -87,7 +72,7 @@ class FluxNetwork:
         return tuple(self.fluxes[index].id for index in pivots)
 
 
-def _flux_id(reactions: Sequence[Reaction], number: int) -> str:
+def _flux_id(reactions, number) -> str:
     if len(reactions) == 1:
         return reactions[0].id
     families = {reaction.family for reaction in reactions}
@@ -104,8 +89,7 @@ def _flux_id(reactions: Sequence[Reaction], number: int) -> str:
 
 
 def source_equivalent_fluxes(
-    reactions: Sequence[Reaction],
-    stoichiometry: sp.MatrixBase,
+    reactions: Sequence[Reaction], stoichiometry: sp.MatrixBase
 ) -> FluxNetwork:
     """Group proportional columns without changing the source vector ``S r``."""
 
@@ -122,6 +106,7 @@ def source_equivalent_fluxes(
         groups.setdefault(primitive, []).append((column, coefficient))
 
     fluxes = []
+    reserved_ids = {reaction.id for reaction in reactions}
     for number, (primitive, members) in enumerate(groups.items(), 1):
         if members[0][1] < 0:
             primitive = tuple(-value for value in primitive)
@@ -134,9 +119,16 @@ def source_equivalent_fluxes(
             for reaction, (_, coefficient) in zip(selected, members)
         )
         expression = terms[0] if len(terms) == 1 else sp.Add(*terms, evaluate=False)
+        flux_id = stem = _flux_id(selected, number)
+        if len(selected) > 1:
+            suffix = 2
+            while flux_id in reserved_ids:
+                flux_id = f"{stem}_{suffix}"
+                suffix += 1
+            reserved_ids.add(flux_id)
         fluxes.append(
             SourceFlux(
-                _flux_id(selected, number),
+                flux_id,
                 expression,
                 primitive,
                 tuple(
@@ -146,31 +138,16 @@ def source_equivalent_fluxes(
             )
         )
 
-    matrix = sp.ImmutableMatrix.hstack(
-        *(sp.ImmutableMatrix(flux.stoichiometry) for flux in fluxes)
-    )
+    matrix = sp.ImmutableMatrix.hstack(*(sp.ImmutableMatrix(flux.stoichiometry) for flux in fluxes))
     return FluxNetwork(tuple(fluxes), matrix)
 
 
 def build_network(case: Case) -> ReactionNetwork:
     matrix = sp.ImmutableMatrix(
         [
-            [
-                reaction.net_stoichiometry.get(species_id, sp.S.Zero)
-                for reaction in case.reactions
-            ]
+            [reaction.net_stoichiometry.get(species_id, sp.S.Zero) for reaction in case.reactions]
             for species_id in case.symbols.species_ids
         ]
     )
     rates = sp.ImmutableMatrix([reaction.rate for reaction in case.reactions])
     return ReactionNetwork(matrix, rates, case.symbols.species_ids)
-
-
-__all__ = (
-    "FluxNetwork",
-    "ReactionNetwork",
-    "SourceFlux",
-    "build_network",
-    "primitive_integer_vector",
-    "source_equivalent_fluxes",
-)

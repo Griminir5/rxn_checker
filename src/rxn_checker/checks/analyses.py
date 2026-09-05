@@ -5,20 +5,20 @@ independent equations use exact linear algebra on the stoichiometric matrix;
 faces use only reactant, catalyst, and product supports.
 """
 
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Mapping
 
 import sympy as sp
+from sympy.utilities.iterables import connected_components
 
 from ..context import AnalysisContext
 from ..network import primitive_integer_vector
 from ..results import CheckResult, Evidence, Finding, Verdict
 
-
 _FACE_LIMIT = 32
 _SEARCH_LIMIT = 8192
 
 
-def _linear_text(terms: Sequence[tuple[sp.Expr, str]]) -> str:
+def _linear_text(terms) -> str:
     """Render a short exact linear combination without formatting expressions."""
 
     pieces = []
@@ -32,51 +32,30 @@ def _linear_text(terms: Sequence[tuple[sp.Expr, str]]) -> str:
     return "".join(pieces) or "0"
 
 
-def _components(
-    species_ids: Sequence[str],
-    stoichiometry: sp.MatrixBase,
-) -> tuple[tuple[str, ...], ...]:
+def _components(species_ids, stoichiometry) -> tuple[tuple[str, ...], ...]:
     """Connected species components of the stoichiometric bipartite graph."""
 
-    neighbours = {species_id: set() for species_id in species_ids}
+    edges = []
     for column in range(stoichiometry.cols):
-        participants = tuple(
-            species_ids[row]
-            for row in range(stoichiometry.rows)
-            if stoichiometry[row, column] != 0
-        )
-        for species_id in participants:
-            neighbours[species_id].update(participants)
-
-    components = []
-    remaining = set(species_ids)
-    for seed in species_ids:
-        if seed not in remaining:
-            continue
-        component = {seed}
-        frontier = [seed]
-        remaining.remove(seed)
-        while frontier:
-            for neighbour in neighbours[frontier.pop()]:
-                if neighbour in remaining:
-                    remaining.remove(neighbour)
-                    component.add(neighbour)
-                    frontier.append(neighbour)
-        components.append(tuple(item for item in species_ids if item in component))
-    return tuple(components)
+        participants = [
+            species_ids[row] for row in range(stoichiometry.rows) if stoichiometry[row, column]
+        ]
+        edges.extend((participants[0], species) for species in participants[1:])
+    order = {species: index for index, species in enumerate(species_ids)}
+    return tuple(
+        tuple(sorted(group, key=order.__getitem__))
+        for group in connected_components((species_ids, edges))
+    )
 
 
 def run_conserved_quantities(
-    context: AnalysisContext,
-    _dependencies: Mapping[str, CheckResult],
+    context: AnalysisContext, _dependencies: Mapping[str, CheckResult]
 ) -> tuple[Finding, ...]:
     """Report a primitive integer basis of the left nullspace of S."""
 
     matrix = context.stoichiometry
     species_ids = context.case.symbols.species_ids
-    basis = tuple(
-        primitive_integer_vector(vector) for vector in matrix.T.nullspace()
-    )
+    basis = tuple(primitive_integer_vector(vector) for vector in matrix.T.nullspace())
     rank = matrix.rows - len(basis)
     unchanged = tuple(
         species_ids[row]
@@ -124,8 +103,7 @@ def run_conserved_quantities(
                     "conserved_quantity",
                     {
                         "coefficients": {
-                            species_id: coefficient
-                            for coefficient, species_id in terms
+                            species_id: coefficient for coefficient, species_id in terms
                         },
                         "expression": expression,
                     },
@@ -135,21 +113,14 @@ def run_conserved_quantities(
     return (summary, *quantities)
 
 
-def _insert_minimal(
-    results: list[frozenset[str]],
-    candidate: frozenset[str],
-) -> None:
+def _insert_minimal(results, candidate) -> None:
     if any(result <= candidate for result in results):
         return
     results[:] = [result for result in results if not candidate < result]
     results.append(candidate)
 
 
-def _minimal_sets(
-    seeds: Sequence[frozenset[str]],
-    violations: Callable[[frozenset[str]], Sequence[frozenset[str]]],
-    species_ids: Sequence[str],
-) -> tuple[tuple[frozenset[str], ...], bool]:
+def _minimal_sets(seeds, violations, species_ids) -> tuple[tuple[frozenset[str], ...], bool]:
     """Branch on one violated support until a bounded minimal set is found."""
 
     order = {species_id: index for index, species_id in enumerate(species_ids)}
@@ -177,21 +148,12 @@ def _minimal_sets(
     for seed in seeds:
         search(seed)
     ordered = tuple(
-        sorted(
-            results,
-            key=lambda face: (
-                len(face),
-                tuple(sorted(order[item] for item in face)),
-            ),
-        )
+        sorted(results, key=lambda face: (len(face), tuple(sorted(order[item] for item in face))))
     )
     return ordered, truncated
 
 
-def _feasible_faces(
-    context: AnalysisContext,
-    faces: Sequence[frozenset[str]],
-) -> tuple[tuple[str, ...], ...]:
+def _feasible_faces(context, faces) -> tuple[tuple[str, ...], ...]:
     feasible = []
     for face in faces:
         domain = context.physical_domain
@@ -210,21 +172,19 @@ def _feasible_faces(
     return tuple(feasible)
 
 
-def _faces_text(faces: Sequence[Sequence[str]]) -> str:
+def _faces_text(faces) -> str:
     shown = tuple("{" + ", ".join(face) + "}" for face in faces[:6])
     suffix = f", ... ({len(faces)} total)" if len(faces) > len(shown) else ""
     return ", ".join(shown) + suffix if shown else "none"
 
 
 def run_structural_faces(
-    context: AnalysisContext,
-    _dependencies: Mapping[str, CheckResult],
+    context: AnalysisContext, _dependencies: Mapping[str, CheckResult]
 ) -> Finding:
     """Report bounded sufficient dead-face and invariant-face certificates."""
 
     required = tuple(
-        frozenset((*reaction.reactants, *reaction.catalysts))
-        for reaction in context.case.reactions
+        frozenset((*reaction.reactants, *reaction.catalysts)) for reaction in context.case.reactions
     )
     production_rules = tuple(
         (
@@ -240,9 +200,7 @@ def run_structural_faces(
     species_ids = context.case.symbols.species_ids
     dead, dead_truncated = _minimal_sets(
         (frozenset(),),
-        lambda face: tuple(
-            support for support in required if face.isdisjoint(support)
-        ),
+        lambda face: tuple(support for support in required if face.isdisjoint(support)),
         species_ids,
     )
     invariant, invariant_truncated = _minimal_sets(
@@ -259,9 +217,7 @@ def run_structural_faces(
     truncated = dead_truncated or invariant_truncated
     verdict = Verdict.UNKNOWN if truncated else Verdict.PASS
     qualifier = "Partial" if truncated else "Minimal"
-    suffix = (
-        " Search limit reached; these certificates are partial." if truncated else ""
-    )
+    suffix = " Search limit reached; these certificates are partial." if truncated else ""
     return Finding(
         context.case.name,
         verdict,
@@ -287,20 +243,14 @@ def run_structural_faces(
     )
 
 
-def _independent_rows(context: AnalysisContext) -> tuple[int, ...]:
+def _independent_rows(context) -> tuple[int, ...]:
     matrix = context.stoichiometry
-    rate_cost = tuple(
-        sp.count_ops(reaction.rate) for reaction in context.case.reactions
-    )
+    rate_cost = tuple(sp.count_ops(reaction.rate) for reaction in context.case.reactions)
     ordered = sorted(
         range(matrix.rows),
         key=lambda row: (
             sum(matrix[row, column] != 0 for column in range(matrix.cols)),
-            sum(
-                rate_cost[column]
-                for column in range(matrix.cols)
-                if matrix[row, column] != 0
-            ),
+            sum(rate_cost[column] for column in range(matrix.cols) if matrix[row, column] != 0),
             row,
         ),
     )
@@ -310,8 +260,7 @@ def _independent_rows(context: AnalysisContext) -> tuple[int, ...]:
 
 
 def run_steady_state_equations(
-    context: AnalysisContext,
-    _dependencies: Mapping[str, CheckResult],
+    context: AnalysisContext, _dependencies: Mapping[str, CheckResult]
 ) -> tuple[Finding, ...]:
     """Report a low-complexity independent set of sparse equations F_i = 0."""
 
@@ -330,9 +279,7 @@ def run_steady_state_equations(
             for column, reaction in enumerate(context.case.reactions)
             if context.stoichiometry[row, column] != 0
         )
-        expression_terms = tuple(
-            coefficient * reaction.rate for coefficient, reaction in terms
-        )
+        expression_terms = tuple(coefficient * reaction.rate for coefficient, reaction in terms)
         expression = (
             expression_terms[0]
             if len(expression_terms) == 1
@@ -359,10 +306,3 @@ def run_steady_state_equations(
             )
         )
     return (summary, *equations)
-
-
-__all__ = (
-    "run_conserved_quantities",
-    "run_steady_state_equations",
-    "run_structural_faces",
-)

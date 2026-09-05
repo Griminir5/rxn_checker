@@ -2,14 +2,14 @@
 
 from collections import Counter, defaultdict
 from collections.abc import Iterable, Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from functools import cache
+from types import MappingProxyType
 
 import sympy as sp
 
 from ..model import Reaction
-from ..network import source_equivalent_fluxes
-
+from ..network import SourceFlux, source_equivalent_fluxes
 
 OPERATION_ORDER = (
     "add",
@@ -30,36 +30,30 @@ _TRANSCENDENTAL = frozenset(("exp", "log", "sqrt", "general_power"))
 _SWITCH = frozenset(("abs", "min", "max", "piecewise"))
 
 
-class _FrozenMapping(Mapping[str, object]):
-    """Small ordered, immutable and hashable mapping for profile metadata."""
+@dataclass(frozen=True)
+class OperationStats:
+    operations: Mapping[str, int]
+    total_operations: int = field(init=False)
+    transcendental_operations: int = field(init=False)
+    switch_operations: int = field(init=False)
 
-    __slots__ = ("_items",)
-
-    def __init__(self, items: Iterable[tuple[str, object]]) -> None:
-        object.__setattr__(self, "_items", tuple(items))
-
-    def __setattr__(self, _name: str, _value: object) -> None:
-        raise AttributeError("Frozen mappings cannot be modified.")
-
-    def __getitem__(self, key: str) -> object:
-        for item_key, value in self._items:
-            if item_key == key:
-                return value
-        raise KeyError(key)
-
-    def __iter__(self):
-        return (key for key, _ in self._items)
-
-    def __len__(self) -> int:
-        return len(self._items)
-
-    def __hash__(self) -> int:
-        return hash(frozenset(self._items))
+    def __post_init__(self):
+        object.__setattr__(self, "operations", MappingProxyType(dict(self.operations)))
+        object.__setattr__(self, "total_operations", sum(self.operations.values()))
+        object.__setattr__(
+            self,
+            "transcendental_operations",
+            sum(value for name, value in self.operations.items() if name in _TRANSCENDENTAL),
+        )
+        object.__setattr__(
+            self,
+            "switch_operations",
+            sum(value for name, value in self.operations.items() if name in _SWITCH),
+        )
 
 
 @dataclass(frozen=True)
-class ExpressionStats:
-    operations: tuple[tuple[str, int], ...]
+class ExpressionStats(OperationStats):
     tree_nodes: int
     unique_nodes: int
     depth: int
@@ -71,22 +65,8 @@ class ExpressionStats:
     piecewise_branches: int = 0
 
     @property
-    def total_operations(self) -> int:
-        return sum(value for _, value in self.operations)
-
-    @property
-    def transcendental_operations(self) -> int:
-        return sum(value for name, value in self.operations if name in _TRANSCENDENTAL)
-
-    @property
-    def switch_operations(self) -> int:
-        return sum(value for name, value in self.operations if name in _SWITCH)
-
-    @property
     def dae_dependencies(self) -> tuple[sp.Symbol, ...]:
-        return _ordered_symbols(
-            (*self.concentration_dependencies, *self.operating_dependencies)
-        )
+        return _ordered_symbols((*self.concentration_dependencies, *self.operating_dependencies))
 
     @property
     def structural_jacobian_entries(self) -> int:
@@ -94,22 +74,9 @@ class ExpressionStats:
 
 
 @dataclass(frozen=True)
-class CSEStats:
-    operations: tuple[tuple[str, int], ...]
+class CSEStats(OperationStats):
     temporary_count: int
     peak_live_temporaries: int
-
-    @property
-    def total_operations(self) -> int:
-        return sum(value for _, value in self.operations)
-
-    @property
-    def transcendental_operations(self) -> int:
-        return sum(value for name, value in self.operations if name in _TRANSCENDENTAL)
-
-    @property
-    def switch_operations(self) -> int:
-        return sum(value for name, value in self.operations if name in _SWITCH)
 
 
 @dataclass(frozen=True)
@@ -122,28 +89,33 @@ class SharedTerm:
 
 
 @dataclass(frozen=True)
+class EvaluationView:
+    outputs: Mapping[str, ExpressionStats]
+    raw: OperationStats
+    cse: CSEStats
+    local_cse: Mapping[str, CSEStats]
+    source_nnz: int
+    rate_input_entries: int
+    residual_entries: int
+    groups: tuple[SourceFlux, ...] = ()
+
+
+@dataclass(frozen=True)
 class EvaluationProfile:
-    declared_outputs: tuple[tuple[str, ExpressionStats], ...]
-    flux_outputs: tuple[tuple[str, ExpressionStats], ...]
-    declared_cse: CSEStats
-    flux_cse: CSEStats
-    declared_local_cse: tuple[tuple[str, CSEStats], ...]
-    flux_local_cse: tuple[tuple[str, CSEStats], ...]
-    flux_groups: tuple[Mapping[str, object], ...]
+    declared: EvaluationView
+    source_equivalent: EvaluationView
     shared_terms: tuple[SharedTerm, ...]
-    declared_source_nnz: int
-    flux_source_nnz: int
 
 
-def _ordered_symbols(symbols: Iterable[sp.Symbol]) -> tuple[sp.Symbol, ...]:
+def _ordered_symbols(symbols) -> tuple[sp.Symbol, ...]:
     return tuple(sorted(set(symbols), key=sp.default_sort_key))
 
 
-def _histogram(counter: Mapping[str, int]) -> tuple[tuple[str, int], ...]:
-    return tuple((name, int(counter.get(name, 0))) for name in OPERATION_ORDER)
+def _histogram(counter) -> dict[str, int]:
+    return {name: counter.get(name, 0) for name in OPERATION_ORDER}
 
 
-def _operation(node: sp.Basic) -> tuple[str | None, int]:
+def _operation(node) -> tuple[str | None, int]:
     if isinstance(node, sp.Add):
         return "add", max(0, len(node.args) - 1)
     if isinstance(node, sp.Mul):
@@ -173,27 +145,17 @@ def _operation(node: sp.Basic) -> tuple[str | None, int]:
     return None, 0
 
 
-def _unsupported_name(node: sp.Basic) -> str | None:
+def _unsupported_name(node) -> str | None:
     if isinstance(node, sp.Pow) and node.exp.is_number is not True:
         return "Pow"
     if isinstance(node, sp.Piecewise):
         return "Piecewise"
-    if node.is_Function and node.func not in {
-        sp.exp,
-        sp.log,
-        sp.Abs,
-        sp.Min,
-        sp.Max,
-    }:
+    if node.is_Function and node.func not in {sp.exp, sp.log, sp.Abs, sp.Min, sp.Max}:
         return node.func.__name__
     return None
 
 
-def _profile_expression(
-    expression: sp.Expr,
-    concentration_symbols: frozenset[sp.Symbol],
-    operating_symbols: frozenset[sp.Symbol],
-) -> ExpressionStats:
+def _profile_expression(expression, concentration_symbols, operating_symbols) -> ExpressionStats:
     dae_symbols = concentration_symbols | operating_symbols
 
     @cache
@@ -237,17 +199,17 @@ def _profile_expression(
     )
 
 
-def _sum_operations(stats: Iterable[ExpressionStats | CSEStats]) -> Counter[str]:
-    total: Counter[str] = Counter()
-    for item in stats:
-        total.update(dict(item.operations))
-    return total
+def _operation_counts(expressions):
+    counts = Counter()
+    for expression in expressions:
+        for node in sp.preorder_traversal(expression):
+            name, multiplicity = _operation(node)
+            if name is not None:
+                counts[name] += multiplicity
+    return _histogram(counts)
 
 
-def _peak_liveness(
-    replacements: Sequence[tuple[sp.Symbol, sp.Expr]],
-    outputs: Sequence[sp.Expr],
-) -> int:
+def _peak_liveness(replacements, outputs) -> int:
     temporaries = frozenset(symbol for symbol, _ in replacements)
     last_use: dict[sp.Symbol, int] = {}
     expressions = (*tuple(value for _, value in replacements), *outputs)
@@ -260,32 +222,21 @@ def _peak_liveness(
     for position, (symbol, _value) in enumerate(replacements):
         active.add(symbol)
         peak = max(peak, len(active))
-        active.difference_update(
-            item for item in tuple(active) if last_use.get(item) == position
-        )
+        active.difference_update(item for item in tuple(active) if last_use.get(item) == position)
     return peak
 
 
-def _cse_stats(expressions: Sequence[sp.Expr]) -> CSEStats:
+def _cse_stats(expressions) -> CSEStats:
     replacements, outputs = sp.cse(
-        tuple(expressions),
-        symbols=sp.numbered_symbols("t"),
-        order="canonical",
+        tuple(expressions), symbols=sp.numbered_symbols("t"), order="canonical"
     )
-    profiled = tuple(
-        _profile_expression(expression, frozenset(), frozenset())
-        for expression in (*tuple(value for _, value in replacements), *outputs)
-    )
+    expressions = [value for _, value in replacements] + list(outputs)
     return CSEStats(
-        _histogram(_sum_operations(profiled)),
-        len(replacements),
-        _peak_liveness(replacements, outputs),
+        _operation_counts(expressions), len(replacements), _peak_liveness(replacements, outputs)
     )
 
 
-def _shared_terms(
-    outputs: Sequence[tuple[str, sp.Expr]],
-) -> tuple[SharedTerm, ...]:
+def _shared_terms(outputs) -> tuple[SharedTerm, ...]:
     occurrences: Counter[sp.Expr] = Counter()
     users: defaultdict[sp.Expr, list[str]] = defaultdict(list)
     for output_id, expression in outputs:
@@ -300,18 +251,12 @@ def _shared_terms(
     for expression, count in occurrences.items():
         if count < 2:
             continue
-        operations = _profile_expression(
-            expression, frozenset(), frozenset()
-        ).total_operations
+        operations = sum(_operation_counts((expression,)).values())
         if not operations:
             continue
         terms.append(
             SharedTerm(
-                expression,
-                operations,
-                count,
-                tuple(users[expression]),
-                (count - 1) * operations,
+                expression, operations, count, tuple(users[expression]), (count - 1) * operations
             )
         )
     return tuple(
@@ -346,44 +291,30 @@ def profile_evaluation(
     declared = tuple((reaction.id, reaction.rate) for reaction in reactions)
     network = source_equivalent_fluxes(reactions, stoichiometry)
     fluxes = tuple((flux.id, flux.expression) for flux in network.fluxes)
-    flux_groups = tuple(
-        _FrozenMapping(
-            (
-                ("id", flux.id),
-                ("stoichiometry", flux.stoichiometry),
-                ("members", flux.members),
-                ("expression", flux.expression),
-            )
+
+    def view(outputs, matrix, groups=()):
+        stats = {
+            name: _profile_expression(expression, concentration_set, operating_set)
+            for name, expression in outputs
+        }
+        counts = Counter()
+        for item in stats.values():
+            counts.update(item.operations)
+        source_nnz = sum(value != 0 for value in matrix)
+        inputs = sum(item.structural_jacobian_entries for item in stats.values())
+        return EvaluationView(
+            stats,
+            OperationStats(_histogram(counts)),
+            _cse_stats(tuple(expression for _, expression in outputs)),
+            {name: _cse_stats((expression,)) for name, expression in outputs},
+            source_nnz,
+            inputs,
+            len(outputs) + inputs + source_nnz,
+            groups,
         )
-        for flux in network.fluxes
-    )
-    declared_stats = tuple(
-        (output_id, _profile_expression(expression, concentration_set, operating_set))
-        for output_id, expression in declared
-    )
-    flux_stats = tuple(
-        (output_id, _profile_expression(expression, concentration_set, operating_set))
-        for output_id, expression in fluxes
-    )
+
     return EvaluationProfile(
-        declared_stats,
-        flux_stats,
-        _cse_stats(tuple(expression for _, expression in declared)),
-        _cse_stats(tuple(expression for _, expression in fluxes)),
-        tuple((output_id, _cse_stats((expression,))) for output_id, expression in declared),
-        tuple((output_id, _cse_stats((expression,))) for output_id, expression in fluxes),
-        flux_groups,
+        view(declared, stoichiometry),
+        view(fluxes, network.stoichiometry, network.fluxes),
         _shared_terms(declared),
-        sum(value != 0 for value in stoichiometry),
-        sum(value != 0 for value in network.stoichiometry),
     )
-
-
-__all__ = (
-    "CSEStats",
-    "EvaluationProfile",
-    "ExpressionStats",
-    "OPERATION_ORDER",
-    "SharedTerm",
-    "profile_evaluation",
-)

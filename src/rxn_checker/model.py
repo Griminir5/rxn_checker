@@ -50,7 +50,8 @@ class Species:
         _name(self.name, "Species name")
         if self.id in {"temperature", "pressure"}:
             raise ValueError(f"Species id '{self.id}' is reserved.")
-        try: phase = Phase(self.phase)
+        try:
+            phase = Phase(self.phase)
         except (TypeError, ValueError) as error:
             raise ValueError("Species phase must be either 'gas' or 'solid'.") from error
         if not isinstance(self.atoms, Mapping) or not self.atoms:
@@ -58,12 +59,19 @@ class Species:
         atoms = {}
         for element, value in self.atoms.items():
             _name(element, f"Element in species '{self.id}'")
-            count = parse_rational(value, label=f"Atom count for '{element}' in species '{self.id}'")
-            if count <= 0: raise ValueError("Atom counts must be positive.")
+            count = parse_rational(
+                value, label=f"Atom count for '{element}' in species '{self.id}'"
+            )
+            if count <= 0:
+                raise ValueError("Atom counts must be positive.")
             atoms[element] = count
-        mass = None if self.molar_mass is None else parse_rational(
-            self.molar_mass, label=f"Molar mass for species '{self.id}'")
-        if mass is not None and mass <= 0: raise ValueError("Molar mass must be positive.")
+        mass = (
+            None
+            if self.molar_mass is None
+            else parse_rational(self.molar_mass, label=f"Molar mass for species '{self.id}'")
+        )
+        if mass is not None and mass <= 0:
+            raise ValueError("Molar mass must be positive.")
         for key, value in (("phase", phase), ("atoms", atoms), ("molar_mass", mass)):
             object.__setattr__(self, key, value)
 
@@ -76,8 +84,10 @@ class CaseSymbols:
 
     def __post_init__(self):
         concentrations = dict(self.concentrations)
-        if not concentrations: raise ValueError("A case must declare at least one species.")
-        for species_id in concentrations: _name(species_id, "Case species id")
+        if not concentrations:
+            raise ValueError("A case must declare at least one species.")
+        for species_id in concentrations:
+            _name(species_id, "Case species id")
         if set(concentrations) & {"temperature", "pressure"}:
             raise ValueError("Temperature and pressure are reserved names.")
         symbols = (*concentrations.values(), self.temperature, self.pressure)
@@ -92,27 +102,46 @@ class CaseSymbols:
     @classmethod
     def for_species(cls, species_ids: Iterable[str]):
         ids = tuple(species_ids)
-        if len(ids) != len(set(ids)): raise ValueError("Case species must not contain duplicates.")
-        return cls({item: sp.Symbol(item, real=True) for item in ids},
-                   sp.Symbol("temperature", real=True), sp.Symbol("pressure", real=True))
+        if len(ids) != len(set(ids)):
+            raise ValueError("Case species must not contain duplicates.")
+        return cls(
+            {item: sp.Symbol(item, real=True) for item in ids},
+            sp.Symbol("temperature", real=True),
+            sp.Symbol("pressure", real=True),
+        )
 
     def concentration(self, species_id):
-        try: return self.concentrations[species_id]
-        except KeyError as error: raise KeyError(f"Case has no species '{species_id}'.") from error
+        try:
+            return self.concentrations[species_id]
+        except KeyError as error:
+            raise KeyError(f"Case has no species '{species_id}'.") from error
 
-    species_ids = property(lambda self: tuple(self.concentrations))
-    concentration_symbols = property(lambda self: frozenset(self.concentrations.values()))
-    parameter_symbols = property(lambda self: frozenset((self.temperature, self.pressure)))
-    all_symbols = property(lambda self: self.concentration_symbols | self.parameter_symbols)
+    @property
+    def species_ids(self):
+        return tuple(self.concentrations)
+
+    @property
+    def concentration_symbols(self):
+        return frozenset(self.concentrations.values())
+
+    @property
+    def parameter_symbols(self):
+        return frozenset((self.temperature, self.pressure))
+
+    @property
+    def all_symbols(self):
+        return self.concentration_symbols | self.parameter_symbols
 
 
 def _side(values, label):
-    if not isinstance(values, Mapping): raise TypeError(f"{label} coefficients must be a mapping.")
+    if not isinstance(values, Mapping):
+        raise TypeError(f"{label} coefficients must be a mapping.")
     result = {}
     for species_id, value in values.items():
         _name(species_id, f"{label} species id")
         coefficient = parse_rational(value, label=f"{label} coefficient for '{species_id}'")
-        if coefficient <= 0: raise ValueError(f"{label} coefficients must be positive.")
+        if coefficient <= 0:
+            raise ValueError(f"{label} coefficients must be positive.")
         result[species_id] = coefficient
     return result
 
@@ -128,29 +157,52 @@ class Reaction:
 
     def __post_init__(self):
         _name(self.id, "Reaction id")
-        reactants, products, catalysts = _side(self.reactants, "Reactant"), _side(
-            self.products, "Product"), tuple(self.catalysts)
+        reactants, products, catalysts = (
+            _side(self.reactants, "Reactant"),
+            _side(self.products, "Product"),
+            tuple(self.catalysts),
+        )
         if not reactants and not products:
             raise ValueError(f"Reaction '{self.id}' must have a reactant or product.")
-        for item in catalysts: _name(item, "Catalyst id")
+        for item in catalysts:
+            _name(item, "Catalyst id")
         if len(catalysts) != len(set(catalysts)):
             raise ValueError("Catalysts must be unique.")
         if (set(reactants) | set(products)) & set(catalysts):
             raise ValueError("Catalysts must not also be reactants or products.")
         rate = sp.sympify(self.rate)
-        if not isinstance(rate, sp.Expr): raise TypeError("Reaction rate must be a scalar SymPy expression.")
+        if not isinstance(rate, sp.Expr):
+            raise TypeError("Reaction rate must be a scalar SymPy expression.")
         if rate.has(sp.nan, sp.zoo, sp.oo, -sp.oo, sp.I) or any(
-            number.is_finite is False or number.is_real is False for number in rate.atoms(sp.Number)):
-            raise ValueError(f"Reaction '{self.id}' rate contains a non-finite or complex constant.")
-        net = {item: products.get(item, 0) - reactants.get(item, 0)
-               for item in dict.fromkeys((*reactants, *products))}
+            number.is_finite is False or number.is_real is False for number in rate.atoms(sp.Number)
+        ):
+            raise ValueError(
+                f"Reaction '{self.id}' rate contains a non-finite or complex constant."
+            )
+        net = {
+            item: products.get(item, 0) - reactants.get(item, 0)
+            for item in dict.fromkeys((*reactants, *products))
+        }
         net = {item: value for item, value in net.items() if value}
-        if not net: raise ValueError(f"Reaction '{self.id}' has zero net stoichiometry.")
-        for key, value in (("reactants", reactants), ("products", products),
-                           ("catalysts", catalysts), ("rate", rate), ("net_stoichiometry", net)):
+        if not net:
+            raise ValueError(f"Reaction '{self.id}' has zero net stoichiometry.")
+        for key, value in (
+            ("reactants", reactants),
+            ("products", products),
+            ("catalysts", catalysts),
+            ("rate", rate),
+            ("net_stoichiometry", net),
+        ):
             object.__setattr__(self, key, value)
 
-    family = property(lambda self: self.id.rsplit(".", 1)[0] if "." in self.id else "")
-    name = property(lambda self: self.id.rsplit(".", 1)[-1])
-    species_ids = property(lambda self: tuple(dict.fromkeys(
-        (*self.reactants, *self.products, *self.catalysts))))
+    @property
+    def family(self):
+        return self.id.rpartition(".")[0]
+
+    @property
+    def name(self):
+        return self.id.rsplit(".", 1)[-1]
+
+    @property
+    def species_ids(self):
+        return tuple(dict.fromkeys((*self.reactants, *self.products, *self.catalysts)))

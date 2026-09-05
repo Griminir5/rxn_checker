@@ -6,6 +6,10 @@ dist/
 wheels/
 *.egg-info
 rxn-checker-report.txt
+report.txt
+report.json
+.pytest_cache/
+.ruff_cache/
 
 # Virtual environments
 .venv

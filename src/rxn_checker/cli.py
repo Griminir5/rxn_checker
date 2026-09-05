@@ -1,19 +1,18 @@
 """Command-line selection, execution, and rendering."""
 
 import argparse
-from collections.abc import Sequence
 import json
-from pathlib import Path
 import sys
+from collections.abc import Sequence
+from pathlib import Path
 
-from .checks.registry import CHECK_REGISTRY, PROFILES
-from .checks.runner import run_checks
+from .checks import CHECK_REGISTRY, PROFILES, run_checks
 from .loading import load_case
 from .reporting import render_json, render_text
 from .results import Verdict
 
 
-def _csv(value: str) -> tuple[str, ...]:
+def _csv(value) -> tuple[str, ...]:
     values = tuple(item.strip() for item in value.split(",") if item.strip())
     if not values:
         raise argparse.ArgumentTypeError("Expected a comma-separated check list.")
@@ -22,43 +21,36 @@ def _csv(value: str) -> tuple[str, ...]:
 
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        prog="rxn-checker",
-        description="Check a reaction case with a selected dependency profile.",
+        prog="rxn-checker", description="Check a reaction case with a selected dependency profile."
     )
     parser.add_argument(
-        "case",
-        nargs="?",
-        type=Path,
-        help="case YAML file, or a directory containing case.yaml",
+        "case", nargs="?", type=Path, help="case YAML file, or a directory containing case.yaml"
     )
     parser.add_argument("--profile", choices=sorted(PROFILES))
     parser.add_argument("--checks", type=_csv, help="comma-separated checks only")
     parser.add_argument("--skip", type=_csv, default=(), help="checks to exclude")
-    parser.add_argument("--format", choices=("text", "json"), dest="format")
+    parser.add_argument("--format", choices=("text", "json"))
     parser.add_argument("--list-checks", action="store_true")
     parser.add_argument("--debug", action="store_true")
     return parser
 
 
-def _case_path(path: Path) -> Path:
-    path = path.expanduser()
-    if path.is_dir():
-        path = path / "case.yaml"
-    return path.resolve()
-
-
-def _loading_error(path: Path, error: Exception, output_format: str) -> str:
+def _loading_error(path, error, output_format) -> str:
     message = str(error.args[0]) if len(error.args) == 1 else str(error)
     if output_format == "json":
-        return json.dumps(
-            {
-                "case_name": None,
-                "source": str(path),
-                "overall": Verdict.ERROR.value,
-                "error": f"{type(error).__name__}: {message}",
-            },
-            indent=2,
-        ) + "\n"
+        return (
+            json.dumps(
+                {
+                    "schema": 2,
+                    "case_name": None,
+                    "source": str(path),
+                    "overall": Verdict.ERROR.value,
+                    "error": f"{type(error).__name__}: {message}",
+                },
+                indent=2,
+            )
+            + "\n"
+        )
     return (
         f"rxn-checker: ERROR\nSource: {path}\n\n"
         f"Case loading\n  ERROR    {type(error).__name__}: {message}\n\n"
@@ -67,21 +59,24 @@ def _loading_error(path: Path, error: Exception, output_format: str) -> str:
 
 
 def _list_checks() -> str:
-    return "\n".join(
-        f"{spec.id:<32} {spec.stage.value:<10} {spec.name}"
-        for spec in CHECK_REGISTRY
-    ) + "\n"
+    return (
+        "\n".join(f"{spec.id:<32} {spec.stage.value:<10} {spec.name}" for spec in CHECK_REGISTRY)
+        + "\n"
+    )
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    arguments = _parser().parse_args(argv)
+    parser = _parser()
+    arguments = parser.parse_args(argv)
     if arguments.list_checks:
         sys.stdout.write(_list_checks())
         return 0
     if arguments.case is None:
-        _parser().error("CASE is required unless --list-checks is used")
+        parser.error("CASE is required unless --list-checks is used")
 
-    case_path = _case_path(arguments.case)
+    case_path = arguments.case.expanduser().resolve()
+    if case_path.is_dir():
+        case_path = case_path / "case.yaml"
     try:
         case = load_case(case_path)
         configured_exclude = tuple(case.check_config.get("exclude", ()))

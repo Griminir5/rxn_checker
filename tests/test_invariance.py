@@ -1,4 +1,4 @@
-"""Phase 6 chemistry-gate and physical-invariance contracts."""
+"""chemistry-gate and physical-invariance contracts."""
 
 import sympy as sp
 
@@ -25,22 +25,13 @@ from rxn_checker.species import PROPERTY_REGISTRY, PropertyRegistry
 def _case(rate_builder, *, registry=PROPERTY_REGISTRY) -> Case:
     symbols = CaseSymbols.for_species(("Aye", "Bee"))
     aye = symbols.concentration("Aye")
-    reaction = Reaction(
-        "test.forward",
-        {"Aye": 1},
-        {"Bee": 1},
-        (),
-        rate_builder(aye),
-    )
+    reaction = Reaction("test.forward", {"Aye": 1}, {"Bee": 1}, (), rate_builder(aye))
     domain = DomainSpec(
         symbols,
         ConcentrationModel.INDEPENDENT,
         {symbol: 10 for symbol in symbols.concentration_symbols},
         {symbol: -1 for symbol in symbols.concentration_symbols},
-        {
-            symbols.temperature: Interval(300, 1000),
-            symbols.pressure: Interval(100_000, 200_000),
-        },
+        {symbols.temperature: Interval(300, 1000), symbols.pressure: Interval(100_000, 200_000)},
     )
     return Case(
         "linear_transfer",
@@ -54,11 +45,7 @@ def _case(rate_builder, *, registry=PROPERTY_REGISTRY) -> Case:
 def test_linear_transfer_has_a_forward_invariance_certificate() -> None:
     case = _case(lambda aye: 2 * aye)
     context = AnalysisContext(case)
-    result = run_checks(
-        case,
-        only=("forward_invariance",),
-        context=context,
-    )
+    result = run_checks(case, only=("forward_invariance",), context=context)
 
     assert result.overall is Verdict.PASS
     boundary = result.results["physical_boundary_inward"].findings[0]
@@ -99,19 +86,9 @@ def test_negative_physical_rate_blocks_invariance() -> None:
 def test_undefined_rate_skips_only_that_reaction_downstream() -> None:
     case = _case(lambda aye: aye)
     aye = case.symbols.concentration("Aye")
-    singular = Reaction(
-        "test.singular",
-        {"Aye": 1},
-        {"Bee": 1},
-        (),
-        1 / aye,
-    )
+    singular = Reaction("test.singular", {"Aye": 1}, {"Bee": 1}, (), 1 / aye)
     case = Case(
-        case.name,
-        case.species,
-        case.symbols,
-        (*case.reactions, singular),
-        case.domain_spec,
+        case.name, case.species, case.symbols, (*case.reactions, singular), case.domain_spec
     )
 
     result = run_checks(case, only=("physical_lipschitz",))
@@ -151,9 +128,7 @@ def test_exact_physical_witness_disproves_a_nonzero_depletion_rate() -> None:
     reaction = Reaction("test.coupled", {"Aye": 1}, {"Bee": 1}, (), bee)
 
     result = check_zero_at_depletion(
-        reaction,
-        case.symbols,
-        case.domain_spec.build(DomainKind.PHYSICAL),
+        reaction, case.symbols, case.domain_spec.build(DomainKind.PHYSICAL)
     )
 
     assert result.passed is False
@@ -162,11 +137,7 @@ def test_exact_physical_witness_disproves_a_nonzero_depletion_rate() -> None:
 
 def test_atom_totals_are_exact_and_mass_uses_exact_tolerance_arithmetic() -> None:
     reaction = Reaction(
-        "test.fractional",
-        {"Fe0.94O": 1},
-        {"Fe": "0.94", "O2": "1/2"},
-        (),
-        sp.S.One,
+        "test.fractional", {"Fe0.94O": 1}, {"Fe": "0.94", "O2": "1/2"}, (), sp.S.One
     )
 
     atoms = check_atom_conservation(reaction, PROPERTY_REGISTRY.records)
@@ -179,13 +150,7 @@ def test_atom_totals_are_exact_and_mass_uses_exact_tolerance_arithmetic() -> Non
 
 
 def test_exact_atom_and_tolerant_mass_imbalances_fail() -> None:
-    reaction = Reaction(
-        "test.imbalanced",
-        {"Aye": 1},
-        {"Cee": 1},
-        (),
-        sp.S.One,
-    )
+    reaction = Reaction("test.imbalanced", {"Aye": 1}, {"Cee": 1}, (), sp.S.One)
 
     atoms = check_atom_conservation(reaction, PROPERTY_REGISTRY.records)
     mass = check_mass_conservation(reaction, PROPERTY_REGISTRY.records)
@@ -202,11 +167,7 @@ def test_missing_molar_mass_fails_the_chemistry_gate() -> None:
     }
     registry = PropertyRegistry(records)
     case = _case(lambda aye: aye, registry=registry)
-    result = run_checks(
-        case,
-        only=("forward_invariance",),
-        context=AnalysisContext(case),
-    )
+    result = run_checks(case, only=("forward_invariance",), context=AnalysisContext(case))
 
     assert result.results["mass_conservation"].verdict is Verdict.FAIL
     assert result.results["physical_rate_definedness"].verdict is Verdict.SKIPPED

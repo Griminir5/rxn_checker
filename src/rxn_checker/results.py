@@ -32,6 +32,7 @@ class Finding:
     summary: str
     evidence: Evidence | None = None
 
+
 _PRIORITY = {
     Verdict.PASS: 0,
     Verdict.SKIPPED: 1,
@@ -50,10 +51,7 @@ class CheckResult:
 
     @property
     def verdict(self) -> Verdict:
-        return max(
-            (finding.verdict for finding in self.findings),
-            key=_PRIORITY.__getitem__,
-        )
+        return max((finding.verdict for finding in self.findings), key=_PRIORITY.__getitem__)
 
 
 @dataclass(frozen=True)

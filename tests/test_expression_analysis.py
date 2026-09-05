@@ -1,19 +1,14 @@
-"""Mathematical regression tests for the Phase 4 expression analyzer."""
+"""Mathematical regression tests for the expression analyzer."""
 
 from collections import Counter
 from pathlib import Path
 
+import pytest
 import sympy as sp
 
 from rxn_checker import AnalysisContext, load_case
 from rxn_checker.domain import ConcentrationDomain, DomainKind, Interval
-from rxn_checker.proof import (
-    ExpressionAnalyzer,
-    ProofVerdict,
-    Sign,
-    SignRequirement,
-)
-
+from rxn_checker.proof import ExpressionAnalyzer, ProofVerdict, Sign, SignRequirement
 
 ROOT = Path(__file__).parents[1]
 
@@ -21,11 +16,20 @@ ROOT = Path(__file__).parents[1]
 def _domain(*, c_bounds=(0, 2), d_bounds=(-1, 3)):
     c, d = sp.symbols("c d", real=True)
     domain = ConcentrationDomain(
-        DomainKind.PHYSICAL,
-        {c: Interval(*c_bounds), d: Interval(*d_bounds)},
-        {},
+        DomainKind.PHYSICAL, {c: Interval(*c_bounds), d: Interval(*d_bounds)}, {}
     )
     return c, d, domain
+
+
+@pytest.mark.parametrize(
+    ("value", "verdict"), ((0, ProofVerdict.FAIL), (2, ProofVerdict.PASS), (-2, ProofVerdict.PASS))
+)
+def test_sparse_sum_distinguishes_nonzero_from_nonnegative(value, verdict):
+    _, _, domain = _domain()
+    proof = ExpressionAnalyzer().prove_sum(
+        ((1, sp.Integer(value)),), domain, SignRequirement.NONZERO
+    )
+    assert proof.verdict is verdict
 
 
 def test_arithmetic_bounds_are_sound_and_affine_bounds_are_exact() -> None:
@@ -99,11 +103,7 @@ def test_definedness_guards_report_exact_failures_and_unknown_functions() -> Non
 
 def test_trigonometric_poles_report_the_guard_denominator() -> None:
     c = sp.Symbol("c", real=True)
-    domain = ConcentrationDomain(
-        DomainKind.PHYSICAL,
-        {c: Interval(0, sp.pi)},
-        {},
-    )
+    domain = ConcentrationDomain(DomainKind.PHYSICAL, {c: Interval(0, sp.pi)}, {})
 
     result = ExpressionAnalyzer().defined(sp.tan(c), domain)
 
@@ -114,15 +114,9 @@ def test_trigonometric_poles_report_the_guard_denominator() -> None:
 
 def test_positive_and_open_positive_intervals_certify_reciprocals() -> None:
     c = sp.Symbol("c", real=True)
-    positive = ConcentrationDomain(
-        DomainKind.PHYSICAL,
-        {c: Interval(1, 2)},
-        {},
-    )
+    positive = ConcentrationDomain(DomainKind.PHYSICAL, {c: Interval(1, 2)}, {})
     open_positive = ConcentrationDomain(
-        DomainKind.PHYSICAL,
-        {c: Interval(0, 2, lower_closed=False)},
-        {},
+        DomainKind.PHYSICAL, {c: Interval(0, 2, lower_closed=False)}, {}
     )
     analyzer = ExpressionAnalyzer()
 
@@ -135,9 +129,7 @@ def test_positive_and_open_positive_intervals_certify_reciprocals() -> None:
 def test_chamfered_total_proves_a_reciprocal_denominator_positive() -> None:
     case = load_case(ROOT / "reforming_case")
     domain = AnalysisContext(case).physical_domain
-    gases = tuple(
-        item.id for item in case.species if item.phase.value == "gas"
-    )
+    gases = tuple(item.id for item in case.species if item.phase.value == "gas")
     total = sum(case.symbols.concentration(item) for item in gases)
     analyzer = ExpressionAnalyzer()
 
@@ -154,11 +146,7 @@ def test_sign_proofs_use_bounds_and_bounded_exact_witness_search() -> None:
 
     square = analyzer.prove_sign(c**2, domain, SignRequirement.NONNEGATIVE)
     affine_failure = analyzer.prove_sign(c - 1, domain, SignRequirement.NONNEGATIVE)
-    nonlinear_failure = analyzer.prove_sign(
-        c * (1 - c),
-        domain,
-        SignRequirement.NONNEGATIVE,
-    )
+    nonlinear_failure = analyzer.prove_sign(c * (1 - c), domain, SignRequirement.NONNEGATIVE)
 
     assert square.verdict is ProofVerdict.PASS
     assert affine_failure.verdict is ProofVerdict.FAIL

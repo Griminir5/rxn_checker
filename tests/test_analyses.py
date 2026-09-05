@@ -1,4 +1,4 @@
-"""Phase 8 compact nonblocking analyses."""
+"""compact nonblocking analyses."""
 
 import json
 from pathlib import Path
@@ -20,7 +20,6 @@ from rxn_checker.checks import run_checks
 from rxn_checker.reporting import render_json, render_text
 from rxn_checker.species import PROPERTY_REGISTRY
 
-
 ROOT = Path(__file__).parents[1]
 
 
@@ -41,21 +40,14 @@ def test_conservation_reports_an_exact_primitive_left_nullspace_basis() -> None:
         "unchanged_species": (),
         "basis_size": 1,
     }
-    assert quantity.evidence.data["coefficients"] == {
-        "Aye": 1,
-        "Bee": 1,
-        "Cee": 2,
-    }
+    assert quantity.evidence.data["coefficients"] == {"Aye": 1, "Bee": 1, "Cee": 2}
     vector = sp.Matrix((1, 1, 2))
     assert (vector.T * AnalysisContext(case).stoichiometry).is_zero_matrix
     assert quantity.summary == "Aye + Bee + 2*Cee = constant."
 
 
 def test_reforming_conservation_separates_unchanged_species_and_components() -> None:
-    result = run_checks(
-        load_case(ROOT / "reforming_case"),
-        only=("conserved_quantities",),
-    )
+    result = run_checks(load_case(ROOT / "reforming_case"), only=("conserved_quantities",))
     evidence = result.results["conserved_quantities"].findings[0].evidence.data
 
     assert evidence["rank"] == 4
@@ -84,22 +76,13 @@ def test_catalyst_depletion_structurally_disables_a_reaction() -> None:
     symbols = CaseSymbols.for_species(("Aye", "Bee", "Cee"))
     aye = symbols.concentration("Aye")
     cee = symbols.concentration("Cee")
-    reaction = Reaction(
-        "test.catalysed",
-        {"Aye": 1},
-        {"Bee": 1},
-        ("Cee",),
-        aye * cee,
-    )
+    reaction = Reaction("test.catalysed", {"Aye": 1}, {"Bee": 1}, ("Cee",), aye * cee)
     domain = DomainSpec(
         symbols,
         ConcentrationModel.INDEPENDENT,
         {symbol: 10 for symbol in symbols.concentration_symbols},
         {symbol: -1 for symbol in symbols.concentration_symbols},
-        {
-            symbols.temperature: Interval(300, 1000),
-            symbols.pressure: Interval(100_000, 200_000),
-        },
+        {symbols.temperature: Interval(300, 1000), symbols.pressure: Interval(100_000, 200_000)},
     )
     case = Case(
         "catalysed",
@@ -112,9 +95,7 @@ def test_catalyst_depletion_structurally_disables_a_reaction() -> None:
     result = run_checks(case, only=("structural_faces",))
     evidence = result.results["structural_faces"].findings[0].evidence.data
 
-    assert evidence["required_supports"] == {
-        "test.catalysed": ("Aye", "Cee")
-    }
+    assert evidence["required_supports"] == {"test.catalysed": ("Aye", "Cee")}
     assert evidence["dead_faces"] == (("Aye",), ("Cee",))
     assert evidence["invariant_faces"] == (("Aye",), ("Cee",))
 
@@ -122,18 +103,12 @@ def test_catalyst_depletion_structurally_disables_a_reaction() -> None:
 def test_steady_state_equations_are_sparse_and_row_independent() -> None:
     case = _example()
     context = AnalysisContext(case)
-    result = run_checks(
-        case,
-        only=("steady_state_equations",),
-        context=context,
-    )
+    result = run_checks(case, only=("steady_state_equations",), context=context)
     summary, first, second = result.results["steady_state_equations"].findings
 
     assert summary.evidence.data["rank"] == 2
     assert (first.subject, second.subject) == ("Cee", "Aye")
-    assert first.evidence.data["coefficients"] == {
-        "aye_plus_bee_to_cee.half_order": 1
-    }
+    assert first.evidence.data["coefficients"] == {"aye_plus_bee_to_cee.half_order": 1}
     assert second.evidence.data["coefficients"] == {
         "aye_to_bee.autocatalytic": -1,
         "aye_plus_bee_to_cee.half_order": -1,

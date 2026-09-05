@@ -18,7 +18,6 @@ from rxn_checker import (
 )
 from rxn_checker.domain import GAS_CONSTANT
 
-
 ROOT = Path(__file__).parents[1]
 
 
@@ -31,14 +30,8 @@ def _spec(
     return DomainSpec(
         symbols=symbols,
         concentration_model=model,
-        upper={
-            symbols.concentration("A"): 10,
-            symbols.concentration("B"): 10,
-        },
-        excursion_lower={
-            symbols.concentration("A"): -1,
-            symbols.concentration("B"): -2,
-        },
+        upper={symbols.concentration("A"): 10, symbols.concentration("B"): 10},
+        excursion_lower={symbols.concentration("A"): -1, symbols.concentration("B"): -2},
         parameter_intervals={
             symbols.temperature: Interval(300, 1000),
             symbols.pressure: Interval(100_000, 200_000),
@@ -68,14 +61,9 @@ def test_reforming_domain_has_gas_and_selected_solid_chamfers() -> None:
     augmented = context.augmented_domain
     constraints = {item.name: item for item in physical.total_constraints}
 
-    expected_gas_minimum = Rational(100_000) / (
-        GAS_CONSTANT * Rational("1473.15")
-    )
+    expected_gas_minimum = Rational(100_000) / (GAS_CONSTANT * Rational("1473.15"))
     assert constraints["gas"].minimum == expected_gas_minimum
-    assert tuple(symbol.name for symbol in constraints["solid"].symbols) == (
-        "Ni",
-        "NiO",
-    )
+    assert tuple(symbol.name for symbol in constraints["solid"].symbols) == ("Ni", "NiO")
     assert constraints["solid"].minimum == Rational("1.0e-8")
     assert physical.total_constraints == augmented.total_constraints
     assert context.physical_domain is physical
@@ -130,9 +118,7 @@ def test_augmented_witness_can_keep_one_gas_negative() -> None:
 def test_infeasible_total_minimum_is_rejected() -> None:
     symbols = CaseSymbols.for_species(("A", "B"))
     constraint = TotalConstraint(
-        "gas",
-        (symbols.concentration("A"), symbols.concentration("B")),
-        21,
+        "gas", (symbols.concentration("A"), symbols.concentration("B")), 21
     )
 
     with pytest.raises(ValueError, match="Physical concentration domain is empty"):
@@ -179,10 +165,7 @@ def test_chamfered_affine_minimum_uses_fractional_knapsack() -> None:
         ConcentrationModel.CHAMFERED,
         {aye: 10, bee: 10},
         {aye: -1, bee: -2},
-        {
-            symbols.temperature: Interval(300, 1000),
-            symbols.pressure: Interval(100_000, 200_000),
-        },
+        {symbols.temperature: Interval(300, 1000), symbols.pressure: Interval(100_000, 200_000)},
         (constraint,),
     )
 
@@ -203,10 +186,7 @@ def test_domain_restriction_preserves_totals_and_detects_empty_regions() -> None
         ConcentrationModel.CHAMFERED,
         {aye: 10, bee: 10},
         {aye: -1, bee: -2},
-        {
-            symbols.temperature: Interval(300, 1000),
-            symbols.pressure: Interval(100_000, 200_000),
-        },
+        {symbols.temperature: Interval(300, 1000), symbols.pressure: Interval(100_000, 200_000)},
         (TotalConstraint("gas", (aye, bee), 5),),
     )
     physical = spec.build(DomainKind.PHYSICAL)

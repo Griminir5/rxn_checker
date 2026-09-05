@@ -1,4 +1,4 @@
-"""Phase 3 result, DAG, selection, and rendering tests."""
+"""result, DAG, selection, and rendering tests."""
 
 import json
 from pathlib import Path
@@ -18,26 +18,17 @@ from rxn_checker.cli import main
 from rxn_checker.reporting import render_json, render_text
 from rxn_checker.results import Finding, Role
 
-
 ROOT = Path(__file__).parents[1]
 PROFILES = frozenset(("physical",))
 
 
-def _spec(
-    check_id,
-    run,
-    *,
-    stage=Stage.PHYSICAL,
-    requires=(),
-    role=Role.BLOCKING,
-):
+def _spec(check_id, run, *, stage=Stage.PHYSICAL, requires=(), role=Role.BLOCKING):
     return CheckSpec(
         check_id,
         check_id.replace("_", " ").title(),
         stage,
         CheckScope.CASE,
         requires,
-        role is Role.BLOCKING,
         PROFILES,
         run,
         role,
@@ -65,18 +56,10 @@ def test_dependency_plan_is_deterministic_and_deduplicated() -> None:
 
 
 def test_explicit_dependency_conflict_is_rejected() -> None:
-    registry = (
-        _spec("root", _finding()),
-        _spec("leaf", _finding(), requires=("root",)),
-    )
+    registry = (_spec("root", _finding()), _spec("leaf", _finding(), requires=("root",)))
 
     with pytest.raises(ValueError, match="require excluded"):
-        plan_checks(
-            profile=None,
-            only=("leaf",),
-            exclude=("root",),
-            registry=registry,
-        )
+        plan_checks(profile=None, only=("leaf",), exclude=("root",), registry=registry)
 
 
 def test_registry_rejects_cycles_and_unknown_dependencies() -> None:
@@ -136,6 +119,19 @@ def test_chemistry_failure_finishes_gate_then_stops_later_stage() -> None:
     assert calls == ["chem_fail", "chem_pass"]
     assert result.results["physical"].verdict is Verdict.SKIPPED
     assert "chemistry stage" in result.results["physical"].findings[0].summary
+
+
+def test_stages_are_grouped_even_when_the_registry_is_interleaved() -> None:
+    case = load_case(ROOT / "example_case")
+    plan = (
+        _spec("physical_first", _finding()),
+        _spec("chem_fail", _finding(Verdict.FAIL), stage=Stage.CHEMISTRY),
+        _spec("physical_last", _finding()),
+    )
+    result = execute_plan(case, plan)
+    assert result.selected_checks == ("chem_fail", "physical_first", "physical_last")
+    assert result.results["physical_first"].verdict is Verdict.SKIPPED
+    assert result.results["physical_last"].verdict is Verdict.SKIPPED
 
 
 def test_unknown_prerequisite_skips_dependent_but_error_is_distinct() -> None:
@@ -201,23 +197,12 @@ def test_case_yaml_rejects_unknown_check_selection(tmp_path) -> None:
         load_case(path)
 
 
-def test_cli_checks_selects_only_requested_check_and_prerequisites(
-    capsys, tmp_path
-) -> None:
+def test_cli_checks_selects_only_requested_check_and_prerequisites(capsys, tmp_path) -> None:
     case_path = tmp_path / "case.yaml"
     case_path.write_text(
-        (ROOT / "example_case" / "case.yaml").read_text(encoding="utf-8"),
-        encoding="utf-8",
+        (ROOT / "example_case" / "case.yaml").read_text(encoding="utf-8"), encoding="utf-8"
     )
-    exit_code = main(
-        (
-            str(case_path),
-            "--checks",
-            "physical_lipschitz",
-            "--format",
-            "json",
-        )
-    )
+    exit_code = main((str(case_path), "--checks", "physical_lipschitz", "--format", "json"))
     output = capsys.readouterr().out
     payload = json.loads(output)
 

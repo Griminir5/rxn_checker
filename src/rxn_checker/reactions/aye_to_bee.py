@@ -13,7 +13,7 @@ GAS_CONSTANT = Rational("8.314")  # J/(mol K)
 SIMPLE_RATE_CONSTANT = Rational(2)
 
 
-def _activation_factor(symbols: CaseSymbols) -> Expr:
+def _activation_factor(symbols) -> Expr:
     return exp(-ACTIVATION_ENERGY / (GAS_CONSTANT * symbols.temperature))
 
 

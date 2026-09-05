@@ -1,38 +1,25 @@
 """Regression tests for the exact model and schema-1 loader."""
 
-from pathlib import Path
-from types import SimpleNamespace
 import subprocess
 import sys
+from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 from sympy import Rational
 
 import rxn_checker.loading as loading
-from rxn_checker import (
-    CaseSymbols,
-    Phase,
-    Reaction,
-    Species,
-    load_case,
-    parse_rational,
-)
+from rxn_checker import CaseSymbols, Phase, Reaction, Species, load_case, parse_rational
 from rxn_checker.checks.atom_conservation import check_atom_conservation
 from rxn_checker.checks.mass_conservation import check_mass_conservation
 from rxn_checker.species import PROPERTY_REGISTRY
-
 
 ROOT = Path(__file__).parents[1]
 
 
 @pytest.mark.parametrize(
     ("value", "expected"),
-    (
-        (1, Rational(1)),
-        (0.5, Rational(1, 2)),
-        ("1/2", Rational(1, 2)),
-        ("0.94", Rational(47, 50)),
-    ),
+    ((1, Rational(1)), (0.5, Rational(1, 2)), ("1/2", Rational(1, 2)), ("0.94", Rational(47, 50))),
 )
 def test_rational_parser_uses_decimal_spelling(value, expected) -> None:
     assert parse_rational(value) == expected
@@ -61,22 +48,15 @@ def test_species_and_reaction_quantities_are_exact() -> None:
 
 
 @pytest.mark.parametrize(
-    ("case_directory", "reaction_count"),
-    (("example_case", 2), ("reforming_case", 9)),
+    ("case_directory", "reaction_count"), (("example_case", 2), ("reforming_case", 9))
 )
 def test_bundled_cases_load(case_directory: str, reaction_count: int) -> None:
     case = load_case(ROOT / case_directory)
 
     assert len(case.reactions) == reaction_count
-    assert case.symbols.concentration_symbols.isdisjoint(
-        case.symbols.parameter_symbols
-    )
-    assert case.domain_spec.parameter_intervals[
-        case.symbols.temperature
-    ].lower.is_Rational
-    assert case.domain_spec.parameter_intervals[
-        case.symbols.pressure
-    ].upper.is_Rational
+    assert case.symbols.concentration_symbols.isdisjoint(case.symbols.parameter_symbols)
+    assert case.domain_spec.parameter_intervals[case.symbols.temperature].lower.is_Rational
+    assert case.domain_spec.parameter_intervals[case.symbols.pressure].upper.is_Rational
 
 
 def test_built_in_wustite_composition_is_fractional_and_exact() -> None:
@@ -108,11 +88,7 @@ assert 'rxn_checker.reactions.medrano' not in sys.modules
 assert 'rxn_checker.reactions.xu_froment' not in sys.modules
 """
     completed = subprocess.run(
-        [sys.executable, "-c", script],
-        cwd=ROOT,
-        check=False,
-        capture_output=True,
-        text=True,
+        [sys.executable, "-c", script], cwd=ROOT, check=False, capture_output=True, text=True
     )
 
     assert completed.returncode == 0, completed.stderr
@@ -145,29 +121,20 @@ domain:
         aye = symbols.concentration("Aye")
         bee = symbols.concentration("Bee")
         return {
-            "forward": Reaction(
-                "probe.forward", {"Aye": 1}, {"Bee": 1}, (), aye
-            ),
-            "backward": Reaction(
-                "probe.backward", {"Bee": 1}, {"Aye": 1}, (), bee
-            ),
+            "forward": Reaction("probe.forward", {"Aye": 1}, {"Bee": 1}, (), aye),
+            "backward": Reaction("probe.backward", {"Bee": 1}, {"Aye": 1}, (), bee),
         }
 
     monkeypatch.setattr(
         loading,
         "_family_module",
-        lambda case_directory, family_id: SimpleNamespace(
-            build_family=build_family
-        ),
+        lambda case_directory, family_id: SimpleNamespace(build_family=build_family),
     )
 
     case = load_case(case_path)
 
     assert calls == 1
-    assert tuple(reaction.id for reaction in case.reactions) == (
-        "probe.forward",
-        "probe.backward",
-    )
+    assert tuple(reaction.id for reaction in case.reactions) == ("probe.forward", "probe.backward")
 
 
 def test_xu_froment_shared_terms_are_built_once(monkeypatch) -> None:
@@ -192,8 +159,7 @@ def test_unselected_local_family_is_not_executed(tmp_path: Path) -> None:
     reactions_directory = tmp_path / "reactions"
     reactions_directory.mkdir()
     (reactions_directory / "broken.py").write_text(
-        "raise RuntimeError('unselected module was imported')\n",
-        encoding="utf-8",
+        "raise RuntimeError('unselected module was imported')\n", encoding="utf-8"
     )
     case_path = tmp_path / "case.yaml"
     case_path.write_text(
@@ -216,9 +182,7 @@ domain:
 
     case = load_case(case_path)
 
-    assert tuple(reaction.id for reaction in case.reactions) == (
-        "aye_to_bee.simple",
-    )
+    assert tuple(reaction.id for reaction in case.reactions) == ("aye_to_bee.simple",)
 
 
 def test_selected_local_family_loads(tmp_path: Path) -> None:
@@ -264,6 +228,4 @@ domain:
 
     case = load_case(case_path)
 
-    assert tuple(reaction.id for reaction in case.reactions) == (
-        "local_decay.simple",
-    )
+    assert tuple(reaction.id for reaction in case.reactions) == ("local_decay.simple",)

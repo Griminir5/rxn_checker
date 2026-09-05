@@ -1,16 +1,15 @@
 """Text and JSON renderers for structured run results."""
 
-from collections.abc import Iterable, Mapping
-from enum import Enum
 import json
+from collections.abc import Iterable, Mapping
+from dataclasses import fields, is_dataclass
+from enum import Enum
 from pathlib import Path
 
 import sympy as sp
 
-from .checks.definitions import CheckScope, CheckSpec, Stage
-from .checks.registry import CHECK_REGISTRY
-from .results import Finding, Role, RunResult, Verdict
-
+from .checks import CHECK_REGISTRY, CheckScope, CheckSpec, Stage
+from .results import Role, RunResult, Verdict
 
 _STAGE_NAMES = {
     Stage.CHEMISTRY: "Chemistry",
@@ -18,10 +17,6 @@ _STAGE_NAMES = {
     Stage.AUGMENTED: "Augmented domain",
     Stage.ANALYSIS: "Analyses",
 }
-
-
-def _specs(registry: Iterable[CheckSpec]) -> dict[str, CheckSpec]:
-    return {spec.id: spec for spec in registry}
 
 
 def render_text(
@@ -36,7 +31,7 @@ def render_text(
 
     if verbosity not in {"summary", "failures", "full"}:
         raise ValueError("Unknown report verbosity.")
-    by_id = _specs(registry)
+    by_id = {spec.id: spec for spec in registry}
     lines = [f"rxn-checker: {run.overall.value}", f"Case: {run.case_name}"]
     if profile is not None:
         lines.append(f"Profile: {profile}")
@@ -53,80 +48,44 @@ def render_text(
                 current_stage = spec.stage
 
             findings = result.findings
-            if spec.scope is CheckScope.REACTION:
-                reaction_findings = tuple(
-                    item for item in findings if item.subject != run.case_name
-                )
-                case_findings = tuple(
-                    item for item in findings if item.subject == run.case_name
-                )
-            else:
-                reaction_findings = ()
-                case_findings = findings
-            passed = sum(item.verdict is Verdict.PASS for item in reaction_findings)
-            show_passing_case_detail = False
-            aggregate = (
-                reaction_findings
-                and passed == len(reaction_findings)
-                and all(item.verdict is Verdict.PASS for item in case_findings)
-                and (len(reaction_findings) > 1 or bool(case_findings))
+            reaction_findings = tuple(
+                item
+                for item in findings
+                if spec.scope is CheckScope.REACTION and item.subject != run.case_name
             )
-            if aggregate:
-                lines.append(
-                    f"  PASS     {spec.name:<34} "
-                    f"{passed}/{len(reaction_findings)} reactions"
+            case_findings = tuple(item for item in findings if item.subject == run.case_name)
+            passed = sum(item.verdict is Verdict.PASS for item in reaction_findings)
+            progress = (
+                f" {passed}/{len(reaction_findings)} reactions"
+                if len(reaction_findings) > 1 or reaction_findings and case_findings
+                else ""
+            )
+            name = f"{spec.name:<34}" if progress else spec.name
+            lines.append(f"  {result.verdict.value:<8} {name}{progress}")
+            for finding in findings:
+                detail = (
+                    finding.verdict is not Verdict.PASS
+                    or finding.evidence
+                    and finding.evidence.kind == "negative_side_summary"
+                    or result.verdict is Verdict.PASS
+                    and (
+                        result.role is Role.ANALYSIS
+                        or reaction_findings
+                        and finding.subject == run.case_name
+                    )
                 )
-                if verbosity == "failures" and case_findings:
-                    findings = case_findings
-                    show_passing_case_detail = True
-                elif verbosity != "full":
+                if verbosity != "full" and not detail:
                     continue
-            else:
-                progress = (
-                    f" {passed}/{len(reaction_findings)} reactions"
-                    if len(reaction_findings) > 1
-                    else ""
-                )
-                name = f"{spec.name:<34}" if progress else spec.name
-                lines.append(f"  {result.verdict.value:<8} {name}{progress}")
-
-            visible = findings
-            if verbosity == "failures" and result.verdict is not Verdict.PASS:
-                visible = tuple(
-                    item
-                    for item in findings
-                    if item.verdict is not Verdict.PASS
-                    or (
-                        item.evidence is not None
-                        and item.evidence.kind == "negative_side_summary"
-                    )
-                )
-            elif verbosity == "failures" and not show_passing_case_detail:
-                visible = (
-                    findings
-                    if result.role is Role.ANALYSIS
-                    else tuple(
-                        item
-                        for item in findings
-                        if item.evidence is not None
-                        and item.evidence.kind == "negative_side_summary"
-                    )
-                )
-            for finding in visible:
-                subject = (
-                    ""
-                    if finding.subject == run.case_name
-                    else f"{finding.subject}: "
-                )
-                lines.append(
-                    f"           {finding.verdict.value:<8} {subject}{finding.summary}"
-                )
+                subject = "" if finding.subject == run.case_name else f"{finding.subject}: "
+                lines.append(f"           {finding.verdict.value:<8} {subject}{finding.summary}")
 
     lines.extend(("", f"Overall: {run.overall.value}"))
     return "\n".join(lines) + "\n"
 
 
-def _json_value(value: object) -> object:
+def _json_value(value) -> object:
+    if is_dataclass(value):
+        return {field.name: _json_value(getattr(value, field.name)) for field in fields(value)}
     if isinstance(value, Mapping):
         return {str(key): _json_value(item) for key, item in value.items()}
     if isinstance(value, (tuple, list)):
@@ -140,7 +99,7 @@ def _json_value(value: object) -> object:
     return str(value)
 
 
-def _finding_json(finding: Finding) -> dict[str, object]:
+def _finding_json(finding) -> dict[str, object]:
     rendered: dict[str, object] = {
         "subject": finding.subject,
         "verdict": finding.verdict.value,
@@ -154,14 +113,10 @@ def _finding_json(finding: Finding) -> dict[str, object]:
     return rendered
 
 
-def render_json(
-    run: RunResult,
-    *,
-    registry: Iterable[CheckSpec] = CHECK_REGISTRY,
-) -> str:
+def render_json(run: RunResult, *, registry: Iterable[CheckSpec] = CHECK_REGISTRY) -> str:
     """Serialize every structured result, including evidence and timing."""
 
-    by_id = _specs(registry)
+    by_id = {spec.id: spec for spec in registry}
     results = {}
     for check_id in run.selected_checks:
         spec = by_id[check_id]
@@ -170,28 +125,23 @@ def render_json(
             "name": spec.name,
             "stage": spec.stage.value,
             "domain": (
-                spec.stage.value
-                if spec.stage in {Stage.PHYSICAL, Stage.AUGMENTED}
-                else None
+                spec.stage.value if spec.stage in {Stage.PHYSICAL, Stage.AUGMENTED} else None
             ),
             "scope": spec.scope.value,
             "role": result.role.value,
             "verdict": result.verdict.value,
             "requires": list(spec.requires),
             "prerequisites": {
-                required: run.results[required].verdict.value
-                for required in spec.requires
+                required: run.results[required].verdict.value for required in spec.requires
             },
             "duration_seconds": result.duration_seconds,
             "findings": [_finding_json(item) for item in result.findings],
         }
     payload = {
+        "schema": 2,
         "case_name": run.case_name,
         "selected_checks": list(run.selected_checks),
         "overall": run.overall.value,
         "results": results,
     }
     return json.dumps(payload, indent=2, sort_keys=False) + "\n"
-
-
-__all__ = ("render_json", "render_text")

@@ -46,28 +46,59 @@ class CheckSpec:
     stage: Stage
     scope: CheckScope
     requires: tuple[str, ...]
-    blocking: bool
     profiles: frozenset[str]
     run: CheckRunner
-    role: Role | None = None
+    role: Role = Role.BLOCKING
     accepts_partial_dependencies: bool = False
 
-    def __post_init__(self) -> None:
-        if self.role is None:
-            role = Role.BLOCKING if self.blocking else Role.ANALYSIS
-            object.__setattr__(self, "role", role)
+
+_TARGETS = {
+    "basic": ("atom_conservation", "mass_conservation"),
+    "physical": ("forward_invariance",),
+    "robust": ("forward_invariance", "negative_side_nonrepulsion"),
+    "analysis": (
+        "forward_invariance",
+        "conserved_quantities",
+        "structural_faces",
+        "steady_state_equations",
+        "evaluation_profile",
+        "differential_solver_profile",
+    ),
+    "all": (
+        "forward_invariance",
+        "negative_side_nonrepulsion",
+        "conserved_quantities",
+        "structural_faces",
+        "steady_state_equations",
+        "evaluation_profile",
+        "differential_solver_profile",
+    ),
+}
+PROFILES = frozenset(_TARGETS)
 
 
-def _spec(id, name, stage, scope, requires, run, *, blocking=True, partial=False):
-    return CheckSpec(id, name, stage, scope, requires, blocking, frozenset(), run,
-                     Role.BLOCKING if blocking else Role.ANALYSIS, partial)
+def _spec(id, name, stage, scope, requires, run, *, partial=False):
+    return CheckSpec(
+        id,
+        name,
+        stage,
+        scope,
+        requires,
+        frozenset(name for name, ids in _TARGETS.items() if id in ids),
+        run,
+        Role.ANALYSIS if stage is Stage.ANALYSIS else Role.BLOCKING,
+        partial,
+    )
 
 
 R, C = CheckScope.REACTION, CheckScope.CASE
 CHEM, PHYS, AUG, ANALYSIS = Stage
+# fmt: off
 CHECK_REGISTRY = (
-    _spec("atom_conservation", "Atom conservation", CHEM, R, (), atom_conservation),
-    _spec("mass_conservation", "Mass conservation", CHEM, R, (), mass_conservation),
+    _spec("atom_conservation", "Atom conservation", CHEM, R,
+          (), atom_conservation),
+    _spec("mass_conservation", "Mass conservation", CHEM, R,
+          (), mass_conservation),
     _spec("physical_rate_definedness", "Rate definedness", PHYS, R,
           ("atom_conservation", "mass_conservation"), physical_definedness),
     _spec("rate_nonnegativity", "Rate non-negativity", PHYS, R,
@@ -87,28 +118,17 @@ CHECK_REGISTRY = (
     _spec("negative_side_nonrepulsion", "Negative-side non-repulsion", AUG, C,
           ("augmented_lipschitz",), negative_side, partial=True),
     _spec("conserved_quantities", "Conserved quantities", ANALYSIS, C,
-          ("atom_conservation", "mass_conservation"), run_conserved_quantities, blocking=False),
+          ("atom_conservation", "mass_conservation"), run_conserved_quantities),
     _spec("structural_faces", "Structural faces", ANALYSIS, C,
-          ("atom_conservation", "mass_conservation"), run_structural_faces, blocking=False),
+          ("atom_conservation", "mass_conservation"), run_structural_faces),
     _spec("steady_state_equations", "Steady-state equations", ANALYSIS, C,
-          ("atom_conservation", "mass_conservation"), run_steady_state_equations, blocking=False),
-    _spec("evaluation_profile", "Evaluation profile", ANALYSIS, C, (),
-          run_evaluation_profile, blocking=False),
-    _spec("differential_solver_profile", "Differential solver profile", ANALYSIS,
-          C, (), run_differential_solver_profile, blocking=False),
+          ("atom_conservation", "mass_conservation"), run_steady_state_equations),
+    _spec("evaluation_profile", "Evaluation profile", ANALYSIS, C,
+          (), run_evaluation_profile),
+    _spec("differential_solver_profile", "Differential solver profile", ANALYSIS, C,
+          (), run_differential_solver_profile),
 )
-PROFILES = frozenset(("basic", "physical", "robust", "analysis", "all"))
-_TARGETS = {
-    "basic": ("atom_conservation", "mass_conservation"),
-    "physical": ("forward_invariance",),
-    "robust": ("forward_invariance", "negative_side_nonrepulsion"),
-    "analysis": ("forward_invariance", "conserved_quantities", "structural_faces",
-                 "steady_state_equations", "evaluation_profile",
-                 "differential_solver_profile"),
-    "all": ("forward_invariance", "negative_side_nonrepulsion", "conserved_quantities",
-            "structural_faces", "steady_state_equations", "evaluation_profile",
-            "differential_solver_profile"),
-}
+# fmt: on
 
 
 def validate_registry(registry=CHECK_REGISTRY) -> tuple[CheckSpec, ...]:
@@ -142,49 +162,53 @@ def validate_registry(registry=CHECK_REGISTRY) -> tuple[CheckSpec, ...]:
         visited.add(check_id)
         ordered.append(spec)
 
-    for spec in specs:
+    for spec in sorted(specs, key=lambda spec: stage_order[spec.stage]):
         visit(spec.id)
     return tuple(ordered)
 
 
 def _closure(ids, by_id):
     selected = set()
+
     def add(check_id):
         if check_id not in selected:
             selected.add(check_id)
             for required in by_id[check_id].requires:
                 add(required)
+
     for check_id in ids:
         add(check_id)
     return selected
 
 
-def plan_checks(*, profile="physical", include=(), exclude=(), only=None,
-                registry=CHECK_REGISTRY) -> tuple[CheckSpec, ...]:
+def plan_checks(
+    *, profile="physical", include=(), exclude=(), only=None, registry=CHECK_REGISTRY
+) -> tuple[CheckSpec, ...]:
     ordered = validate_registry(registry)
     by_id = {spec.id: spec for spec in ordered}
     explicit = tuple(include) if only is None else tuple(only)
     if only is None:
         if profile not in PROFILES:
             raise ValueError(f"Unknown check profile '{profile}'.")
-        built_in = set(by_id) == {spec.id for spec in CHECK_REGISTRY}
-        requested = set(explicit) | (set(_TARGETS[profile]) if built_in else {
-            spec.id for spec in ordered if profile in spec.profiles
-        })
+        requested = set(explicit) | {spec.id for spec in ordered if profile in spec.profiles}
     else:
         requested = set(explicit)
     excluded = set(exclude)
     unknown = (requested | excluded) - set(by_id)
     if unknown:
         raise ValueError("Unknown checks: " + ", ".join(sorted(unknown)) + ".")
-    overlap = set(explicit) & excluded
-    if overlap or _closure(explicit, by_id) & excluded:
-        raise ValueError("Explicitly selected checks require excluded checks: " +
-                         ", ".join(sorted(overlap or (_closure(explicit, by_id) & excluded))) + ".")
-    selected = _closure(requested, by_id) - excluded
-    selected = {item for item in selected if not (set(by_id[item].requires) - selected)}
-    while any(set(by_id[item].requires) - selected for item in selected):
-        selected = {item for item in selected if not (set(by_id[item].requires) - selected)}
+    conflict = _closure(explicit, by_id) & excluded
+    if conflict:
+        raise ValueError(
+            "Explicitly selected checks require excluded checks: "
+            + ", ".join(sorted(conflict))
+            + "."
+        )
+    requested = _closure(requested, by_id)
+    selected = set()
+    for spec in ordered:
+        if spec.id in requested and spec.id not in excluded and set(spec.requires) <= selected:
+            selected.add(spec.id)
     return tuple(spec for spec in ordered if spec.id in selected)
 
 
@@ -211,8 +235,9 @@ def execute_plan(case: Case, plan, *, context=None, fail_fast="stage", debug=Fal
         else:
             failed = tuple(r for r in spec.requires if results[r].verdict is not Verdict.PASS)
             partial = (spec.scope is R or spec.accepts_partial_dependencies) and all(
-                by_id[r].scope is R and by_id[r].stage is spec.stage and
-                reaction_ids <= {finding.subject for finding in results[r].findings}
+                by_id[r].scope is R
+                and by_id[r].stage is spec.stage
+                and reaction_ids <= {finding.subject for finding in results[r].findings}
                 for r in failed
             )
             if failed and not partial:
@@ -228,25 +253,49 @@ def execute_plan(case: Case, plan, *, context=None, fail_fast="stage", debug=Fal
                 except Exception as error:
                     if debug:
                         raise
-                    findings = (Finding(case.name, Verdict.ERROR,
-                                        f"{type(error).__name__}: {error}"),)
+                    findings = (
+                        Finding(case.name, Verdict.ERROR, f"{type(error).__name__}: {error}"),
+                    )
                 result = CheckResult(spec.id, spec.role, findings, perf_counter() - started)
         results[spec.id] = result
-        stage_failed |= spec.blocking and result.verdict in {Verdict.FAIL, Verdict.ERROR}
+        stage_failed |= spec.role is Role.BLOCKING and result.verdict in {
+            Verdict.FAIL,
+            Verdict.ERROR,
+        }
     ids = tuple(spec.id for spec in specs)
     return RunResult(case.name, ids, results, overall_verdict(results))
 
 
-def run_checks(case: Case, checks=None, *, context=None, profile=None, include=None,
-               exclude=None, only=None, fail_fast=None, debug=False) -> RunResult:
+def run_checks(
+    case: Case,
+    checks=None,
+    *,
+    context=None,
+    profile=None,
+    include=None,
+    exclude=None,
+    only=None,
+    fail_fast=None,
+    debug=False,
+) -> RunResult:
     config = case.check_config
     registry = tuple(checks) if checks is not None else CHECK_REGISTRY
     no_selection = profile is None and include is None and exclude is None and only is None
-    plan = validate_registry(registry) if checks is not None and no_selection else plan_checks(
-        profile=profile or config.get("profile", "physical"),
-        include=include if include is not None else config.get("include", ()),
-        exclude=exclude if exclude is not None else config.get("exclude", ()),
-        only=only, registry=registry,
+    plan = (
+        validate_registry(registry)
+        if checks is not None and no_selection
+        else plan_checks(
+            profile=profile or config.get("profile", "physical"),
+            include=include if include is not None else config.get("include", ()),
+            exclude=exclude if exclude is not None else config.get("exclude", ()),
+            only=only,
+            registry=registry,
+        )
     )
-    return execute_plan(case, plan, context=context,
-                        fail_fast=fail_fast or config.get("fail_fast", "stage"), debug=debug)
+    return execute_plan(
+        case,
+        plan,
+        context=context,
+        fail_fast=fail_fast or config.get("fail_fast", "stage"),
+        debug=debug,
+    )

@@ -14,9 +14,7 @@ RATE_CONSTANT = Rational(2)
 def build_family(symbols: CaseSymbols) -> Mapping[str, Reaction]:
     aye = symbols.concentration("Aye")
     bee = symbols.concentration("Bee")
-    activation_factor = exp(
-        -ACTIVATION_ENERGY / (GAS_CONSTANT * symbols.temperature)
-    )
+    activation_factor = exp(-ACTIVATION_ENERGY / (GAS_CONSTANT * symbols.temperature))
     return {
         "half_order": Reaction(
             id="aye_plus_bee_to_cee.half_order",

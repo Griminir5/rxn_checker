@@ -23,8 +23,9 @@ class ZeroAtDepletionResult:
     counterexamples: Mapping[str, Point]
 
 
-def check_zero_at_depletion(reaction: Reaction, symbols: CaseSymbols,
-                            domain: ConcentrationDomain | None = None) -> ZeroAtDepletionResult:
+def check_zero_at_depletion(
+    reaction: Reaction, symbols: CaseSymbols, domain: ConcentrationDomain | None = None
+) -> ZeroAtDepletionResult:
     required = tuple(dict.fromkeys((*reaction.reactants, *reaction.catalysts)))
     rates, conclusions, counterexamples = {}, {}, {}
     analyzer = ExpressionAnalyzer()
@@ -42,43 +43,72 @@ def check_zero_at_depletion(reaction: Reaction, symbols: CaseSymbols,
                     conclusion = sp.factor_terms(rate).is_zero
         else:
             proof = analyzer.prove_zero(rate, face)
-            conclusion = {ProofVerdict.PASS: True, ProofVerdict.FAIL: False,
-                          ProofVerdict.UNKNOWN: None}[proof.verdict]
+            conclusion = {
+                ProofVerdict.PASS: True,
+                ProofVerdict.FAIL: False,
+                ProofVerdict.UNKNOWN: None,
+            }[proof.verdict]
             if proof.witness is not None:
                 counterexamples[species_id] = proof.witness
         rates[species_id], conclusions[species_id] = rate, conclusion
-    passed = False if False in conclusions.values() else (
-        None if None in conclusions.values() else True)
+    passed = (
+        False if False in conclusions.values() else (None if None in conclusions.values() else True)
+    )
     return ZeroAtDepletionResult(reaction.id, passed, rates, conclusions, counterexamples)
 
 
 def _finding(result):
-    failed = [(species, rate) for species, rate in result.rates_at_depletion.items()
-              if result.conclusions[species] is False]
-    unknown = [(species, rate) for species, rate in result.rates_at_depletion.items()
-               if result.conclusions[species] is None]
+    failed = [
+        (species, rate)
+        for species, rate in result.rates_at_depletion.items()
+        if result.conclusions[species] is False
+    ]
+    unknown = [
+        (species, rate)
+        for species, rate in result.rates_at_depletion.items()
+        if result.conclusions[species] is None
+    ]
     if failed:
-        summary = " ".join([f"Rate at {species}=0 is {rate}, not zero."
-                            for species, rate in failed] +
-                           [f"Could not prove that the rate at {species}=0 is zero: {rate}."
-                            for species, rate in unknown])
-        data = {species: {"rate": str(rate), "point": {
-            str(symbol): str(value) for symbol, value in
-            result.counterexamples.get(species, {}).items()}}
-            for species, rate in failed}
-        return Finding(result.reaction_id, Verdict.FAIL, summary,
-                       Evidence("depletion_rates", data))
+        summary = " ".join(
+            [f"Rate at {species}=0 is {rate}, not zero." for species, rate in failed]
+            + [
+                f"Could not prove that the rate at {species}=0 is zero: {rate}."
+                for species, rate in unknown
+            ]
+        )
+        data = {
+            species: {
+                "rate": str(rate),
+                "point": {
+                    str(symbol): str(value)
+                    for symbol, value in result.counterexamples.get(species, {}).items()
+                },
+            }
+            for species, rate in failed
+        }
+        return Finding(result.reaction_id, Verdict.FAIL, summary, Evidence("depletion_rates", data))
     if unknown:
-        return Finding(result.reaction_id, Verdict.UNKNOWN, " ".join(
-            f"Could not prove that the rate at {species}=0 is zero: {rate}."
-            for species, rate in unknown))
-    summary = ("Rate is exactly zero at every required depletion boundary."
-               if result.rates_at_depletion else "Reaction has no reactants or catalysts.")
+        return Finding(
+            result.reaction_id,
+            Verdict.UNKNOWN,
+            " ".join(
+                f"Could not prove that the rate at {species}=0 is zero: {rate}."
+                for species, rate in unknown
+            ),
+        )
+    summary = (
+        "Rate is exactly zero at every required depletion boundary."
+        if result.rates_at_depletion
+        else "Reaction has no reactants or catalysts."
+    )
     return Finding(result.reaction_id, Verdict.PASS, summary)
 
 
 def run(context: AnalysisContext, dependencies: Mapping) -> tuple[Finding, ...]:
-    return tuple(reaction_skip(dependencies, "physical_rate_definedness", reaction.id)
-                 or _finding(check_zero_at_depletion(
-                     reaction, context.case.symbols, context.physical_domain))
-                 for reaction in context.case.reactions)
+    return tuple(
+        reaction_skip(dependencies, "physical_rate_definedness", reaction.id)
+        or _finding(
+            check_zero_at_depletion(reaction, context.case.symbols, context.physical_domain)
+        )
+        for reaction in context.case.reactions
+    )

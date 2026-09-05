@@ -31,16 +31,19 @@ class Interval:
 
     def __post_init__(self):
         lower, upper = exact_expr(self.lower), exact_expr(self.upper)
-        if any(value.is_real is not True or value.is_finite is not True
-               for value in (lower, upper)):
+        if any(
+            value.is_real is not True or value.is_finite is not True for value in (lower, upper)
+        ):
             raise ValueError("Interval bounds must be finite and real.")
         object.__setattr__(self, "lower", lower)
         object.__setattr__(self, "upper", upper)
 
     def contains(self, value):
         value = exact_expr(value)
-        return bool((value > self.lower or self.lower_closed and value == self.lower)
-                    and (value < self.upper or self.upper_closed and value == self.upper))
+        return bool(
+            (value > self.lower or self.lower_closed and value == self.lower)
+            and (value < self.upper or self.upper_closed and value == self.upper)
+        )
 
 
 @dataclass(frozen=True)
@@ -65,8 +68,9 @@ class AffineForm:
     coefficients: Mapping[sp.Symbol, sp.Expr]
 
     def value(self, point):
-        return self.constant + sum(value * point[symbol]
-                                   for symbol, value in self.coefficients.items())
+        return self.constant + sum(
+            value * point[symbol] for symbol, value in self.coefficients.items()
+        )
 
 
 @cache
@@ -81,7 +85,8 @@ def affine_form(expression) -> AffineForm | None:
         constant, coefficients = sp.S.Zero, {}
         for argument in expression.args:
             form = affine_form(argument)
-            if form is None: return None
+            if form is None:
+                return None
             constant += form.constant
             for symbol, value in form.coefficients.items():
                 coefficients[symbol] = coefficients.get(symbol, 0) + value
@@ -90,15 +95,20 @@ def affine_form(expression) -> AffineForm | None:
         scale, variable = sp.S.One, None
         for argument in expression.args:
             form = affine_form(argument)
-            if form is None: return None
+            if form is None:
+                return None
             if form.coefficients:
-                if variable is not None: return None
+                if variable is not None:
+                    return None
                 variable = form
             else:
                 scale *= form.constant
-        if variable is None: return AffineForm(scale, {})
-        return AffineForm(scale * variable.constant,
-                          {key: scale * value for key, value in variable.coefficients.items()})
+        if variable is None:
+            return AffineForm(scale, {})
+        return AffineForm(
+            scale * variable.constant,
+            {key: scale * value for key, value in variable.coefficients.items()},
+        )
     return None
 
 
@@ -122,71 +132,108 @@ class ConcentrationDomain:
         return {**self.intervals, **self.parameter_intervals}
 
     def interval(self, symbol):
-        if symbol in self.intervals: return self.intervals[symbol]
-        try: return self.parameter_intervals[symbol]
-        except KeyError as error: raise KeyError(f"Domain has no symbol '{symbol}'.") from error
+        if symbol in self.intervals:
+            return self.intervals[symbol]
+        try:
+            return self.parameter_intervals[symbol]
+        except KeyError as error:
+            raise KeyError(f"Domain has no symbol '{symbol}'.") from error
 
-    def restrict(self, symbol, *, lower=None, upper=None,
-                 strict_lower=False, strict_upper=False):
+    def restrict(self, symbol, *, lower=None, upper=None, strict_lower=False, strict_upper=False):
         current = self.interval(symbol)
         lower = current.lower if lower is None else max(current.lower, exact_expr(lower))
         upper = current.upper if upper is None else min(current.upper, exact_expr(upper))
-        lower_closed = current.lower_closed and not strict_lower if lower == current.lower else not strict_lower
-        upper_closed = current.upper_closed and not strict_upper if upper == current.upper else not strict_upper
+        lower_closed = (
+            current.lower_closed and not strict_lower
+            if lower == current.lower
+            else not strict_lower
+        )
+        upper_closed = (
+            current.upper_closed and not strict_upper
+            if upper == current.upper
+            else not strict_upper
+        )
         concentrations, parameters = dict(self.intervals), dict(self.parameter_intervals)
         (concentrations if symbol in concentrations else parameters)[symbol] = Interval(
-            lower, upper, lower_closed, upper_closed)
+            lower, upper, lower_closed, upper_closed
+        )
         return ConcentrationDomain(self.kind, concentrations, parameters, self.total_constraints)
 
     def is_feasible(self):
         intervals = self.all_intervals
-        if any(item.lower > item.upper or item.lower == item.upper and
-               not (item.lower_closed and item.upper_closed) for item in intervals.values()):
+        if any(
+            item.lower > item.upper
+            or item.lower == item.upper
+            and not (item.lower_closed and item.upper_closed)
+            for item in intervals.values()
+        ):
             return False
-        return all(sum(intervals[symbol].upper for symbol in total.symbols) > total.minimum
-                   or sum(intervals[symbol].upper for symbol in total.symbols) == total.minimum
-                   and all(intervals[symbol].upper_closed for symbol in total.symbols)
-                   for total in self.total_constraints)
+        return all(
+            sum(intervals[symbol].upper for symbol in total.symbols) > total.minimum
+            or sum(intervals[symbol].upper for symbol in total.symbols) == total.minimum
+            and all(intervals[symbol].upper_closed for symbol in total.symbols)
+            for total in self.total_constraints
+        )
 
     def _satisfy_totals(self, point, costs=None, maximize=False):
         intervals = self.all_intervals
         for total in self.total_constraints:
             remaining = total.minimum - sum(point[symbol] for symbol in total.symbols)
-            if remaining <= 0: continue
-            capacities = {symbol: intervals[symbol].upper - point[symbol]
-                          for symbol in total.symbols}
-            if remaining > sum(capacities.values()): return False
+            if remaining <= 0:
+                continue
+            capacities = {
+                symbol: intervals[symbol].upper - point[symbol] for symbol in total.symbols
+            }
+            if remaining > sum(capacities.values()):
+                return False
             if costs is None and remaining < sum(capacities.values()):
                 capacity = sum(capacities.values())
                 for symbol, available in capacities.items():
                     point[symbol] += remaining * available / capacity
                 continue
-            order = total.symbols if costs is None else sorted(total.symbols,
-                key=lambda symbol: (costs.get(symbol, 0), symbol.name), reverse=maximize)
+            order = (
+                total.symbols
+                if costs is None
+                else sorted(
+                    total.symbols,
+                    key=lambda symbol: (costs.get(symbol, 0), symbol.name),
+                    reverse=maximize,
+                )
+            )
             for symbol in order:
                 amount = min(remaining, capacities[symbol])
                 if amount and amount == capacities[symbol] and not intervals[symbol].upper_closed:
                     return False
                 point[symbol] += amount
                 remaining -= amount
-                if remaining == 0: break
+                if remaining == 0:
+                    break
         return True
 
     def exact_witness(self, preferences=None):
-        if not self.is_feasible(): return None
+        if not self.is_feasible():
+            return None
         preferences, point = preferences or {}, {}
         for symbol, interval in self.all_intervals.items():
             preferred = preferences.get(symbol)
-            point[symbol] = (exact_expr(preferred) if preferred is not None and interval.contains(preferred)
-                else interval.lower if interval.lower_closed else (interval.lower + interval.upper) / 2)
+            point[symbol] = (
+                exact_expr(preferred)
+                if preferred is not None and interval.contains(preferred)
+                else interval.lower
+                if interval.lower_closed
+                else (interval.lower + interval.upper) / 2
+            )
         return point if self._satisfy_totals(point) else None
 
     def _extreme(self, form, maximize):
         intervals = self.all_intervals
         unknown = set(form.coefficients) - set(intervals)
         if unknown:
-            raise ValueError("Affine expression uses symbols outside the domain: " +
-                             ", ".join(sorted(map(str, unknown))) + ".")
+            raise ValueError(
+                "Affine expression uses symbols outside the domain: "
+                + ", ".join(sorted(map(str, unknown)))
+                + "."
+            )
         point = {}
         for symbol, interval in intervals.items():
             coefficient = form.coefficients.get(symbol, sp.S.Zero)
@@ -203,7 +250,8 @@ class ConcentrationDomain:
         if not self.is_feasible():
             raise ValueError("Cannot bound an expression on an empty domain.")
         form = affine_form(expression)
-        if form is None: return None
+        if form is None:
+            return None
         lower, lower_point = self._extreme(form, False)
         upper, upper_point = self._extreme(form, True)
         return AffineBounds(lower, upper, lower_point, upper_point)
@@ -240,10 +288,13 @@ class DomainSpec:
             used.update(total.symbols)
         if model is ConcentrationModel.INDEPENDENT and constraints:
             raise ValueError("Independent concentration domains cannot define totals.")
-        for name, value in (("concentration_model", model), ("upper", upper),
-                            ("excursion_lower", lower),
-                            ("parameter_intervals", dict(self.parameter_intervals)),
-                            ("total_constraints", constraints)):
+        for name, value in (
+            ("concentration_model", model),
+            ("upper", upper),
+            ("excursion_lower", lower),
+            ("parameter_intervals", dict(self.parameter_intervals)),
+            ("total_constraints", constraints),
+        ):
             object.__setattr__(self, name, value)
         for kind in DomainKind:
             if not self.build(kind).is_feasible():
@@ -251,13 +302,14 @@ class DomainSpec:
 
     def build(self, kind):
         kind = DomainKind(kind)
-        lower = ({symbol: sp.S.Zero for symbol in self.upper}
-                 if kind is DomainKind.PHYSICAL else self.excursion_lower)
-        return ConcentrationDomain(kind,
+        lower = (
+            {symbol: sp.S.Zero for symbol in self.upper}
+            if kind is DomainKind.PHYSICAL
+            else self.excursion_lower
+        )
+        return ConcentrationDomain(
+            kind,
             {symbol: Interval(lower[symbol], upper) for symbol, upper in self.upper.items()},
-            self.parameter_intervals, self.total_constraints)
-
-
-__all__ = ("AffineBounds", "AffineForm", "ConcentrationDomain", "ConcentrationModel",
-           "DomainKind", "DomainSpec", "GAS_CONSTANT", "Interval", "TotalConstraint",
-           "affine_form")
+            self.parameter_intervals,
+            self.total_constraints,
+        )

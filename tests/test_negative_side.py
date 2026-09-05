@@ -1,4 +1,4 @@
-"""Phase 7 augmented-domain recovery examples."""
+"""augmented-domain recovery examples."""
 
 import sympy as sp
 
@@ -16,22 +16,11 @@ from rxn_checker.reporting import render_text
 from rxn_checker.species import PROPERTY_REGISTRY
 
 
-def _case(
-    rate_builder,
-    *,
-    reactants=None,
-    products=None,
-    negative=("Aye",),
-    inert=(),
-) -> Case:
+def _case(rate_builder, *, reactants=None, products=None, negative=("Aye",), inert=()) -> Case:
     species_ids = ("Aye", "Bee", "Cee")
     symbols = CaseSymbols.for_species(species_ids)
     reaction = Reaction(
-        "test.reaction",
-        reactants or {"Aye": 1},
-        products or {"Bee": 1},
-        (),
-        rate_builder(symbols),
+        "test.reaction", reactants or {"Aye": 1}, products or {"Bee": 1}, (), rate_builder(symbols)
     )
     domain = DomainSpec(
         symbols,
@@ -41,10 +30,7 @@ def _case(
             symbols.concentration(species_id): (-1 if species_id in negative else 0)
             for species_id in species_ids
         },
-        {
-            symbols.temperature: Interval(300, 1000),
-            symbols.pressure: Interval(100_000, 200_000),
-        },
+        {symbols.temperature: Interval(300, 1000), symbols.pressure: Interval(100_000, 200_000)},
     )
     return Case(
         "negative_side",
@@ -74,9 +60,7 @@ def test_linear_consumption_is_nonrepelling_and_strictly_attracting() -> None:
 
 
 def test_clamped_consumption_is_nonrepelling_but_stuck_when_negative() -> None:
-    case = _case(
-        lambda symbols: 2 * sp.Max(symbols.concentration("Aye"), 0)
-    )
+    case = _case(lambda symbols: 2 * sp.Max(symbols.concentration("Aye"), 0))
     finding = _run(case).results["negative_side_nonrepulsion"].findings[0]
 
     assert finding.verdict is Verdict.PASS
@@ -108,9 +92,7 @@ def test_augmented_irregularity_skips_recovery_for_that_source() -> None:
 
 def test_irregular_unrelated_rate_does_not_block_an_inert_coordinate() -> None:
     case = _case(
-        lambda symbols: sp.sqrt(symbols.concentration("Aye")),
-        negative=("Cee",),
-        inert=("Cee",),
+        lambda symbols: sp.sqrt(symbols.concentration("Aye")), negative=("Cee",), inert=("Cee",)
     )
     result = _run(case)
 
@@ -123,8 +105,7 @@ def test_irregular_unrelated_rate_does_not_block_an_inert_coordinate() -> None:
 
 def test_simultaneous_negative_error_is_an_exact_counterexample() -> None:
     case = _case(
-        lambda symbols: symbols.concentration("Aye")
-        * symbols.concentration("Bee"),
+        lambda symbols: symbols.concentration("Aye") * symbols.concentration("Bee"),
         reactants={"Aye": 1, "Bee": 1},
         products={"Cee": 1},
         negative=("Aye", "Bee"),
@@ -147,11 +128,7 @@ def test_simultaneous_negative_error_is_an_exact_counterexample() -> None:
 
 
 def test_negative_inert_coordinate_is_nonrepelling_but_stuck() -> None:
-    case = _case(
-        lambda symbols: symbols.concentration("Aye"),
-        negative=("Cee",),
-        inert=("Cee",),
-    )
+    case = _case(lambda symbols: symbols.concentration("Aye"), negative=("Cee",), inert=("Cee",))
     finding = _run(case).results["negative_side_nonrepulsion"].findings[0]
 
     assert finding.subject == "Cee"

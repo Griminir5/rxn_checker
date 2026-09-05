@@ -22,10 +22,13 @@ class MassConservationResult:
     imbalance: sp.Expr
 
 
-def check_mass_conservation(reaction: Reaction, species_by_id: Mapping[str, Species], *,
-                            rel_tol: RationalInput = MASS_RELATIVE_TOLERANCE,
-                            abs_tol: RationalInput = MASS_ABSOLUTE_TOLERANCE
-                            ) -> MassConservationResult:
+def check_mass_conservation(
+    reaction: Reaction,
+    species_by_id: Mapping[str, Species],
+    *,
+    rel_tol: RationalInput = MASS_RELATIVE_TOLERANCE,
+    abs_tol: RationalInput = MASS_ABSOLUTE_TOLERANCE,
+) -> MassConservationResult:
     relative, absolute = parse_rational(rel_tol), parse_rational(abs_tol)
     if relative < 0 or absolute < 0:
         raise ValueError("Mass tolerances must be non-negative.")
@@ -33,15 +36,19 @@ def check_mass_conservation(reaction: Reaction, species_by_id: Mapping[str, Spec
     masses = {item: species_by_id[item].molar_mass for item in ids}
     missing = [item for item, mass in masses.items() if mass is None]
     if missing:
-        raise ValueError(f"Cannot check mass conservation for reaction '{reaction.id}'; "
-                         "molar mass is missing for species: " + ", ".join(missing) + ".")
-    total = lambda side: sum((coefficient * masses[item]
-                              for item, coefficient in side.items()), sp.S.Zero)
-    reactants, products = total(reaction.reactants), total(reaction.products)
+        raise ValueError(
+            f"Cannot check mass conservation for reaction '{reaction.id}'; "
+            "molar mass is missing for species: " + ", ".join(missing) + "."
+        )
+    reactants, products = (
+        sum((coefficient * masses[item] for item, coefficient in side.items()), sp.S.Zero)
+        for side in (reaction.reactants, reaction.products)
+    )
     imbalance = products - reactants
     allowed = max(absolute, relative * max(abs(reactants), abs(products)))
-    return MassConservationResult(reaction.id, bool(abs(imbalance) <= allowed),
-                                  reactants, products, imbalance)
+    return MassConservationResult(
+        reaction.id, bool(abs(imbalance) <= allowed), reactants, products, imbalance
+    )
 
 
 def run(context: AnalysisContext, _dependencies: Mapping) -> tuple[Finding, ...]:
@@ -52,12 +59,26 @@ def run(context: AnalysisContext, _dependencies: Mapping) -> tuple[Finding, ...]
         except ValueError as error:
             findings.append(Finding(reaction.id, Verdict.FAIL, str(error)))
             continue
-        details = None if result.passed else Evidence("mass_imbalance", {
-            "reactant_mass_kg_per_mol": result.reactant_mass,
-            "product_mass_kg_per_mol": result.product_mass,
-            "imbalance_kg_per_mol": result.imbalance})
-        findings.append(Finding(reaction.id,
-            Verdict.PASS if result.passed else Verdict.FAIL,
-            "Stoichiometric masses balance." if result.passed else
-            "Products and reactants have different masses.", details))
+        details = (
+            None
+            if result.passed
+            else Evidence(
+                "mass_imbalance",
+                {
+                    "reactant_mass_kg_per_mol": result.reactant_mass,
+                    "product_mass_kg_per_mol": result.product_mass,
+                    "imbalance_kg_per_mol": result.imbalance,
+                },
+            )
+        )
+        findings.append(
+            Finding(
+                reaction.id,
+                Verdict.PASS if result.passed else Verdict.FAIL,
+                "Stoichiometric masses balance."
+                if result.passed
+                else "Products and reactants have different masses.",
+                details,
+            )
+        )
     return tuple(findings)

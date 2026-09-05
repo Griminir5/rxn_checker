@@ -5,7 +5,6 @@ from types import MappingProxyType
 
 from ..model import CaseSymbols, Reaction
 
-
 FamilyBuilder = Callable[[CaseSymbols], Mapping[str, Reaction]]
 
 # Module names, rather than imported modules, keep unselected families unloaded.

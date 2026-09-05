@@ -1,21 +1,20 @@
 """Strict schema-1 YAML loading and requested-family imports."""
 
-from collections.abc import Mapping
 import hashlib
+import sys
+from collections.abc import Mapping
 from importlib import import_module, util
 from pathlib import Path
-import sys
 
 import yaml
 
 from .case import Case
 from .domain import GAS_CONSTANT, ConcentrationModel, DomainSpec, Interval, TotalConstraint
-from .model import CaseSymbols, Phase, Reaction, Species, parse_rational
+from .model import CaseSymbols, Phase, Reaction, parse_rational
 from .reactions import BUILTIN_FAMILIES
 from .species import PROPERTY_REGISTRY, PropertyRegistry
 
-_TOP_KEYS = {"schema", "species", "inerts", "reactions", "parameters",
-             "domain", "checks", "report"}
+_TOP_KEYS = {"schema", "species", "inerts", "reactions", "parameters", "domain", "checks", "report"}
 
 
 def _mapping(value, label):
@@ -36,8 +35,7 @@ def _strings(config, key, optional=False):
     values = config.get(key)
     if not isinstance(values, list):
         raise ValueError(f"Case '{key}' must be a YAML sequence.")
-    if any(not isinstance(value, str) or not value or value != value.strip()
-           for value in values):
+    if any(not isinstance(value, str) or not value or value != value.strip() for value in values):
         raise ValueError(f"Case '{key}' entries must be non-empty strings.")
     if len(values) != len(set(values)):
         raise ValueError(f"Case '{key}' entries must be unique.")
@@ -50,8 +48,7 @@ def _parameters(value, symbols):
     if set(config) != {"temperature", "pressure"}:
         raise ValueError("Case parameters must define temperature and pressure.")
     result = {}
-    for key, symbol in (("temperature", symbols.temperature),
-                        ("pressure", symbols.pressure)):
+    for key, symbol in (("temperature", symbols.temperature), ("pressure", symbols.pressure)):
         pair = config[key]
         if not isinstance(pair, list) or len(pair) != 2:
             raise ValueError(f"Case parameter '{key}' must contain [lower, upper].")
@@ -71,10 +68,13 @@ def _bounds(value, species_ids, label):
     overrides = _mapping(config.get("overrides", {}), f"Domain '{label}.overrides'")
     unknown = set(overrides) - set(species_ids)
     if unknown:
-        raise ValueError(f"Domain '{label}' references unknown species: " +
-                         ", ".join(sorted(unknown)) + ".")
-    return {item: parse_rational(overrides.get(item, default), label=f"{label} for '{item}'")
-            for item in species_ids}
+        raise ValueError(
+            f"Domain '{label}' references unknown species: " + ", ".join(sorted(unknown)) + "."
+        )
+    return {
+        item: parse_rational(overrides.get(item, default), label=f"{label} for '{item}'")
+        for item in species_ids
+    }
 
 
 def _total(value, phase, species, symbols, parameters):
@@ -86,8 +86,9 @@ def _total(value, phase, species, symbols, parameters):
     mode = config.get("mode", "none")
     allowed = {"none", "explicit"} | ({"ideal_gas_minimum"} if phase is Phase.GAS else set())
     if mode not in allowed:
-        raise ValueError(f"{label.title()} total mode must be one of: " +
-                         ", ".join(sorted(allowed)) + ".")
+        raise ValueError(
+            f"{label.title()} total mode must be one of: " + ", ".join(sorted(allowed)) + "."
+        )
     selected = tuple(item.id for item in species if item.phase is phase)
     if "species" in config:
         selected = tuple(config["species"] if isinstance(config["species"], list) else ())
@@ -99,8 +100,12 @@ def _total(value, phase, species, symbols, parameters):
     unknown = set(selected) - set(by_id)
     wrong = {item for item in selected if item in by_id and by_id[item].phase is not phase}
     if unknown or wrong:
-        kind, values = ("unknown species", unknown) if unknown else ("species from another phase", wrong)
-        raise ValueError(f"Domain {label} total includes {kind}: " + ", ".join(sorted(values)) + ".")
+        kind, values = (
+            ("unknown species", unknown) if unknown else ("species from another phase", wrong)
+        )
+        raise ValueError(
+            f"Domain {label} total includes {kind}: " + ", ".join(sorted(values)) + "."
+        )
     if mode == "none":
         if "species" in config or "value" in config:
             raise ValueError(f"Domain {label} total options require a non-none mode.")
@@ -127,18 +132,30 @@ def _domain(value, species, symbols, parameters):
     try:
         model = ConcentrationModel(config.get("concentration_model"))
     except (TypeError, ValueError) as error:
-        raise ValueError("Domain concentration_model must be 'independent' or 'chamfered'.") from error
+        raise ValueError(
+            "Domain concentration_model must be 'independent' or 'chamfered'."
+        ) from error
     ids = tuple(item.id for item in species)
-    upper, lower = _bounds(config.get("upper"), ids, "upper"), _bounds(
-        config.get("excursion_lower"), ids, "excursion_lower")
+    upper, lower = (
+        _bounds(config.get("upper"), ids, "upper"),
+        _bounds(config.get("excursion_lower"), ids, "excursion_lower"),
+    )
     totals = _mapping(config.get("totals", {}), "Domain 'totals'")
     _keys(totals, ("gas", "solid"), "domain totals")
-    constraints = tuple(item for phase in Phase if (item := _total(
-        totals.get(phase.value), phase, species, symbols, parameters)) is not None)
-    return DomainSpec(symbols, model,
+    constraints = tuple(
+        item
+        for phase in Phase
+        if (item := _total(totals.get(phase.value), phase, species, symbols, parameters))
+        is not None
+    )
+    return DomainSpec(
+        symbols,
+        model,
         {symbols.concentration(item): upper[item] for item in ids},
         {symbols.concentration(item): lower[item] for item in ids},
-        parameters, constraints)
+        parameters,
+        constraints,
+    )
 
 
 def _checks(value):
@@ -150,6 +167,7 @@ def _checks(value):
     if fail_fast not in {"stage", "none"}:
         raise ValueError("Check fail_fast must be 'stage' or 'none'.")
     from .checks import plan_checks
+
     plan_checks(profile=profile, include=include, exclude=exclude)
     return {"profile": profile, "include": include, "exclude": exclude, "fail_fast": fail_fast}
 
@@ -168,7 +186,9 @@ def _report(value):
 def _selector(value):
     parts = value.split(".")
     if len(parts) not in (1, 2) or any(not part.isidentifier() for part in parts):
-        raise ValueError(f"Invalid reaction selector '{value}'; expected 'family' or 'family.reaction'.")
+        raise ValueError(
+            f"Invalid reaction selector '{value}'; expected 'family' or 'family.reaction'."
+        )
     return parts[0], parts[1] if len(parts) == 2 else None
 
 
@@ -210,22 +230,29 @@ def _build_family(directory, family_id, symbols):
         if not isinstance(reaction, Reaction):
             raise TypeError(f"Reaction family '{family_id}' returned a non-Reaction value.")
         if reaction.id != f"{family_id}.{local_id}":
-            raise ValueError(f"Reaction family '{family_id}' key '{local_id}' returned reaction id "
-                             f"'{reaction.id}', expected '{family_id}.{local_id}'.")
+            raise ValueError(
+                f"Reaction family '{family_id}' key '{local_id}' returned reaction id "
+                f"'{reaction.id}', expected '{family_id}.{local_id}'."
+            )
     return built
 
 
 def _reactions(selectors, symbols, directory):
     parsed = tuple(map(_selector, selectors))
-    families = {family_id: _build_family(directory, family_id, symbols)
-                for family_id in dict.fromkeys(family for family, _ in parsed)}
+    families = {
+        family_id: _build_family(directory, family_id, symbols)
+        for family_id in dict.fromkeys(family for family, _ in parsed)
+    }
     selected, selected_ids = [], set()
     for family_id, local_id in parsed:
         family = families[family_id]
         for name in family if local_id is None else (local_id,):
             if name not in family:
-                raise ValueError(f"Unknown reaction '{family_id}.{name}'. Available reactions: " +
-                                 ", ".join(family) + ".")
+                raise ValueError(
+                    f"Unknown reaction '{family_id}.{name}'. Available reactions: "
+                    + ", ".join(family)
+                    + "."
+                )
             if family[name].id in selected_ids:
                 raise ValueError(f"Reaction '{family[name].id}' was selected more than once.")
             selected.append(family[name])
@@ -241,19 +268,24 @@ def load_case(path: str | Path, *, property_registry: PropertyRegistry = PROPERT
     _keys(config, _TOP_KEYS, "top-level case")
     if config.get("schema") != 1 or isinstance(config.get("schema"), bool):
         raise ValueError("Case 'schema' must be integer 1.")
-    ids, inerts, selectors = (_strings(config, "species"),
-                              _strings(config, "inerts", True),
-                              _strings(config, "reactions"))
+    ids, inerts, selectors = (
+        _strings(config, "species"),
+        _strings(config, "inerts", True),
+        _strings(config, "reactions"),
+    )
     missing = [item for item in ids if item not in property_registry.records]
     if missing:
         raise ValueError("Unknown case species: " + ", ".join(missing) + ".")
     species = tuple(property_registry.get_record(item) for item in ids)
     symbols = CaseSymbols.for_species(ids)
     parameters = _parameters(config.get("parameters"), symbols)
-    return Case(path.parent.name, species, symbols,
+    return Case(
+        path.parent.name,
+        species,
+        symbols,
         _reactions(selectors, symbols, path.parent),
-        _domain(config.get("domain"), species, symbols, parameters), inerts,
-        _checks(config.get("checks")), _report(config.get("report")))
-
-
-__all__ = ("load_case",)
+        _domain(config.get("domain"), species, symbols, parameters),
+        inerts,
+        _checks(config.get("checks")),
+        _report(config.get("report")),
+    )

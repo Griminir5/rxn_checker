@@ -1,7 +1,7 @@
 """Symbolic differential profile of the concentration-space kinetic system."""
 
 from collections import Counter
-from collections.abc import Iterable, Mapping, Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, replace
 from enum import StrEnum
 from functools import cache
@@ -17,12 +17,12 @@ from sympy.core.relational import (
     StrictLessThan,
     Unequality,
 )
+from sympy.utilities.iterables import strongly_connected_components
 
 from ..domain import ConcentrationDomain, DomainKind
 from ..model import Reaction
-from ..network import FluxNetwork, SourceFlux, source_equivalent_fluxes
-from .analysis import BoundResult, ExpressionAnalyzer, ProofVerdict
-
+from ..network import source_equivalent_fluxes
+from .analysis import ExpressionAnalyzer, ProofVerdict
 
 _MAX_HESSIAN_ENTRIES = 2048
 _MAX_SECOND_DERIVATIVE_OPS = 256
@@ -145,35 +145,33 @@ class DifferentialSolverProfile:
     source_equivalent_fluxes: int
 
 
-def _true(value: object) -> bool:
+def _true(value) -> bool:
     return value is True or value is sp.true
 
 
-def _maximum(values: Iterable[sp.Expr]) -> sp.Expr:
+def _maximum(values) -> sp.Expr:
     values = tuple(values)
     return sp.S.Zero if not values else values[0] if len(values) == 1 else sp.Max(*values)
 
 
-def _sum(expressions: Iterable[sp.Expr]) -> sp.Expr:
+def _sum(expressions) -> sp.Expr:
     terms = tuple(expressions)
-    return sp.S.Zero if not terms else terms[0] if len(terms) == 1 else sp.Add(*terms, evaluate=False)
+    return (
+        sp.S.Zero if not terms else terms[0] if len(terms) == 1 else sp.Add(*terms, evaluate=False)
+    )
 
 
-def _product(coefficient: sp.Expr, expression: sp.Expr) -> sp.Expr:
+def _product(coefficient, expression) -> sp.Expr:
     if coefficient == 1:
         return expression
     return sp.Mul(coefficient, expression, evaluate=False)
 
 
-def _ordered(symbols: Iterable[sp.Symbol]) -> tuple[sp.Symbol, ...]:
+def _ordered(symbols) -> tuple[sp.Symbol, ...]:
     return tuple(sorted(set(symbols), key=sp.default_sort_key))
 
 
-def _condition_truth(
-    condition: object,
-    domain: ConcentrationDomain,
-    analyzer: ExpressionAnalyzer,
-) -> tuple[bool | None, str]:
+def _condition_truth(condition, domain, analyzer) -> tuple[bool | None, str]:
     if condition in (True, sp.true):
         return True, "unconditional branch"
     if condition in (False, sp.false):
@@ -214,9 +212,7 @@ def _condition_truth(
 
 
 def reduce_branches(
-    expression: sp.Expr,
-    domain: ConcentrationDomain,
-    analyzer: ExpressionAnalyzer,
+    expression: sp.Expr, domain: ConcentrationDomain, analyzer: ExpressionAnalyzer
 ) -> BranchReduction:
     """Select only Abs/Min/Max/Piecewise branches proved on ``domain``."""
 
@@ -274,13 +270,15 @@ def reduce_branches(
                 )
                 if dominates:
                     relation = "no greater" if rebuilt.func is sp.Min else "no smaller"
-                    return record(value, candidate, f"selected argument is {relation} than every alternative")
+                    return record(
+                        value, candidate, f"selected argument is {relation} than every alternative"
+                    )
         return rebuilt
 
     return BranchReduction(visit(sp.sympify(expression)), tuple(reductions))
 
 
-def _surface_location(bounds: BoundResult) -> SurfaceLocation:
+def _surface_location(bounds) -> SurfaceLocation:
     if not bounds.known:
         return SurfaceLocation.UNKNOWN
     lower, upper = bounds.lower, bounds.upper
@@ -296,39 +294,16 @@ def _surface_location(bounds: BoundResult) -> SurfaceLocation:
     return SurfaceLocation.POSSIBLE
 
 
-def _surface(
-    kind: str,
-    expression: sp.Expr,
-    source: sp.Expr,
-    domain: ConcentrationDomain,
-    analyzer: ExpressionAnalyzer,
-) -> SurfaceProfile:
-    bounds = analyzer.bounds(expression, domain)
-    return SurfaceProfile(
-        kind,
-        expression,
-        source,
-        _surface_location(bounds),
-        bounds.reason,
-    )
-
-
-def _condition_surface(condition: object) -> sp.Expr | None:
-    if isinstance(condition, Relational):
-        return condition.lhs - condition.rhs
-    return None
-
-
-def _extract_surfaces(
-    expression: sp.Expr,
-    domain: ConcentrationDomain,
-    analyzer: ExpressionAnalyzer,
-) -> tuple[SurfaceProfile, ...]:
+def _extract_surfaces(expression, domain, analyzer) -> tuple[SurfaceProfile, ...]:
     surfaces: dict[tuple[str, sp.Expr, sp.Expr], SurfaceProfile] = {}
 
     def add(kind: str, zero: sp.Expr, source: sp.Expr) -> None:
         key = kind, zero, source
-        surfaces.setdefault(key, _surface(kind, zero, source, domain, analyzer))
+        if key not in surfaces:
+            bounds = analyzer.bounds(zero, domain)
+            surfaces[key] = SurfaceProfile(
+                kind, zero, source, _surface_location(bounds), bounds.reason
+            )
 
     for node in sp.preorder_traversal(expression):
         if node.func is sp.Abs:
@@ -338,9 +313,8 @@ def _extract_surfaces(
                 add("switch", left - right, node)
         elif isinstance(node, sp.Piecewise):
             for _branch, condition in node.args:
-                zero = _condition_surface(condition)
-                if zero is not None:
-                    add("switch", zero, node)
+                if isinstance(condition, Relational):
+                    add("switch", condition.lhs - condition.rhs, node)
         elif node.func is sp.log:
             add("rate singularity", node.args[0], node)
         elif isinstance(node, sp.Pow) and node.exp.is_number is True:
@@ -358,7 +332,7 @@ def _extract_surfaces(
     return tuple(surfaces.values())
 
 
-def _active(surfaces: Sequence[SurfaceProfile], kinds: set[str]) -> bool:
+def _active(surfaces, kinds) -> bool:
     return any(
         surface.kind in kinds and surface.location is not SurfaceLocation.EXCLUDED
         for surface in surfaces
@@ -370,7 +344,7 @@ def symbolic_derivative(expression: sp.Expr, variable: sp.Symbol) -> sp.Expr:
     return sp.diff(expression, variable)
 
 
-def _feedback_kind(lower: sp.Expr | None, upper: sp.Expr | None) -> FeedbackKind:
+def _feedback_kind(lower, upper) -> FeedbackKind:
     if lower is None or upper is None:
         return FeedbackKind.UNKNOWN
     if lower == upper == 0:
@@ -385,10 +359,7 @@ def _feedback_kind(lower: sp.Expr | None, upper: sp.Expr | None) -> FeedbackKind
 
 
 def _signed_interval(
-    expression: sp.Expr | None,
-    terms: Sequence[tuple[sp.Expr, DerivativeBound]],
-    domain: ConcentrationDomain,
-    analyzer: ExpressionAnalyzer,
+    expression, terms, domain, analyzer
 ) -> tuple[sp.Expr | None, sp.Expr | None, bool, str | None]:
     if expression is not None and sp.count_ops(expression) <= _MAX_SECOND_DERIVATIVE_OPS:
         bounds = analyzer.bounds(expression, domain)
@@ -404,11 +375,7 @@ def _signed_interval(
     return lower.doit(), upper.doit(), False, None
 
 
-def _linear_derivatives(
-    terms: Sequence[tuple[sp.Expr, DerivativeBound]],
-    domain: ConcentrationDomain,
-    analyzer: ExpressionAnalyzer,
-) -> dict[str, object]:
+def _linear_derivatives(terms, domain, analyzer) -> dict[str, object]:
     terms = tuple((coefficient, bound) for coefficient, bound in terms if coefficient != 0)
     expression = (
         _sum(_product(coefficient, bound.derivative) for coefficient, bound in terms)
@@ -435,19 +402,14 @@ def _linear_derivatives(
     }
 
 
-def _regularity(
-    defined: ProofVerdict,
-    gradient: ProofVerdict,
-    surfaces: Sequence[SurfaceProfile],
-) -> Regularity:
-    reachable = tuple(
-        item for item in surfaces if item.location is not SurfaceLocation.EXCLUDED
-    )
+def _regularity(defined, gradient, surfaces) -> Regularity:
+    reachable = tuple(item for item in surfaces if item.location is not SurfaceLocation.EXCLUDED)
     if defined is not ProofVerdict.PASS:
         return Regularity.UNKNOWN
     if any(item.kind == "switch" for item in reachable):
         interior = any(
-            item.location in {
+            item.location
+            in {
                 SurfaceLocation.INTERIOR,
                 SurfaceLocation.EVERYWHERE,
                 SurfaceLocation.POSSIBLE,
@@ -458,28 +420,23 @@ def _regularity(
         )
         if interior:
             return (
-                Regularity.PIECEWISE_C1
-                if gradient is ProofVerdict.PASS
-                else Regularity.CONTINUOUS
+                Regularity.PIECEWISE_C1 if gradient is ProofVerdict.PASS else Regularity.CONTINUOUS
             )
         return Regularity.C1_INTERIOR
-    if any("first-derivative" in item.kind or item.kind == "rate singularity" for item in reachable):
+    if any(
+        "first-derivative" in item.kind or item.kind == "rate singularity" for item in reachable
+    ):
         return Regularity.CONTINUOUS
     return Regularity.C1 if gradient is ProofVerdict.PASS else Regularity.UNKNOWN
 
 
 def _profile_rate(
-    analyzer: ExpressionAnalyzer,
-    flux: SourceFlux,
-    concentration_symbols: Sequence[sp.Symbol],
-    operating_symbols: Sequence[sp.Symbol],
-    domain: ConcentrationDomain,
+    analyzer, flux, concentration_symbols, operating_symbols, domain
 ) -> RateDifferentialProfile:
     reduced = reduce_branches(flux.expression, domain, analyzer)
     surfaces = _extract_surfaces(reduced.expression, domain, analyzer)
     variables = _ordered(
-        reduced.expression.free_symbols
-        & set((*concentration_symbols, *operating_symbols))
+        reduced.expression.free_symbols & set((*concentration_symbols, *operating_symbols))
     )
     gradient = analyzer.gradient_envelope(reduced.expression, domain, variables)
     components = (
@@ -489,10 +446,7 @@ def _profile_rate(
     )
     defined = analyzer.defined(reduced.expression, domain).verdict
     regularity = _regularity(defined, gradient.verdict, surfaces)
-    nonsmooth = _active(
-        surfaces,
-        {"switch", "rate singularity", "first-derivative singularity"},
-    )
+    nonsmooth = _active(surfaces, {"switch", "rate singularity", "first-derivative singularity"})
 
     derivatives = []
     for variable in variables:
@@ -501,9 +455,7 @@ def _profile_rate(
         bounds = None if unavailable else analyzer.bounds(derivative, domain)
         signed = bounds is not None and bounds.known
         absolute = (
-            sp.Max(abs(bounds.lower), abs(bounds.upper))
-            if signed
-            else components.get(variable)
+            sp.Max(abs(bounds.lower), abs(bounds.upper)) if signed else components.get(variable)
         )
         reason = None
         if unavailable:
@@ -552,21 +504,17 @@ def _profile_rate(
     )
 
 
-def _gradient(
-    rates: Sequence[RateDifferentialProfile],
-    variables: Sequence[sp.Symbol],
-) -> dict[tuple[int, int], DerivativeBound]:
+def _gradient(rates, variables) -> dict[tuple[int, int], DerivativeBound]:
     positions = {symbol: index for index, symbol in enumerate(variables)}
     return {
         (row, positions[bound.variable]): bound
         for row, rate in enumerate(rates)
         for bound in rate.derivatives
-        if bound.variable in positions
-        and (bound.derivative != 0 or bound.absolute_upper != 0)
+        if bound.variable in positions and (bound.derivative != 0 or bound.absolute_upper != 0)
     }
 
 
-def _sign_label(lower: sp.Expr | None, upper: sp.Expr | None) -> str:
+def _sign_label(lower, upper) -> str:
     if lower is None or upper is None:
         return "unknown"
     if lower == upper == 0:
@@ -580,28 +528,17 @@ def _sign_label(lower: sp.Expr | None, upper: sp.Expr | None) -> str:
     return "non-strict"
 
 
-def _entry(
-    row: str,
-    column: str,
-    terms: Sequence[tuple[sp.Expr, DerivativeBound]],
-    domain: ConcentrationDomain,
-    analyzer: ExpressionAnalyzer,
-) -> dict[str, object] | None:
+def _entry(row, column, terms, domain, analyzer) -> dict[str, object] | None:
     terms = tuple((coefficient, bound) for coefficient, bound in terms if coefficient)
     if not terms:
         return None
     data = _linear_derivatives(terms, domain, analyzer)
     if data["expression"] == 0 and data["absolute_upper"] == 0:
         return None
-    return {
-        "row": row,
-        "column": column,
-        **data,
-        "sign": _sign_label(data["lower"], data["upper"]),
-    }
+    return {"row": row, "column": column, **data, "sign": _sign_label(data["lower"], data["upper"])}
 
 
-def _numeric(value: sp.Expr | None) -> float:
+def _numeric(value) -> float:
     if value is None:
         return float("-inf")
     try:
@@ -611,10 +548,14 @@ def _numeric(value: sp.Expr | None) -> float:
         return float("-inf")
 
 
-def _ranked(entries: Sequence[Mapping[str, object]], limit: int = 5):
+def _ranked(entries, limit=5):
     ranked = sorted(
         entries,
-        key=lambda item: (-_numeric(item.get("absolute_upper")), str(item.get("row")), str(item.get("column"))),
+        key=lambda item: (
+            -_numeric(item.get("absolute_upper")),
+            str(item.get("row")),
+            str(item.get("column")),
+        ),
     )[:limit]
     return tuple(
         {
@@ -626,65 +567,27 @@ def _ranked(entries: Sequence[Mapping[str, object]], limit: int = 5):
     )
 
 
-def _strongly_connected(nodes: Sequence[str], edges: Mapping[str, set[str]]) -> tuple[tuple[str, ...], ...]:
-    """Return deterministic Tarjan components for a small reaction graph."""
-
-    index = 0
-    stack: list[str] = []
-    active: set[str] = set()
-    indices: dict[str, int] = {}
-    low: dict[str, int] = {}
-    components: list[tuple[str, ...]] = []
-
-    def visit(node: str) -> None:
-        nonlocal index
-        indices[node] = low[node] = index
-        index += 1
-        stack.append(node)
-        active.add(node)
-        for target in sorted(edges.get(node, ())):
-            if target not in indices:
-                visit(target)
-                low[node] = min(low[node], low[target])
-            elif target in active:
-                low[node] = min(low[node], indices[target])
-        if low[node] == indices[node]:
-            component = []
-            while True:
-                target = stack.pop()
-                active.remove(target)
-                component.append(target)
-                if target == node:
-                    break
-            components.append(tuple(sorted(component)))
-
-    for node in nodes:
-        if node not in indices:
-            visit(node)
-    return tuple(components)
-
-
-def _build_interaction(
-    analyzer: ExpressionAnalyzer,
-    network: FluxNetwork,
-    rates: Sequence[RateDifferentialProfile],
-    concentration_symbols: Sequence[sp.Symbol],
-    gradient: Mapping[tuple[int, int], DerivativeBound],
-    domain: ConcentrationDomain,
-) -> MatrixEnvelope:
-    labels = tuple(flux.id for flux in network.fluxes)
+def _matrix_entries(left, gradient, right, rows, columns, domain, analyzer):
+    """Bound entries of left * gradient * right without expanding rate expressions."""
     entries = []
-    for affected in range(len(rates)):
-        for source in range(len(rates)):
-            terms = tuple(
-                (network.stoichiometry[variable, source], gradient[affected, variable])
-                for variable in range(len(concentration_symbols))
-                if (affected, variable) in gradient
-                and network.stoichiometry[variable, source] != 0
+    for row, row_label in enumerate(rows):
+        for column, column_label in enumerate(columns):
+            terms = (
+                (left[row, reaction] * right[variable, column], bound)
+                for (reaction, variable), bound in gradient.items()
+                if left[row, reaction] and right[variable, column]
             )
-            item = _entry(labels[affected], labels[source], terms, domain, analyzer)
-            if item:
+            item = _entry(row_label, column_label, terms, domain, analyzer)
+            if item is not None:
                 entries.append(item)
+    return entries
+
+
+def _build_interaction(analyzer, network, rates, gradient, domain) -> MatrixEnvelope:
+    labels = tuple(flux.id for flux in network.fluxes)
+    entries = _matrix_entries(
+        sp.eye(len(rates)), gradient, network.stoichiometry, labels, labels, domain, analyzer
+    )
 
     edges = {label: set() for label in labels}
     for item in entries:
@@ -692,7 +595,10 @@ def _build_interaction(
             edges[item["column"]].add(item["row"])
     fan_in = {label: sum(label in targets for targets in edges.values()) for label in labels}
     fan_out = {label: len(edges[label]) for label in labels}
-    components = _strongly_connected(labels, edges)
+    graph_edges = [(source, target) for source in labels for target in sorted(edges[source])]
+    components = tuple(
+        tuple(sorted(group)) for group in strongly_connected_components((labels, graph_edges))
+    )
     component_of = {node: index for index, group in enumerate(components) for node in group}
     one_way = sorted(
         {
@@ -730,95 +636,54 @@ def _build_interaction(
     )
 
 
-def _scaled_entry(item: dict[str, object], factor: sp.Expr) -> dict[str, object]:
-    rendered = dict(item)
-    rendered.update(
-        {
-            "scaled_lower": factor * item["lower"] if item["lower"] is not None else None,
-            "scaled_upper": factor * item["upper"] if item["upper"] is not None else None,
-            "scaled_absolute_upper": (
-                factor * item["absolute_upper"] if item["absolute_upper"] is not None else None
-            ),
-        }
-    )
-    return rendered
+def _scale_entries(entries, row_scales, column_scales):
+    for item in entries:
+        factor = column_scales[item["column"]] / row_scales[item["row"]]
+        for key in ("lower", "upper", "absolute_upper"):
+            item[f"scaled_{key}"] = None if item[key] is None else factor * item[key]
 
 
-def _matrix_measures(
-    entries: Sequence[Mapping[str, object]],
-    row_labels: Sequence[str],
-    column_labels: Sequence[str],
-    *,
-    scaled: bool = False,
-) -> tuple[sp.Expr | None, sp.Expr | None, sp.Expr | None, bool, bool]:
-    absolute_key = "scaled_absolute_upper" if scaled else "absolute_upper"
-    lower_key = "scaled_lower" if scaled else "lower"
-    upper_key = "scaled_upper" if scaled else "upper"
-    lookup = {(item["row"], item["column"]): item for item in entries}
-    rows, log_rows, spectral_rows = [], [], []
-    complete, coarse = True, False
+def _matrix_measures(entries, row_labels, *, scaled=False):
+    prefix = "scaled_" if scaled else ""
+    absolute_key, upper_key = prefix + "absolute_upper", prefix + "upper"
+    if any(item[absolute_key] is None for item in entries):
+        return None, None, None, False, False
+    rows, log_rows = [], []
+    coarse = False
     for row in row_labels:
-        absolute = []
-        off_diagonal = []
-        diagonal = lookup.get((row, row)) if row in column_labels else None
-        for column in column_labels:
-            item = lookup.get((row, column))
-            value = sp.S.Zero if item is None else item[absolute_key]
-            if value is None:
-                complete = False
-                continue
-            absolute.append(value)
-            if column != row:
-                off_diagonal.append(value)
-        if len(absolute) != len(column_labels):
-            continue
-        row_sum = sum(absolute, sp.S.Zero)
+        row_entries = [item for item in entries if item["row"] == row]
+        row_sum = sum((item[absolute_key] for item in row_entries), sp.S.Zero)
+        diagonal = next((item for item in row_entries if item["column"] == row), None)
+        log_sum = row_sum
+        if diagonal is not None:
+            if diagonal[upper_key] is None:
+                coarse = True
+            else:
+                log_sum += diagonal[upper_key] - diagonal[absolute_key]
         rows.append(row_sum)
-        radius = sum(off_diagonal, sp.S.Zero)
-        if diagonal is None:
-            centre_upper = centre_absolute = sp.S.Zero
-        else:
-            centre_upper = diagonal[upper_key]
-            centre_absolute = diagonal[absolute_key]
-            if centre_absolute is None:
-                complete = False
-                continue
-            if centre_upper is None:
-                centre_upper, coarse = centre_absolute, True
-        log_rows.append(centre_upper + radius)
-        spectral_rows.append(centre_absolute + radius)
-    return (
-        _maximum(rows) if complete else None,
-        _maximum(log_rows) if complete else None,
-        _maximum(spectral_rows) if complete else None,
-        complete,
-        coarse,
-    )
+        log_rows.append(log_sum)
+    infinity = _maximum(rows)
+    # Gershgorin's absolute row bound equals the induced infinity norm bound.
+    return infinity, _maximum(log_rows), infinity, True, coarse
 
 
 def _build_source_jacobian(
-    analyzer: ExpressionAnalyzer,
-    network: FluxNetwork,
-    species_ids: Sequence[str],
-    concentration_symbols: Sequence[sp.Symbol],
-    gradient: Mapping[tuple[int, int], DerivativeBound],
-    scales: Sequence[sp.Expr],
-    domain: ConcentrationDomain,
+    analyzer, network, species_ids, concentration_symbols, gradient, scales, domain
 ) -> MatrixEnvelope:
-    entries = []
-    for row, species_id in enumerate(species_ids):
-        for column, symbol in enumerate(concentration_symbols):
-            terms = tuple(
-                (network.stoichiometry[row, reaction], gradient[reaction, column])
-                for reaction in range(len(network.fluxes))
-                if (reaction, column) in gradient
-                and network.stoichiometry[row, reaction] != 0
-            )
-            item = _entry(species_id, symbol.name, terms, domain, analyzer)
-            if item:
-                entries.append(_scaled_entry(item, scales[column] / scales[row]))
+    columns = tuple(symbol.name for symbol in concentration_symbols)
+    entries = _matrix_entries(
+        network.stoichiometry,
+        gradient,
+        sp.eye(len(columns)),
+        species_ids,
+        columns,
+        domain,
+        analyzer,
+    )
+    _scale_entries(entries, dict(zip(species_ids, scales)), dict(zip(columns, scales)))
+
     infinity, logarithmic, spectral, complete, coarse = _matrix_measures(
-        entries, species_ids, tuple(symbol.name for symbol in concentration_symbols), scaled=True
+        entries, species_ids, scaled=True
     )
     row_widths = Counter(item["row"] for item in entries)
     column_widths = Counter(item["column"] for item in entries)
@@ -845,33 +710,12 @@ def _build_source_jacobian(
 
 
 def _build_reduced_jacobian(
-    analyzer: ExpressionAnalyzer,
-    network: FluxNetwork,
-    basis: sp.MatrixBase,
-    coordinates: sp.MatrixBase,
-    gradient: Mapping[tuple[int, int], DerivativeBound],
-    domain: ConcentrationDomain,
+    analyzer, network, basis, coordinates, gradient, domain
 ) -> MatrixEnvelope:
     labels = tuple(f"z:{name}" for name in network.basis_ids)
-    entries = []
-    for row in range(basis.cols):
-        for column in range(basis.cols):
-            terms = tuple(
-                (
-                    coordinates[row, reaction] * basis[variable, column],
-                    gradient[reaction, variable],
-                )
-                for reaction in range(len(network.fluxes))
-                for variable in range(basis.rows)
-                if (reaction, variable) in gradient
-                and coordinates[row, reaction] * basis[variable, column] != 0
-            )
-            item = _entry(labels[row], labels[column], terms, domain, analyzer)
-            if item:
-                entries.append(item)
-    infinity, logarithmic, spectral, complete, coarse = _matrix_measures(
-        entries, labels, labels
-    )
+    entries = _matrix_entries(coordinates, gradient, basis, labels, labels, domain, analyzer)
+
+    infinity, logarithmic, spectral, complete, coarse = _matrix_measures(entries, labels)
     return MatrixEnvelope(
         (basis.cols, basis.cols),
         len(entries),
@@ -892,50 +736,36 @@ def _build_reduced_jacobian(
 
 
 def _build_operating_coupling(
-    analyzer: ExpressionAnalyzer,
-    network: FluxNetwork,
-    rates: Sequence[RateDifferentialProfile],
-    species_ids: Sequence[str],
-    operating_symbols: Sequence[sp.Symbol],
-    domain: ConcentrationDomain,
-    concentration_scales: Sequence[sp.Expr],
+    analyzer, network, rates, species_ids, operating_symbols, domain, concentration_scales
 ) -> MatrixEnvelope:
-    by_rate = tuple({item.variable: item for item in rate.derivatives} for rate in rates)
-    operating_scales = tuple(
-        max(abs(domain.interval(symbol).lower), abs(domain.interval(symbol).upper))
-        for symbol in operating_symbols
+    columns = tuple(symbol.name for symbol in operating_symbols)
+    entries = _matrix_entries(
+        network.stoichiometry,
+        _gradient(rates, operating_symbols),
+        sp.eye(len(columns)),
+        species_ids,
+        columns,
+        domain,
+        analyzer,
     )
-    entries = []
-    for row, species_id in enumerate(species_ids):
-        for column, symbol in enumerate(operating_symbols):
-            terms = tuple(
-                (network.stoichiometry[row, reaction], by_rate[reaction][symbol])
-                for reaction in range(len(rates))
-                if symbol in by_rate[reaction]
-                and network.stoichiometry[row, reaction] != 0
-            )
-            item = _entry(species_id, symbol.name, terms, domain, analyzer)
-            if item:
-                entries.append(
-                    _scaled_entry(item, operating_scales[column] / concentration_scales[row])
-                )
+    _scale_entries(
+        entries,
+        dict(zip(species_ids, concentration_scales)),
+        dict(zip(columns, _domain_scales(domain, operating_symbols))),
+    )
+
     complete = all(item["scaled_absolute_upper"] is not None for item in entries)
-    column_bounds = {
-        symbol.name: _maximum(
-            item["scaled_absolute_upper"]
-            for item in entries
-            if item["column"] == symbol.name and item["scaled_absolute_upper"] is not None
-        )
-        for symbol in operating_symbols
-    }
+    column_bounds = {}
+    for column in columns:
+        bounds = [item["scaled_absolute_upper"] for item in entries if item["column"] == column]
+        column_bounds[column] = None if None in bounds else _maximum(bounds)
     return MatrixEnvelope(
         (len(species_ids), len(operating_symbols)),
         len(entries),
         tuple(entries),
         _maximum(
             sum(
-                (item["scaled_absolute_upper"] for item in entries if item["row"] == row),
-                sp.S.Zero,
+                (item["scaled_absolute_upper"] for item in entries if item["row"] == row), sp.S.Zero
             )
             for row in species_ids
         )
@@ -947,20 +777,20 @@ def _build_operating_coupling(
         None if complete else "Some operating-variable coupling bounds are unresolved.",
         tuple(species_ids),
         tuple(symbol.name for symbol in operating_symbols),
-        {"column_bounds": column_bounds, "largest_entries": _ranked(tuple(
-            {**item, "absolute_upper": item["scaled_absolute_upper"]} for item in entries
-        ))},
+        {
+            "column_bounds": column_bounds,
+            "largest_entries": _ranked(
+                tuple({**item, "absolute_upper": item["scaled_absolute_upper"]} for item in entries)
+            ),
+        },
     )
 
 
 def _reaction_contributors(
-    network: FluxNetwork,
-    rates: Sequence[RateDifferentialProfile],
-    concentration_symbols: Sequence[sp.Symbol],
-    scales: Sequence[sp.Expr],
+    network, rates, concentration_symbols, scales
 ) -> tuple[RateDifferentialProfile, ...]:
     profiled = []
-    for reaction, (flux, rate) in enumerate(zip(network.fluxes, rates)):
+    for reaction, rate in enumerate(rates):
         derivatives = {item.variable: item for item in rate.derivatives}
         weighted = tuple(
             derivatives[symbol].absolute_upper * scales[column]
@@ -972,8 +802,7 @@ def _reaction_contributors(
             for symbol in concentration_symbols
         )
         direction = _maximum(
-            abs(network.stoichiometry[row, reaction]) / scales[row]
-            for row in range(len(scales))
+            abs(network.stoichiometry[row, reaction]) / scales[row] for row in range(len(scales))
         )
         contribution = direction * sum(weighted, sp.S.Zero) if complete else None
         profiled.append(replace(rate, source_jacobian_contribution=contribution))
@@ -981,13 +810,7 @@ def _reaction_contributors(
 
 
 def _profile_curvature(
-    analyzer: ExpressionAnalyzer,
-    network: FluxNetwork,
-    rates: Sequence[RateDifferentialProfile],
-    concentration_symbols: Sequence[sp.Symbol],
-    operating_symbols: Sequence[sp.Symbol],
-    scales: Sequence[sp.Expr],
-    domain: ConcentrationDomain,
+    analyzer, network, rates, concentration_symbols, scales, domain
 ) -> tuple[tuple[RateDifferentialProfile, ...], sp.Expr | None, bool]:
     attempted = 0
     truncated = False
@@ -997,8 +820,7 @@ def _profile_curvature(
 
     for rate in rates:
         nonsmooth = _active(
-            rate.surfaces,
-            {"switch", "rate singularity", "first-derivative singularity"},
+            rate.surfaces, {"switch", "rate singularity", "first-derivative singularity"}
         )
         if nonsmooth or rate.regularity in {Regularity.CONTINUOUS, Regularity.UNKNOWN}:
             rate_sums.append(None)
@@ -1010,18 +832,18 @@ def _profile_curvature(
         complete = True
         for left, right in combinations_with_replacement(dependencies, 2):
             if attempted >= _MAX_HESSIAN_ENTRIES:
-                truncated = complete = False
+                truncated, complete = True, False
                 break
             first = symbolic_derivative(rate.reduced_expression, left)
             if first.has(sp.Derivative) or sp.count_ops(first) > _MAX_SECOND_DERIVATIVE_OPS:
-                truncated = complete = False
+                truncated, complete = True, False
                 continue
             second = symbolic_derivative(first, right)
             attempted += 1
             if second == 0:
                 continue
             if second.has(sp.Derivative) or sp.count_ops(second) > _MAX_SECOND_DERIVATIVE_OPS:
-                truncated = complete = False
+                truncated, complete = True, False
                 continue
             bounds = analyzer.bounds(second, domain)
             absolute = bounds.absolute_upper
@@ -1046,7 +868,9 @@ def _profile_curvature(
             for item in entries
             if item["left"] in concentration_set and item["right"] in concentration_set
         )
-        concentration_complete = complete and all(item["complete"] for item in concentration_entries)
+        concentration_complete = complete and all(
+            item["complete"] for item in concentration_entries
+        )
         scale_by_symbol = dict(zip(concentration_symbols, scales))
         curvature_sum = None
         if concentration_complete:
@@ -1060,8 +884,7 @@ def _profile_curvature(
         rate_sums.append(curvature_sum)
         reaction = len(rate_sums) - 1
         direction = _maximum(
-            abs(network.stoichiometry[row, reaction]) / scales[row]
-            for row in range(len(scales))
+            abs(network.stoichiometry[row, reaction]) / scales[row] for row in range(len(scales))
         )
         contribution = direction * curvature_sum if curvature_sum is not None else None
         regularity = (
@@ -1086,9 +909,7 @@ def _profile_curvature(
     if all(value is not None for value in rate_sums):
         variation = _maximum(
             sum(
-                abs(network.stoichiometry[row, reaction])
-                / scales[row]
-                * rate_sums[reaction]
+                abs(network.stoichiometry[row, reaction]) / scales[row] * rate_sums[reaction]
                 for reaction in range(len(rates))
             )
             for row in range(len(scales))
@@ -1096,10 +917,7 @@ def _profile_curvature(
     return tuple(profiled), variation, truncated
 
 
-def _domain_scales(
-    domain: ConcentrationDomain,
-    concentration_symbols: Sequence[sp.Symbol],
-) -> tuple[sp.Expr, ...]:
+def _domain_scales(domain, concentration_symbols) -> tuple[sp.Expr, ...]:
     scales = tuple(
         max(abs(domain.interval(symbol).lower), abs(domain.interval(symbol).upper))
         for symbol in concentration_symbols
@@ -1108,14 +926,14 @@ def _domain_scales(
 
 
 def _profile_domain(
-    analyzer: ExpressionAnalyzer,
-    network: FluxNetwork,
-    species_ids: Sequence[str],
-    concentration_symbols: Sequence[sp.Symbol],
-    operating_symbols: Sequence[sp.Symbol],
-    domain: ConcentrationDomain,
-    basis: sp.MatrixBase,
-    coordinates: sp.MatrixBase,
+    analyzer,
+    network,
+    species_ids,
+    concentration_symbols,
+    operating_symbols,
+    domain,
+    basis,
+    coordinates,
 ) -> DomainDifferentialProfile:
     rates = tuple(
         _profile_rate(analyzer, flux, concentration_symbols, operating_symbols, domain)
@@ -1124,26 +942,16 @@ def _profile_domain(
     scales = _domain_scales(domain, concentration_symbols)
     rates = _reaction_contributors(network, rates, concentration_symbols, scales)
     gradient = _gradient(rates, concentration_symbols)
-    interaction = _build_interaction(
-        analyzer, network, rates, concentration_symbols, gradient, domain
-    )
+    interaction = _build_interaction(analyzer, network, rates, gradient, domain)
     source = _build_source_jacobian(
         analyzer, network, species_ids, concentration_symbols, gradient, scales, domain
     )
-    reduced = _build_reduced_jacobian(
-        analyzer, network, basis, coordinates, gradient, domain
-    )
+    reduced = _build_reduced_jacobian(analyzer, network, basis, coordinates, gradient, domain)
     operating = _build_operating_coupling(
         analyzer, network, rates, species_ids, operating_symbols, domain, scales
     )
     rates, variation, truncated = _profile_curvature(
-        analyzer,
-        network,
-        rates,
-        concentration_symbols,
-        operating_symbols,
-        scales,
-        domain,
+        analyzer, network, rates, concentration_symbols, scales, domain
     )
     return DomainDifferentialProfile(
         domain.kind,
@@ -1177,48 +985,19 @@ def profile_differential(
     network = source_equivalent_fluxes(reactions, stoichiometry)
     basis, coordinates = network.rank_factorization
     species_ids = tuple(symbol.name for symbol in concentration_symbols)
-    physical = _profile_domain(
-        analyzer,
-        network,
-        species_ids,
-        concentration_symbols,
-        operating_symbols,
-        physical_domain,
-        basis,
-        coordinates,
-    )
-    augmented = _profile_domain(
-        analyzer,
-        network,
-        species_ids,
-        concentration_symbols,
-        operating_symbols,
-        augmented_domain,
-        basis,
-        coordinates,
+    physical, augmented = (
+        _profile_domain(
+            analyzer,
+            network,
+            species_ids,
+            concentration_symbols,
+            operating_symbols,
+            domain,
+            basis,
+            coordinates,
+        )
+        for domain in (physical_domain, augmented_domain)
     )
     return DifferentialSolverProfile(
-        basis.cols,
-        network.basis_ids,
-        physical,
-        augmented,
-        len(reactions),
-        len(network.fluxes),
+        basis.cols, network.basis_ids, physical, augmented, len(reactions), len(network.fluxes)
     )
-
-
-__all__ = (
-    "BranchReduction",
-    "DerivativeBound",
-    "DifferentialSolverProfile",
-    "DomainDifferentialProfile",
-    "FeedbackKind",
-    "MatrixEnvelope",
-    "RateDifferentialProfile",
-    "Regularity",
-    "SurfaceLocation",
-    "SurfaceProfile",
-    "profile_differential",
-    "reduce_branches",
-    "symbolic_derivative",
-)

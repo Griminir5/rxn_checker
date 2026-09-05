@@ -1,7 +1,8 @@
 """Built-in exact species definitions."""
 
 from dataclasses import dataclass
-from ..model import Phase, Species
+
+from .model import Phase, Species
 
 
 @dataclass(frozen=True)
@@ -13,10 +14,12 @@ class PropertyRegistry:
             raise ValueError("Species registry keys must match record ids.")
 
     def get_record(self, species_id):
-        try: return self.records[species_id]
+        try:
+            return self.records[species_id]
         except KeyError as error:
-            raise KeyError(f"Unknown species '{species_id}'. Available species: " +
-                           ", ".join(self.records)) from error
+            raise KeyError(
+                f"Unknown species '{species_id}'. Available species: " + ", ".join(self.records)
+            ) from error
 
 
 G, S = Phase.GAS, Phase.SOLID

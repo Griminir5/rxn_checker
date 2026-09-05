@@ -18,27 +18,10 @@ Point = Mapping[sp.Symbol, sp.Expr]
 _FACTOR_TERMS_LIMIT = 64
 _WITNESS_LIMIT = 24
 _SUPPORTED_FUNCTIONS = frozenset(
-    (
-        sp.Abs,
-        sp.Min,
-        sp.Max,
-        sp.exp,
-        sp.log,
-        sp.sin,
-        sp.cos,
-        sp.sinh,
-        sp.cosh,
-        sp.tanh,
-        sp.atan,
-    )
+    (sp.Abs, sp.Min, sp.Max, sp.exp, sp.log, sp.sin, sp.cos, sp.sinh, sp.cosh, sp.tanh, sp.atan)
 )
 _DISCONTINUOUS_FUNCTIONS = frozenset((sp.Piecewise, sp.floor, sp.ceiling, sp.sign))
-_TRIGONOMETRIC_GUARDS = {
-    sp.tan: sp.cos,
-    sp.sec: sp.cos,
-    sp.cot: sp.sin,
-    sp.csc: sp.sin,
-}
+_TRIGONOMETRIC_GUARDS = {sp.tan: sp.cos, sp.sec: sp.cos, sp.cot: sp.sin, sp.csc: sp.sin}
 
 
 class ProofVerdict(StrEnum):
@@ -140,23 +123,19 @@ class SumProof:
     reason: str | None = None
 
 
-def _exact(expression: object) -> sp.Expr:
-    return exact_expr(expression)
-
-
-def _minimum(values: Iterable[sp.Expr]) -> sp.Expr:
+def _minimum(values) -> sp.Expr:
     return sp.Min(*tuple(values))
 
 
-def _maximum(values: Iterable[sp.Expr]) -> sp.Expr:
+def _maximum(values) -> sp.Expr:
     return sp.Max(*tuple(values))
 
 
-def _true(relation: object) -> bool:
+def _true(relation) -> bool:
     return relation is True or relation is sp.true
 
 
-def _sign_from_bounds(bounds: BoundResult) -> Sign:
+def _sign_from_bounds(bounds) -> Sign:
     if not bounds.known:
         return Sign.UNKNOWN
     lower, upper = bounds.lower, bounds.upper
@@ -173,7 +152,7 @@ def _sign_from_bounds(bounds: BoundResult) -> Sign:
     return Sign.UNKNOWN
 
 
-def _known_sign(expression: sp.Expr) -> Sign:
+def _known_sign(expression) -> Sign:
     for attribute, sign in (
         ("is_zero", Sign.ZERO),
         ("is_positive", Sign.POSITIVE),
@@ -186,14 +165,10 @@ def _known_sign(expression: sp.Expr) -> Sign:
     return Sign.UNKNOWN
 
 
-def _meets(sign: Sign, requirement: SignRequirement) -> bool | None:
+def _meets(sign, requirement) -> bool | None:
     accepted = {
         SignRequirement.POSITIVE: {Sign.POSITIVE},
-        SignRequirement.NONNEGATIVE: {
-            Sign.POSITIVE,
-            Sign.NONNEGATIVE,
-            Sign.ZERO,
-        },
+        SignRequirement.NONNEGATIVE: {Sign.POSITIVE, Sign.NONNEGATIVE, Sign.ZERO},
         SignRequirement.NONZERO: {Sign.POSITIVE, Sign.NEGATIVE},
     }
     rejected = {
@@ -219,12 +194,9 @@ class ExpressionAnalyzer:
         self._lipschitz_results: dict[tuple, LipschitzResult] = {}
 
     def _key(
-        self,
-        expression: object,
-        domain: ConcentrationDomain,
-        active_variables: Iterable[sp.Symbol] | None,
+        self, expression, domain, active_variables
     ) -> tuple[sp.Expr, ConcentrationDomain, tuple[sp.Symbol, ...]]:
-        expression = _exact(expression)
+        expression = exact_expr(expression)
         active = tuple(
             sorted(
                 active_variables if active_variables is not None else domain.intervals,
@@ -244,15 +216,10 @@ class ExpressionAnalyzer:
             self._bounds[key] = self._compute_bounds(key[0], domain, key[2])
         return self._bounds[key]
 
-    def _unknown_bound(self, expression: sp.Expr, reason: str) -> BoundResult:
+    def _unknown_bound(self, expression, reason) -> BoundResult:
         return BoundResult(None, None, decisive_subexpression=expression, reason=reason)
 
-    def _compute_bounds(
-        self,
-        expression: sp.Expr,
-        domain: ConcentrationDomain,
-        active: tuple[sp.Symbol, ...],
-    ) -> BoundResult:
+    def _compute_bounds(self, expression, domain, active) -> BoundResult:
         unknown = expression.free_symbols - set(domain.all_intervals)
         if unknown:
             symbol = min(unknown, key=lambda item: item.name)
@@ -265,11 +232,7 @@ class ExpressionAnalyzer:
         affine = domain.affine_bounds(expression)
         if affine is not None:
             return BoundResult(
-                affine.lower,
-                affine.upper,
-                True,
-                affine.lower_witness,
-                affine.upper_witness,
+                affine.lower, affine.upper, True, affine.lower_witness, affine.upper_witness
             )
 
         child_bounds = tuple(self.bounds(item, domain, active) for item in expression.args)
@@ -279,8 +242,7 @@ class ExpressionAnalyzer:
 
         if isinstance(expression, sp.Add):
             return BoundResult(
-                sum(item.lower for item in child_bounds),
-                sum(item.upper for item in child_bounds),
+                sum(item.lower for item in child_bounds), sum(item.upper for item in child_bounds)
             )
         if isinstance(expression, sp.Mul):
             lower = upper = sp.S.One
@@ -309,9 +271,7 @@ class ExpressionAnalyzer:
             )
             combine = _minimum if expression.func is sp.Min else _maximum
             return BoundResult(combine(endpoints[0]), combine(endpoints[1]))
-        if expression.func is sp.exp:
-            item = child_bounds[0]
-            return BoundResult(sp.exp(item.lower), sp.exp(item.upper))
+
         if expression.func is sp.log:
             item = child_bounds[0]
             if _true(item.lower > 0):
@@ -319,7 +279,7 @@ class ExpressionAnalyzer:
             return self._unknown_bound(expression.args[0], "Logarithm needs a positive argument.")
         if expression.func in {sp.sin, sp.cos}:
             return BoundResult(-sp.S.One, sp.S.One)
-        if expression.func in {sp.sinh, sp.tanh, sp.atan}:
+        if expression.func in {sp.exp, sp.sinh, sp.tanh, sp.atan}:
             item = child_bounds[0]
             return BoundResult(expression.func(item.lower), expression.func(item.upper))
         if expression.func is sp.cosh:
@@ -328,7 +288,7 @@ class ExpressionAnalyzer:
             return BoundResult(sp.S.One, _maximum(endpoints))
         return self._unknown_bound(expression, f"Unsupported function {expression.func.__name__}.")
 
-    def _power_bounds(self, expression: sp.Pow, base: BoundResult) -> BoundResult:
+    def _power_bounds(self, expression, base) -> BoundResult:
         exponent = expression.exp
         if exponent.is_number is not True or exponent.is_real is not True:
             return self._unknown_bound(expression, "Power exponent is not a real constant.")
@@ -339,9 +299,7 @@ class ExpressionAnalyzer:
                 return BoundResult(sp.S.One, sp.S.One, True)
             if integer < 0:
                 positive = self._integer_power_bounds(lower, upper, -integer)
-                if not (
-                    _true(positive.lower > 0) or _true(positive.upper < 0)
-                ):
+                if not (_true(positive.lower > 0) or _true(positive.upper < 0)):
                     return self._unknown_bound(expression.base, "Negative power base can be zero.")
                 reciprocals = (1 / positive.lower, 1 / positive.upper)
                 return BoundResult(_minimum(reciprocals), _maximum(reciprocals))
@@ -354,11 +312,7 @@ class ExpressionAnalyzer:
         return BoundResult(_minimum(values), _maximum(values))
 
     @staticmethod
-    def _integer_power_bounds(
-        lower: sp.Expr,
-        upper: sp.Expr,
-        exponent: int,
-    ) -> BoundResult:
+    def _integer_power_bounds(lower, upper, exponent) -> BoundResult:
         endpoints = (lower**exponent, upper**exponent)
         if exponent % 2 == 0:
             if _true(lower > 0) or _true(upper < 0):
@@ -377,12 +331,7 @@ class ExpressionAnalyzer:
             self._signs[key] = self._compute_sign(key[0], domain, key[2])
         return self._signs[key]
 
-    def _compute_sign(
-        self,
-        expression: sp.Expr,
-        domain: ConcentrationDomain,
-        active: tuple[sp.Symbol, ...],
-    ) -> SignResult:
+    def _compute_sign(self, expression, domain, active) -> SignResult:
         interval = self.bounds(expression, domain, active)
         interval_sign = _sign_from_bounds(interval)
         if interval_sign in {Sign.POSITIVE, Sign.NEGATIVE, Sign.ZERO}:
@@ -415,20 +364,9 @@ class ExpressionAnalyzer:
                     decisive = child.decisive_subexpression or argument
                     break
         point, value = self._point_value(expression, domain)
-        return SignResult(
-            Sign.UNKNOWN,
-            interval,
-            decisive or expression,
-            point,
-            value,
-        )
+        return SignResult(Sign.UNKNOWN, interval, decisive or expression, point, value)
 
-    def _structural_sign(
-        self,
-        expression: sp.Expr,
-        domain: ConcentrationDomain,
-        active: tuple[sp.Symbol, ...],
-    ) -> Sign:
+    def _structural_sign(self, expression, domain, active) -> Sign:
         if isinstance(expression, sp.Add):
             signs = tuple(self.sign(item, domain, active).sign for item in expression.args)
             if all(item in {Sign.POSITIVE, Sign.NONNEGATIVE, Sign.ZERO} for item in signs):
@@ -466,7 +404,7 @@ class ExpressionAnalyzer:
         return Sign.UNKNOWN
 
     @staticmethod
-    def _assumptions(domain: ConcentrationDomain) -> dict[sp.Symbol, sp.Symbol]:
+    def _assumptions(domain) -> dict[sp.Symbol, sp.Symbol]:
         replacements = {}
         for symbol, interval in domain.all_intervals.items():
             if interval.lower > 0 or (interval.lower == 0 and not interval.lower_closed):
@@ -519,10 +457,7 @@ class ExpressionAnalyzer:
         return proof
 
     def _counterexample(
-        self,
-        expression: sp.Expr,
-        domain: ConcentrationDomain,
-        requirement: SignRequirement,
+        self, expression, domain, requirement
     ) -> tuple[Point | None, sp.Expr | None]:
         affine = domain.affine_bounds(expression)
         candidates: list[Point] = []
@@ -541,33 +476,21 @@ class ExpressionAnalyzer:
                 candidates.append(
                     {
                         symbol: affine.lower_witness[symbol]
-                        + weight
-                        * (affine.upper_witness[symbol] - affine.lower_witness[symbol])
+                        + weight * (affine.upper_witness[symbol] - affine.lower_witness[symbol])
                         for symbol in domain.all_intervals
                     }
                 )
-        point = domain.exact_witness()
-        if point is not None:
-            candidates.append(point)
-        for symbol in sorted(expression.free_symbols, key=lambda item: item.name):
-            if symbol not in domain.all_intervals:
-                continue
-            interval = domain.interval(symbol)
-            for value in (interval.upper, (interval.lower + interval.upper) / 2):
-                candidate = domain.exact_witness({symbol: value})
-                if candidate is not None:
-                    candidates.append(candidate)
+        candidates.extend(self._candidate_points(expression, domain))
+
         for candidate in candidates[:_WITNESS_LIMIT]:
-            value = _exact(expression.subs(candidate))
+            value = exact_expr(expression.subs(candidate))
             if self._violates(value, requirement):
                 return candidate, value
         return None, None
 
-    def prove_zero(
-        self, expression: object, domain: ConcentrationDomain
-    ) -> ZeroProof:
+    def prove_zero(self, expression: object, domain: ConcentrationDomain) -> ZeroProof:
         """Prove an identity is zero, or find an exact nonzero value."""
-        expression = _exact(expression)
+        expression = exact_expr(expression)
         if expression.has(sp.nan, sp.zoo, sp.oo, -sp.oo):
             return ZeroProof(ProofVerdict.FAIL, expression, reason="Expression is undefined.")
         numerator, denominator = expression.as_numer_denom()
@@ -579,7 +502,7 @@ class ExpressionAnalyzer:
         if zero is True:
             return ZeroProof(ProofVerdict.PASS, expression)
         for point in self._candidate_points(expression, domain):
-            value = _exact(expression.subs(point, simultaneous=True))
+            value = exact_expr(expression.subs(point, simultaneous=True))
             if value.is_real is True and value.is_finite is True and value.is_zero is False:
                 return ZeroProof(ProofVerdict.FAIL, expression, point, value)
         if zero is False:
@@ -587,7 +510,7 @@ class ExpressionAnalyzer:
         return ZeroProof(ProofVerdict.UNKNOWN, expression, reason="Zero identity is inconclusive.")
 
     @staticmethod
-    def _candidate_points(expression: sp.Expr, domain: ConcentrationDomain) -> tuple[Point, ...]:
+    def _candidate_points(expression, domain) -> tuple[Point, ...]:
         points = [domain.exact_witness()]
         for symbol in sorted(expression.free_symbols & set(domain.all_intervals), key=str):
             interval = domain.interval(symbol)
@@ -612,33 +535,45 @@ class ExpressionAnalyzer:
             else:
                 lower = upper = None
                 known = False
-            contributions.append(ContributionBound(
-                coefficient, bound.lower, bound.upper, lower, upper
-            ))
+            contributions.append(
+                ContributionBound(coefficient, bound.lower, bound.upper, lower, upper)
+            )
         lower = sum((item.source_lower for item in contributions), sp.S.Zero) if known else None
         upper = sum((item.source_upper for item in contributions), sp.S.Zero) if known else None
-        proves = lower is not None and _true(
-            lower > 0 if requirement is SignRequirement.POSITIVE else lower >= 0
-        )
-        if proves:
+        conclusion = _meets(_sign_from_bounds(BoundResult(lower, upper)), requirement)
+        if conclusion is True:
             return SumProof(ProofVerdict.PASS, lower, upper, tuple(contributions))
         expression = sum((coefficient * value for coefficient, value in terms), sp.S.Zero)
         if sp.count_ops(expression) <= 96:
             proof = self.prove_sign(expression, domain, requirement)
             if proof.verdict is not ProofVerdict.UNKNOWN:
-                return SumProof(proof.verdict, lower, upper, tuple(contributions),
-                                proof.witness, proof.witness_value, proof.reason)
-        disproves = upper is not None and _true(
-            upper <= 0 if requirement is SignRequirement.POSITIVE else upper < 0
+                return SumProof(
+                    proof.verdict,
+                    lower,
+                    upper,
+                    tuple(contributions),
+                    proof.witness,
+                    proof.witness_value,
+                    proof.reason,
+                )
+        if conclusion is False:
+            return SumProof(
+                ProofVerdict.FAIL,
+                lower,
+                upper,
+                tuple(contributions),
+                reason="The source upper bound violates the sign requirement.",
+            )
+        return SumProof(
+            ProofVerdict.UNKNOWN,
+            lower,
+            upper,
+            tuple(contributions),
+            reason="Sparse interval and bounded symbolic analysis are inconclusive.",
         )
-        if disproves:
-            return SumProof(ProofVerdict.FAIL, lower, upper, tuple(contributions),
-                            reason="The source upper bound violates the sign requirement.")
-        return SumProof(ProofVerdict.UNKNOWN, lower, upper, tuple(contributions),
-                        reason="Sparse interval and bounded symbolic analysis are inconclusive.")
 
     @staticmethod
-    def _violates(value: sp.Expr, requirement: SignRequirement) -> bool:
+    def _violates(value, requirement) -> bool:
         if value.is_real is not True or value.is_finite is not True:
             return True
         if requirement is SignRequirement.POSITIVE:
@@ -648,12 +583,9 @@ class ExpressionAnalyzer:
         return value.is_zero is True
 
     @staticmethod
-    def _point_value(
-        expression: sp.Expr,
-        domain: ConcentrationDomain,
-    ) -> tuple[Point | None, sp.Expr | None]:
+    def _point_value(expression, domain) -> tuple[Point | None, sp.Expr | None]:
         point = domain.exact_witness()
-        return (None, None) if point is None else (point, _exact(expression.subs(point)))
+        return (None, None) if point is None else (point, exact_expr(expression.subs(point)))
 
     def defined(
         self,
@@ -666,20 +598,13 @@ class ExpressionAnalyzer:
             self._definedness[key] = self._compute_defined(key[0], domain, key[2])
         return self._definedness[key]
 
-    def _compute_defined(
-        self,
-        expression: sp.Expr,
-        domain: ConcentrationDomain,
-        active: tuple[sp.Symbol, ...],
-    ) -> DefinednessResult:
+    def _compute_defined(self, expression, domain, active) -> DefinednessResult:
         if expression in {sp.nan, sp.zoo, sp.oo, -sp.oo}:
             return DefinednessResult(ProofVerdict.FAIL, expression, reason="Non-finite constant.")
         if expression.is_Atom:
             if expression.is_real is False or expression.is_finite is False:
                 return DefinednessResult(
-                    ProofVerdict.FAIL,
-                    expression,
-                    reason="Atom is not finite and real.",
+                    ProofVerdict.FAIL, expression, reason="Atom is not finite and real."
                 )
             if expression.is_number:
                 verdict = (
@@ -692,9 +617,7 @@ class ExpressionAnalyzer:
             if expression in domain.all_intervals:
                 return DefinednessResult(ProofVerdict.PASS)
             return DefinednessResult(
-                ProofVerdict.UNKNOWN,
-                expression,
-                reason=f"No domain interval for {expression}.",
+                ProofVerdict.UNKNOWN, expression, reason=f"No domain interval for {expression}."
             )
 
         for argument in expression.args:
@@ -708,9 +631,7 @@ class ExpressionAnalyzer:
             exponent = expression.exp
             if exponent.is_number is not True or exponent.is_real is not True:
                 return DefinednessResult(
-                    ProofVerdict.UNKNOWN,
-                    exponent,
-                    reason="Power exponent is not a real constant.",
+                    ProofVerdict.UNKNOWN, exponent, reason="Power exponent is not a real constant."
                 )
             if exponent.is_integer and exponent.is_negative:
                 guarded, requirement = expression.base, SignRequirement.NONZERO
@@ -734,11 +655,7 @@ class ExpressionAnalyzer:
                 if proof.verdict is ProofVerdict.UNKNOWN:
                     decisive = proof.result.decisive_subexpression or guarded
                 return DefinednessResult(
-                    proof.verdict,
-                    decisive,
-                    requirement,
-                    proof.witness,
-                    proof.reason,
+                    proof.verdict, decisive, requirement, proof.witness, proof.reason
                 )
 
         if (
@@ -764,13 +681,7 @@ class ExpressionAnalyzer:
         key = self._key(expression, domain, active_variables)
         if not set(key[2]) <= set(domain.intervals):
             raise ValueError("Lipschitz variables must be concentration coordinates.")
-        if key not in self._lipschitz_results:
-            from .lipschitz import compute_lipschitz
-
-            self._lipschitz_results[key] = compute_lipschitz(
-                self, key[0], domain, key[2]
-            )
-        return self._lipschitz_results[key]
+        return self.gradient_envelope(key[0], domain, key[2])
 
     def gradient_envelope(
         self,
@@ -787,23 +698,5 @@ class ExpressionAnalyzer:
         if key not in self._lipschitz_results:
             from .lipschitz import compute_lipschitz
 
-            self._lipschitz_results[key] = compute_lipschitz(
-                self, key[0], domain, key[2]
-            )
+            self._lipschitz_results[key] = compute_lipschitz(self, key[0], domain, key[2])
         return self._lipschitz_results[key]
-
-
-__all__ = (
-    "BoundResult",
-    "ContributionBound",
-    "DefinednessResult",
-    "ExpressionAnalyzer",
-    "Point",
-    "ProofVerdict",
-    "Sign",
-    "SignProof",
-    "SignRequirement",
-    "SignResult",
-    "SumProof",
-    "ZeroProof",
-)

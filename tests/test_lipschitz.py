@@ -1,35 +1,15 @@
-"""Phase 5 scalar and network Lipschitz contracts."""
+"""scalar and network Lipschitz contracts."""
 
 import sympy as sp
 
-from rxn_checker.domain import (
-    ConcentrationDomain,
-    DomainKind,
-    Interval,
-    TotalConstraint,
-)
-from rxn_checker.proof import (
-    ExpressionAnalyzer,
-    ProofVerdict,
-    derive_network_lipschitz,
-)
-
+from rxn_checker.domain import ConcentrationDomain, DomainKind, Interval, TotalConstraint
+from rxn_checker.proof import ExpressionAnalyzer, ProofVerdict, derive_network_lipschitz
 
 c, d, temperature = sp.symbols("c d temperature", real=True)
 
 
-def _domain(
-    lower=0,
-    upper=3,
-    *,
-    kind=DomainKind.PHYSICAL,
-    parameters=None,
-) -> ConcentrationDomain:
-    return ConcentrationDomain(
-        kind,
-        {c: Interval(lower, upper)},
-        parameters or {},
-    )
+def _domain(lower=0, upper=3, *, kind=DomainKind.PHYSICAL, parameters=None) -> ConcentrationDomain:
+    return ConcentrationDomain(kind, {c: Interval(lower, upper)}, parameters or {})
 
 
 def _constant(expression, domain=None):
@@ -48,6 +28,18 @@ def test_elementary_compositional_constants_are_checkable() -> None:
     assert _constant(sp.Max(c, 0), domain) == 1
 
 
+def test_repeated_gradient_coordinates_are_combined_once() -> None:
+    result = ExpressionAnalyzer().gradient_envelope(c * (c + c**2), _domain())
+    assert result.verdict is ProofVerdict.PASS
+    assert result.certificate.gradient_envelope.components == ((c, 33),)
+    assert result.certificate.constant_bound == 33
+
+
+def test_unknown_function_without_arguments_is_inconclusive() -> None:
+    result = ExpressionAnalyzer().lipschitz(sp.Function("unknown")(), _domain())
+    assert result.verdict is ProofVerdict.UNKNOWN
+
+
 def test_reciprocal_requires_a_strict_nonzero_margin() -> None:
     failure = ExpressionAnalyzer().lipschitz(1 / c, _domain(0, 2))
     success = ExpressionAnalyzer().lipschitz(1 / c, _domain(1, 2))
@@ -62,15 +54,10 @@ def test_reciprocal_requires_a_strict_nonzero_margin() -> None:
 
 def test_total_constraint_can_supply_the_reciprocal_margin() -> None:
     independent = ConcentrationDomain(
-        DomainKind.PHYSICAL,
-        {c: Interval(0, 3), d: Interval(0, 2)},
-        {},
+        DomainKind.PHYSICAL, {c: Interval(0, 3), d: Interval(0, 2)}, {}
     )
     chamfered = ConcentrationDomain(
-        DomainKind.PHYSICAL,
-        independent.intervals,
-        {},
-        (TotalConstraint("gas", (c, d), 1),),
+        DomainKind.PHYSICAL, independent.intervals, {}, (TotalConstraint("gas", (c, d), 1),)
     )
     analyzer = ExpressionAnalyzer()
 
@@ -124,10 +111,7 @@ def test_analysis_is_cached_by_expression_domain_and_active_variables() -> None:
 def test_network_constant_is_derived_from_stoichiometry() -> None:
     result = ExpressionAnalyzer().lipschitz(2 * c, _domain())
     certificate = derive_network_lipschitz(
-        _domain(),
-        ("reactant", "product"),
-        sp.ImmutableMatrix([[-1], [1]]),
-        (result.certificate,),
+        _domain(), ("reactant", "product"), sp.ImmutableMatrix([[-1], [1]]), (result.certificate,)
     )
 
     assert certificate.component_bounds == (("reactant", 2), ("product", 2))
@@ -136,9 +120,7 @@ def test_network_constant_is_derived_from_stoichiometry() -> None:
 
 def test_certificate_records_the_selected_domain() -> None:
     physical = ExpressionAnalyzer().lipschitz(c, _domain(kind=DomainKind.PHYSICAL))
-    augmented = ExpressionAnalyzer().lipschitz(
-        c, _domain(-1, 3, kind=DomainKind.AUGMENTED)
-    )
+    augmented = ExpressionAnalyzer().lipschitz(c, _domain(-1, 3, kind=DomainKind.AUGMENTED))
 
     assert physical.certificate.domain is DomainKind.PHYSICAL
     assert augmented.certificate.domain is DomainKind.AUGMENTED

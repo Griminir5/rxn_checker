@@ -1,5 +1,8 @@
 """Differential solver profile contracts."""
 
+import json
+
+import pytest
 import sympy as sp
 
 from rxn_checker import (
@@ -20,8 +23,8 @@ from rxn_checker.proof import (
     SurfaceLocation,
     profile_differential,
 )
+from rxn_checker.reporting import render_json
 from rxn_checker.species import PROPERTY_REGISTRY
-
 
 A, B, C, T, P = sp.symbols("A B C T P", real=True)
 
@@ -30,10 +33,7 @@ def _domain(kind, limits, parameters=None):
     return ConcentrationDomain(
         kind,
         {symbol: Interval(*bounds) for symbol, bounds in limits.items()},
-        {
-            symbol: Interval(*bounds)
-            for symbol, bounds in (parameters or {}).items()
-        },
+        {symbol: Interval(*bounds) for symbol, bounds in (parameters or {}).items()},
     )
 
 
@@ -46,10 +46,9 @@ def _profile(reactions, stoichiometry, physical, augmented=None, operating=()):
         concentration_symbols=symbols,
         operating_symbols=operating,
         physical_domain=physical,
-        augmented_domain=augmented or ConcentrationDomain(
-            DomainKind.AUGMENTED,
-            physical.intervals,
-            physical.parameter_intervals,
+        augmented_domain=augmented
+        or ConcentrationDomain(
+            DomainKind.AUGMENTED, physical.intervals, physical.parameter_intervals
         ),
     )
 
@@ -64,9 +63,11 @@ def test_linear_decay_feedback_jacobian_and_active_mode_are_exact() -> None:
     assert rate.self_feedback_lower == -2
     assert rate.self_feedback_upper == -2
     assert rate.self_feedback_kind is FeedbackKind.DAMPING
-    source = {(item["row"], item["column"]): item for item in profile.physical.source_jacobian.entries}
-    assert source[('A', 'A')]["lower"] == -2
-    assert source[('B', 'A')]["upper"] == 2
+    source = {
+        (item["row"], item["column"]): item for item in profile.physical.source_jacobian.entries
+    }
+    assert source[("A", "A")]["lower"] == -2
+    assert source[("B", "A")]["upper"] == 2
     assert profile.physical.reduced_jacobian.shape == (1, 1)
     assert profile.physical.reduced_jacobian.entries[0]["lower"] == -2
     assert profile.physical.ida_alpha_dominance_threshold == 2
@@ -109,14 +110,9 @@ def test_interaction_graph_retains_one_way_coupling() -> None:
         Reaction("first", {"A": 1}, {"B": 1}, (), A),
         Reaction("second", {"B": 1}, {"C": 1}, (), B),
     )
-    domain = _domain(
-        DomainKind.PHYSICAL, {A: (0, 3), B: (0, 3), C: (0, 3)}
-    )
+    domain = _domain(DomainKind.PHYSICAL, {A: (0, 3), B: (0, 3), C: (0, 3)})
     profile = _profile(reactions, ((-1, 0), (1, -1), (0, 1)), domain)
-    entries = {
-        (item["row"], item["column"])
-        for item in profile.physical.interaction.entries
-    }
+    entries = {(item["row"], item["column"]) for item in profile.physical.interaction.entries}
 
     assert ("second", "first") in entries
     assert ("first", "second") not in entries
@@ -152,16 +148,10 @@ def test_boundary_derivative_singularity_is_reported_without_raising() -> None:
 
 
 def test_operating_coupling_and_scaled_curvature_are_separate() -> None:
-    reaction = Reaction(
-        "operating", {"A": 1}, {"B": 1}, (), A**2 * sp.exp(-1 / T) * P
-    )
+    reaction = Reaction("operating", {"A": 1}, {"B": 1}, (), A**2 * sp.exp(-1 / T) * P)
     parameters = {T: (2, 4), P: (1, 2)}
-    physical = _domain(
-        DomainKind.PHYSICAL, {A: (0, 3), B: (0, 3)}, parameters
-    )
-    profile = _profile(
-        (reaction,), ((-1,), (1,)), physical, operating=(T, P)
-    )
+    physical = _domain(DomainKind.PHYSICAL, {A: (0, 3), B: (0, 3)}, parameters)
+    profile = _profile((reaction,), ((-1,), (1,)), physical, operating=(T, P))
     rate = profile.physical.rates[0]
 
     assert {item.variable for item in rate.derivatives} == {A, T, P}
@@ -181,6 +171,65 @@ def test_unsupported_symbolic_derivative_keeps_partial_results() -> None:
     assert profile.physical.source_jacobian.structural_nonzeros == 2
 
 
+def test_unresolved_operating_coupling_does_not_become_a_zero_bound() -> None:
+    reaction = Reaction("unknown", {"A": 1}, {"B": 1}, (), sp.Function("unknown")(A, T))
+    domain = _domain(DomainKind.PHYSICAL, {A: (0, 1), B: (0, 1)}, {T: (2, 4), P: (1, 2)})
+    coupling = _profile(
+        (reaction,), ((-1,), (1,)), domain, operating=(T, P)
+    ).physical.operating_coupling
+    assert not coupling.complete
+    assert coupling.metadata["column_bounds"] == {"T": None, "P": 0}
+
+
+@pytest.mark.parametrize("limit", ("_MAX_HESSIAN_ENTRIES", "_MAX_SECOND_DERIVATIVE_OPS"))
+def test_curvature_limits_report_truncation(monkeypatch, limit) -> None:
+    import rxn_checker.proof.differential as differential
+
+    monkeypatch.setattr(differential, limit, 0)
+    reaction = Reaction("cubic", {"A": 1}, {"B": 1}, (), A**3)
+    domain = _domain(DomainKind.PHYSICAL, {A: (0, 2), B: (0, 2)})
+    profile = _profile((reaction,), ((-1,), (1,)), domain)
+    assert profile.physical.hessian_truncated
+    assert profile.physical.jacobian_variation_upper is None
+    assert profile.physical.rates[0].curvature_status == "partial"
+
+
+def test_all_four_matrices_match_direct_symbolic_differentiation() -> None:
+    d = sp.Symbol("D", real=True)
+    reactions = (
+        Reaction("first", {"A": 1}, {"B": 1}, (), 2 * A + B + T),
+        Reaction("second", {"B": 1}, {"C": 1}, (), 3 * B - C + 2 * P),
+        Reaction("third", {"A": 1}, {"C": 1}, (), A + 4 * C + T * P),
+    )
+    matrix = sp.Matrix([[-1, 0, -1], [1, -1, 0], [0, 1, 1], [0, 0, 0]])
+    domain = _domain(
+        DomainKind.PHYSICAL, {A: (0, 2), B: (0, 3), C: (0, 5), d: (0, 7)}, {T: (2, 4), P: (1, 2)}
+    )
+    profile = _profile(reactions, matrix, domain, operating=(T, P)).physical
+    rates = sp.Matrix([reaction.rate for reaction in reactions])
+    gradient = rates.jacobian((A, B, C, d))
+    basis, coordinates = matrix.rank_decomposition()
+    expected = (
+        (profile.interaction, gradient * matrix),
+        (profile.source_jacobian, matrix * gradient),
+        (profile.reduced_jacobian, coordinates * gradient * basis),
+        (profile.operating_coupling, matrix * rates.jacobian((T, P))),
+    )
+    for envelope, reference in expected:
+        actual = sp.zeros(*reference.shape)
+        for entry in envelope.entries:
+            row = envelope.row_labels.index(entry["row"])
+            column = envelope.column_labels.index(entry["column"])
+            actual[row, column] = entry["expression"]
+        assert envelope.complete
+        assert sp.simplify(actual - reference).is_zero_matrix
+    scales = sp.diag(2, 3, 5, 7)
+    scaled = scales.inv() * matrix * gradient * scales
+    assert profile.source_jacobian.infinity_norm_upper == max(
+        sum(abs(x) for x in scaled.row(i)) for i in range(scaled.rows)
+    )
+
+
 def test_check_is_nonblocking_and_selected_only_by_analysis_profiles() -> None:
     symbols = CaseSymbols.for_species(("Aye", "Bee"))
     aye = symbols.concentration("Aye")
@@ -190,10 +239,7 @@ def test_check_is_nonblocking_and_selected_only_by_analysis_profiles() -> None:
         ConcentrationModel.INDEPENDENT,
         {symbol: 3 for symbol in symbols.concentration_symbols},
         {symbol: -1 for symbol in symbols.concentration_symbols},
-        {
-            symbols.temperature: Interval(300, 400),
-            symbols.pressure: Interval(1, 2),
-        },
+        {symbols.temperature: Interval(300, 400), symbols.pressure: Interval(1, 2)},
     )
     case = Case(
         "linear",
@@ -206,10 +252,14 @@ def test_check_is_nonblocking_and_selected_only_by_analysis_profiles() -> None:
 
     assert result.results["differential_solver_profile"].findings[0].verdict is Verdict.PASS
     assert result.overall is Verdict.PASS
+    payload = json.loads(render_json(result))
+    data = payload["results"]["differential_solver_profile"]["findings"][0]["evidence"]["data"]
+    assert payload["schema"] == 2
+    assert data["physical"]["rates"][0]["self_feedback_lower"] == "-1"
+    assert data["physical"]["source_jacobian"]["complete"]
+    assert data["physical"]["source_jacobian"]["shape"] == [2, 2]
     assert "differential_solver_profile" not in {
         spec.id for spec in plan_checks(profile="physical")
     }
     for name in ("analysis", "all"):
-        assert "differential_solver_profile" in {
-            spec.id for spec in plan_checks(profile=name)
-        }
+        assert "differential_solver_profile" in {spec.id for spec in plan_checks(profile=name)}
